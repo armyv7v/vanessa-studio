@@ -1,0 +1,11 @@
+# wrangler.toml
+name = "vanessa-nails"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = ".next"   # <-- lo que genera `next build`
+
+# Si quieres usar un Worker separado para el cron (ver paso 6),
+# añade un script llamado `reminder-cron.js` y un trigger:
+[[triggers]]
+type = "cron"
+schedule = "0 * * * *"   # Cada hora en punto
+# El script a ejecutar será el que se encuentre en src/ (ver paso 6)

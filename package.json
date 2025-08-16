@@ -1,0 +1,29 @@
+{
+  "name": "vanessa-nails-studio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "pages:dev": "wrangler pages dev . --local",
+    "pages:publish": "wrangler pages publish ."
+  },
+  "dependencies": {
+    "@headlessui/react": "^1.7.15",
+    "@heroicons/react": "^2.0.18",
+    "@sendgrid/mail": "^8.0.2",
+    "axios": "^1.7.2",
+    "date-fns": "^2.30.0",
+    "googleapis": "^132.0.0",
+    "next": "13.5.6",
+    "react": "18.2.0",
+    "react-day-picker": "^8.10.0",
+    "react-dom": "18.2.0",
+    "tailwindcss": "^3.4.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.33"
+  }
+}
