@@ -9,7 +9,7 @@
  *   client: { name, email, phone }
  * }
  */
-
+export const runtime = 'edge';
 import { addBooking, getAllBookings } from "../../lib/sheets";
 import { sendEmail } from "../../lib/email";
 import { createCalendarEvent, getCalendarEvents } from "../../lib/google-calendar";
