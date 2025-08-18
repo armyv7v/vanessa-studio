@@ -1,11 +1,17 @@
-# wrangler.toml
 name = "vanessa-nails"
 compatibility_date = "2024-01-01"
-pages_build_output_dir = ".next"   # <-- lo que genera `next build`
+compatibility_flags = ["nodejs_compat"]
 
-# Si quieres usar un Worker separado para el cron (ver paso 6),
-# añade un script llamado `reminder-cron.js` y un trigger:
+# Directorio correcto generado por @cloudflare/next-on-pages
+pages_build_output_dir = ".vercel/output/static" # o "dist" dependiendo de tu configuración
+
+[vars]
+# Configura estas variables en Cloudflare Dashboard
+# SENDGRID_API_KEY = ""
+# GOOGLE_SHEET_ID = ""
+# GOOGLE_CLIENT_EMAIL = ""
+# GOOGLE_PRIVATE_KEY = ""
+
+# Si usas el cron job
 [[triggers]]
-type = "cron"
-schedule = "0 * * * *"   # Cada hora en punto
-# El script a ejecutar será el que se encuentre en src/ (ver paso 6)
+cron = "0 * * * *"

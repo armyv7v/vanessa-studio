@@ -1,14 +1,15 @@
-// next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Tus configuraciones actuales (si tienes alguna)
-  // por ejemplo, reactStrictMode: true,
-}
+  reactStrictMode: true,
+  swcMinify: true,
+  // Importante para Cloudflare Workers
+  experimental: {
+    serverComponentsExternalPackages: ['@sendgrid/mail', 'google-auth-library', 'googleapis'],
+  },
+  // Si usas imágenes locales
+  images: {
+    unoptimized: true, // Importante para Cloudflare Pages
+  },
+};
 
-/** @type {import('@cloudflare/next-on-pages').NextOnPagesConfig} */
-const withCF = require('@cloudflare/next-on-pages')({
-  // opcional: puedes cambiar el directorio de salida
-  // output: ".output",
-})
-
-module.exports = withCF(nextConfig)
+module.exports = nextConfig;
