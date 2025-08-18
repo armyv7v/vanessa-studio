@@ -1,5 +1,5 @@
 // pages/api/slots.js
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 import { getAllBookings } from '../../lib/sheets';
 
 export default async function handler(req, res) {
