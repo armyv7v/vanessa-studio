@@ -1,6 +1,6 @@
 name = "vanessa-nails"
 compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
 
 # Directorio correcto generado por @cloudflare/next-on-pages
 pages_build_output_dir = ".vercel/output/static" # o "dist" dependiendo de tu configuración
@@ -11,7 +11,3 @@ pages_build_output_dir = ".vercel/output/static" # o "dist" dependiendo de tu co
 # GOOGLE_SHEET_ID = ""
 # GOOGLE_CLIENT_EMAIL = ""
 # GOOGLE_PRIVATE_KEY = ""
-
-# Si usas el cron job
-[[triggers]]
-cron = "0 * * * *"
