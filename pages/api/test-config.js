@@ -1,5 +1,5 @@
 // pages/api/test-config.js
-export const runtime = 'nodejs';
+export const runtime = 'nodejs';git
 export default function handler(req, res) {
   res.status(200).json({
     GOOGLE_SHEET_ID: process.env.GOOGLE_SHEET_ID ? '✓ Configurada' : '✗ No configurada',
