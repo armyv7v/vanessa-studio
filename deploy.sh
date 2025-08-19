@@ -1,4 +1,5 @@
 #!/bin/bash
 echo "Desplegando sitio estático..."
-# Aquí puedes agregar cualquier lógica adicional si es necesario
-npx wrangler pages deploy .vercel/output/static
+# Desplegar los archivos estáticos generados con el nombre del proyecto
+npx wrangler pages deploy .vercel/output/static --project-name=vanessa-nails
+echo "Despliegue completado."
