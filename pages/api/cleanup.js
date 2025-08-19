@@ -1,5 +1,5 @@
 // pages/api/cleanup.js
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 import { getAllBookings, deleteBookingById } from '../../lib/sheets';
 import { getCalendarEvents } from '../../lib/google-calendar';
 
