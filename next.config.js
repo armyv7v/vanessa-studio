@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Elimina esta línea:
+  // output: 'export',
+  
   reactStrictMode: true,
   swcMinify: true,
   
@@ -14,8 +17,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  
-  output: 'export',
 };
 
 module.exports = nextConfig;
