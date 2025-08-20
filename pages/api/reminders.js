@@ -5,7 +5,6 @@
  * un recordatorio por email.
  */
 export const runtime = 'edge';
-import { getAllBookings } from "../../lib/sheets";
 import { sendEmail } from "../../lib/email";
 import { parse, addHours, isWithinInterval, format } from "date-fns";
 

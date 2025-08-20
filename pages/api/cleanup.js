@@ -1,6 +1,5 @@
 // pages/api/cleanup.js
 export const runtime = 'edge';
-import { getAllBookings, deleteBookingById } from '../../lib/sheets';
 import { getCalendarEvents } from '../../lib/google-calendar';
 
 export default async function handler(req, res) {
@@ -91,7 +90,7 @@ export default async function handler(req, res) {
       
       for (const orphaned of orphanedBookings) {
         try {
-          // NOTA: Necesitarás implementar deleteBookingById en lib/sheets.js
+          
           // await deleteBookingById(orphaned.id);
           console.log(`Cita eliminada - ID: ${orphaned.id}`);
           cleanedCount++;
