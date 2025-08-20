@@ -1,0 +1,50 @@
+diff --git a/pages/index.js b/pages/index.js
+index abcdef1..1234567 100644
+--- a/pages/index.js
++++ b/pages/index.js
+@@ -1,9 +1,10 @@
+ import { useState, useEffect } from 'react';
+ import Head from 'next/head';
+ import { format, addDays } from 'date-fns';
+ import { es } from 'date-fns/locale';
+- import { fetchAvailability } from '../lib/api';
++import { getAvailability } from '../lib/api';
+ 
+ export default function Home() {
+   // Conserva tus estados originales
+   const [selectedService, setSelectedService] = useState('');
+   const [selectedDate, setSelectedDate] = useState(null);
+   const [times, setTimes] = useState([]);
+ 
+-  useEffect(() => {
+-    fetch(`/api/slots?date=${selectedDate}&serviceId=${selectedService}`)
+-      .then(r => r.json())
+-      .then(data => setTimes(data.times || []));
+-  }, [selectedDate, selectedService]);
++  useEffect(() => {
++    const ctrl = new AbortController();
++
++    const dateStr = (() => {
++      try {
++        if (!selectedDate) return new Date().toISOString().slice(0, 10);
++        const d = typeof selectedDate === 'string' ? new Date(selectedDate) : selectedDate;
++        return d.toISOString().slice(0, 10);
++      } catch {
++        return new Date().toISOString().slice(0, 10);
++      }
++    })();
++
++    const serviceIdStr = String(selectedService || '8');
++
++    (async () => {
++      try {
++        const data = await getAvailability({ date: dateStr, serviceId: serviceIdStr });
++        setTimes(data?.times || []);
++      } catch (err) {
++        console.error('Error cargando disponibilidad:', err);
++        setTimes([]);
++      }
++    })();
++
++    return () => ctrl.abort();
++  }, [selectedDate, selectedService]);

@@ -1,4 +1,4 @@
-// pages/index.js
+﻿// pages/index.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { format, addDays } from 'date-fns';
@@ -61,7 +61,16 @@ export default function Home() {
       }
       
       const data = await response.json();
-      setAvailableSlots(data.availableSlots || []);
+
+      // Tolerante a distintos formatos (aunque el backend ya entrega availableSlots: ['HH:mm'])
+      const times = Array.isArray(data?.availableSlots)
+        ? data.availableSlots
+        : Array.isArray(data?.times)
+        ? data.times
+        : Array.isArray(data?.slots)
+        ? data.slots.filter(s => s?.available).map(s => s.start)
+        : [];
+      setAvailableSlots(times);
       
     } catch (error) {
       console.error('Error fetching slots:', error);
@@ -358,7 +367,11 @@ export default function Home() {
                               : 'bg-white border border-gray-200 hover:border-pink-300 hover:shadow-sm'
                           }`}
                         >
-                          {slot}
+                          {(() => {
+                            // Muestra HH:mm si slot es ISO; si ya viene 'HH:mm', lo deja igual
+                            const d = new Date(slot);
+                            return isNaN(d) ? slot : d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+                          })()}
                         </button>
                       ))}
                     </div>
