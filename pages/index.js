@@ -1,9 +1,13 @@
-// pages/index.js
+﻿// pages/index.js
 import { useState, useEffect } from 'react';
+import { fetchAvailability } from '../lib/api';
 import Head from 'next/head';
+import { fetchAvailability } from '../lib/api';
 import { format, addDays } from 'date-fns';
+import { fetchAvailability } from '../lib/api';
 import { es } from 'date-fns/locale';
 
+import { fetchAvailability } from '../lib/api';
 export default function Home() {
   const [selectedService, setSelectedService] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
@@ -21,22 +25,22 @@ export default function Home() {
 
   const services = [
     { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
-    { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
-    { id: 3, name: "Uñas Acrílicas", duration: 180 },
-    { id: 4, name: "Uñas Polygel", duration: 180 },
-    { id: 5, name: "Uñas Softgel", duration: 180 },
-    { id: 6, name: "Kapping o Baño Polygel o Acrílico sobre uña natural", duration: 150 },
-    { id: 7, name: "Reforzamiento Nivelación Rubber", duration: 150 },
+    { id: 2, name: "ReconstrucciÃ³n UÃ±as Mordidas (OnicofagÃ­a)", duration: 180 },
+    { id: 3, name: "UÃ±as AcrÃ­licas", duration: 180 },
+    { id: 4, name: "UÃ±as Polygel", duration: 180 },
+    { id: 5, name: "UÃ±as Softgel", duration: 180 },
+    { id: 6, name: "Kapping o BaÃ±o Polygel o AcrÃ­lico sobre uÃ±a natural", duration: 150 },
+    { id: 7, name: "Reforzamiento NivelaciÃ³n Rubber", duration: 150 },
     { id: 8, name: "Esmaltado Permanente", duration: 90 }
   ];
 
-  // Generar próximos 14 días disponibles (solo días laborables)
+  // Generar prÃ³ximos 14 dÃ­as disponibles (solo dÃ­as laborables)
   const getNextDays = () => {
     const days = [];
     const today = new Date();
     for (let i = 1; i <= 14; i++) {
       const nextDay = addDays(today, i);
-      // Solo días laborables (lunes a sábado)
+      // Solo dÃ­as laborables (lunes a sÃ¡bado)
       if (nextDay.getDay() !== 0) { // 0 = domingo
         days.push(nextDay);
       }
@@ -66,7 +70,7 @@ export default function Home() {
     } catch (error) {
       console.error('Error fetching slots:', error);
       setErrorSlots(error.message);
-      setAvailableSlots([]); // Asegurarse de que sea un array vacío
+      setAvailableSlots([]); // Asegurarse de que sea un array vacÃ­o
     } finally {
       setLoadingSlots(false);
     }
@@ -126,7 +130,7 @@ export default function Home() {
       const data = await response.json();
       
       if (response.ok) {
-        setBookingStatus({ success: true, message: '¡Cita confirmada exitosamente!' });
+        setBookingStatus({ success: true, message: 'Â¡Cita confirmada exitosamente!' });
         // Reset form after successful booking
         setTimeout(() => {
           setSelectedService('');
@@ -145,7 +149,7 @@ export default function Home() {
     }
   };
 
-  // Función para formatear fechas de manera consistente
+  // FunciÃ³n para formatear fechas de manera consistente
   const formatDate = (date) => {
     return date ? format(date, 'd MMMM yyyy', { locale: es }) : '';
   };
@@ -188,13 +192,13 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Paso 1: Selección de servicio */}
+        {/* Paso 1: SelecciÃ³n de servicio */}
 {step === 1 && (
   <div className="max-w-6xl mx-auto">
     <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">Selecciona tu servicio</h2>
     
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {/* Ordenar servicios por duración (menor a mayor) */}
+      {/* Ordenar servicios por duraciÃ³n (menor a mayor) */}
       {[...services]
         .sort((a, b) => a.duration - b.duration)
         .map((service) => (
@@ -205,7 +209,7 @@ export default function Home() {
           >
             {/* Contenido del servicio */}
             <div className="p-6 flex flex-col h-full">
-              {/* Header con badge de duración */}
+              {/* Header con badge de duraciÃ³n */}
               <div className="flex justify-between items-start mb-4">
                 <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-200 transition-colors flex-shrink-0">
                   <svg className="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,7 +226,7 @@ export default function Home() {
                 {service.name}
               </h3>
               
-              {/* Botón de selección */}
+              {/* BotÃ³n de selecciÃ³n */}
               <button className="mt-auto w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 shadow-md hover:shadow-lg flex items-center justify-center">
                 Seleccionar
                 <svg className="inline-block w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,7 +241,7 @@ export default function Home() {
         ))}
     </div>
     
-    {/* Estadísticas o información adicional */}
+    {/* EstadÃ­sticas o informaciÃ³n adicional */}
     <div className="mt-12 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl p-6 border border-pink-100">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
         <div className="p-4">
@@ -250,14 +254,14 @@ export default function Home() {
         </div>
         <div className="p-4">
           <div className="text-3xl font-bold text-indigo-600 mb-2">100%</div>
-          <div className="text-gray-600">Satisfacción garantizada</div>
+          <div className="text-gray-600">SatisfacciÃ³n garantizada</div>
         </div>
       </div>
     </div>
   </div>
 )}
 
-        {/* Paso 2: Selección de fecha */}
+        {/* Paso 2: SelecciÃ³n de fecha */}
         {step === 2 && (
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-center">
@@ -304,13 +308,13 @@ export default function Home() {
                 onClick={() => setStep(1)}
                 className="px-4 py-2 text-pink-600 hover:text-pink-800 transition-colors"
               >
-                ← Volver a servicios
+                â† Volver a servicios
               </button>
             </div>
           </div>
         )}
 
-        {/* Paso 3: Selección de hora */}
+        {/* Paso 3: SelecciÃ³n de hora */}
         {step === 3 && (
           <div className="max-w-2xl mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-center">
@@ -321,7 +325,7 @@ export default function Home() {
             {errorSlots && (
               <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
                 <p><strong>Error:</strong> {errorSlots}</p>
-                <p className="text-sm mt-2">Por favor, verifica tu conexión e inténtalo nuevamente.</p>
+                <p className="text-sm mt-2">Por favor, verifica tu conexiÃ³n e intÃ©ntalo nuevamente.</p>
               </div>
             )}
             
@@ -337,13 +341,13 @@ export default function Home() {
                   availableSlots.length === 0 ? (
                     <div className="text-center py-8">
                       <p className="text-gray-600 mb-4">
-                        No hay horarios disponibles para este día. Elige otro día.
+                        No hay horarios disponibles para este dÃ­a. Elige otro dÃ­a.
                       </p>
                       <button
                         onClick={() => setStep(2)}
                         className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                       >
-                        ← Volver a fechas
+                        â† Volver a fechas
                       </button>
                     </div>
                   ) : (
@@ -379,7 +383,7 @@ export default function Home() {
                 onClick={() => setStep(2)}
                 className="px-4 py-2 text-pink-600 hover:text-pink-800 transition-colors"
               >
-                ← Volver a fechas
+                â† Volver a fechas
               </button>
               
               {selectedTime && (
@@ -448,7 +452,7 @@ export default function Home() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Teléfono *
+                  TelÃ©fono *
                 </label>
                 <input
                   type="tel"
@@ -476,13 +480,13 @@ export default function Home() {
                   {bookingStatus.success && (
                     <div>
                       <p className="font-semibold">{bookingStatus.message}</p>
-                      <p className="text-sm mt-1">Recibirás un email de confirmación.</p>
+                      <p className="text-sm mt-1">RecibirÃ¡s un email de confirmaciÃ³n.</p>
                     </div>
                   )}
                   {bookingStatus.error && (
                     <div>
                       <p className="font-semibold">Error: {bookingStatus.message}</p>
-                      <p className="text-sm mt-1">Por favor, inténtalo nuevamente.</p>
+                      <p className="text-sm mt-1">Por favor, intÃ©ntalo nuevamente.</p>
                     </div>
                   )}
                 </div>
@@ -494,7 +498,7 @@ export default function Home() {
                   onClick={() => setStep(3)}
                   className="px-4 py-2 text-pink-600 hover:text-pink-800 transition-colors"
                 >
-                  ← Volver a horarios
+                  â† Volver a horarios
                 </button>
                 
                 <button
@@ -512,7 +516,7 @@ export default function Home() {
 
       {/* Footer opcional */}
       <footer className="py-6 text-center text-gray-500 text-sm">
-        <p>© {new Date().getFullYear()} Vanessa Nails Studio. Todos los derechos reservados.</p>
+        <p>Â© {new Date().getFullYear()} Vanessa Nails Studio. Todos los derechos reservados.</p>
       </footer>
     </div>
   );
