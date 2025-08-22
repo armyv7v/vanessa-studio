@@ -1,0 +1,178 @@
+﻿/**
+ * WebApp de reservas — Vanessa Nails Studio
+ * Edita y despliega con clasp sin cambiar la URL del WebApp.
+ */
+const TZ = "America/Santiago";
+const CALENDAR_ID = "64693698ebab23975e6f5d11f9f3b170a6d11b9a19ebb459e1486314ee930ebf@group.calendar.google.com";
+const OWNER_EMAIL = "nailsvanessacl@gmail.com";
+const SHEET_ID   = "1aE4dnWZQjEJWAMaDEfDRpACVUDU8_F9-fzd_2mSQQeM";
+const SHEET_NAME = "Reservas";
+const WHATSAPP_PHONE = "56930072631";
+const BANK_LINES = [
+  "VANESSA MORALES — Cuenta RUT 27774310-8 — Banco Estado",
+  "VANESSA MORALES — Cuenta Corriente 12700182876 — Banco Estado"
+];
+// Horario comercial (validación de cortesía; la generación de slots la hace el front)
+const BUSINESS_HOURS = { start: "10:00", end: "18:00" };
+// Desactivar sábados/domingos por semana del mes (SAT1, SAT3, SUN2, etc.)
+const DISABLED_DAYS = [
+  // "SAT2", "SUN1"
+];
+const SERVICE_MAP = {
+  "1": { name: "Retoque (Mantenimiento)", duration: 120 },
+  "2": { name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
+  "3": { name: "Uñas Acrílicas", duration: 180 },
+  "4": { name: "Uñas Polygel", duration: 180 },
+  "5": { name: "Uñas Softgel", duration: 180 },
+  "6": { name: "Kapping o Baño Polygel o Acrílico sobre uña natural", duration: 150 },
+  "7": { name: "Reforzamiento Nivelación Rubber", duration: 150 },
+  "8": { name: "Esmaltado Permanente", duration: 90 }
+};
+function buildRfc3339(dateStr, timeStr, minutesToAdd) {
+  if (!dateStr || !timeStr) throw new Error("dateStr/timeStr requeridos");
+  const [Y, M, D] = dateStr.split("-").map(Number);
+  const [h, m]   = timeStr.split(":").map(Number);
+  const start = new Date(Y, M - 1, D, h, m, 0, 0);
+  const end   = new Date(start.getTime() + (Number(minutesToAdd) || 0) * 60000);
+  const startStr = Utilities.formatDate(start, TZ, "yyyy-MM-dd'T'HH:mm:ssXXX");
+  const endStr   = Utilities.formatDate(end,   TZ, "yyyy-MM-dd'T'HH:mm:ssXXX");
+  return { start, end, startStr, endStr };
+}
+function isDisabledDay(date) {
+  const dow = date.getDay(); // 0 dom, 6 sáb
+  const weekNum = Math.ceil(date.getDate() / 7);
+  if (dow === 6) return DISABLED_DAYS.includes("SAT" + weekNum);
+  if (dow === 0) return DISABLED_DAYS.includes("SUN" + weekNum);
+  return false;
+}
+function hasConflictCalendarApp(calendarId, start, end) {
+  const cal = CalendarApp.getCalendarById(calendarId);
+  const events = cal.getEvents(start, end);
+  return events && events.length > 0;
+}
+function appendToSheet(row) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+  sh.appendRow(row);
+}
+function buildEmailHtml({ clientName, fecha, hora, duracion, telefono, serviceName, htmlLink }) {
+  const bankList = BANK_LINES.map(l => `<li>${l}</li>`).join("");
+  const whatsLink = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
+    "Hola Vanessa, te envío el comprobante de reserva. Mi nombre es " + clientName
+  )}`;
+  return `
+  <div style="font-family:Arial,sans-serif;color:#333;line-height:1.6">
+    <div style="max-width:560px;margin:auto;border:1px solid #f2d7e2;border-radius:12px;overflow:hidden">
+      <div style="background:#fef0f5;padding:16px 20px">
+        <h2 style="margin:0;color:#d63384">✨ Confirmación de Reserva</h2>
+      </div>
+      <div style="padding:20px">
+        <p>Hola <b>${clientName}</b>, tu cita ha sido registrada con éxito 💅🏻</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0">
+          <tr><td style="padding:6px 0;width:140px"><b>Servicio:</b></td><td>${serviceName || "-"}</td></tr>
+          <tr><td style="padding:6px 0"><b>Fecha:</b></td><td>${fecha}</td></tr>
+          <tr><td style="padding:6px 0"><b>Hora:</b></td><td>${hora}</td></tr>
+          <tr><td style="padding:6px 0"><b>Duración:</b></td><td>${duracion} minutos</td></tr>
+          <tr><td style="padding:6px 0"><b>Teléfono:</b></td><td>${telefono || "-"}</td></tr>
+          ${htmlLink ? `<tr><td style="padding:6px 0"><b>Evento:</b></td><td><a href="${htmlLink}">Abrir en Google Calendar</a></td></tr>` : ""}
+        </table>
+        <hr style="border:none;border-top:1px solid #eee;margin:16px 0">
+        <h3 style="margin:10px 0 6px">💖 Condiciones de Reserva</h3>
+        <p>Para apartar tu horita debes enviar una reserva de <b>$5.000</b> pesos, la cual se descuenta del valor total del servicio.</p>
+        <p>🏦 Transferir a:</p>
+        <ul style="margin:0 0 10px 18px;padding:0">${bankList}</ul>
+        <p>💖 Por favor, envía el comprobante por WhatsApp:
+          <a href="${whatsLink}" style="color:#d63384;font-weight:bold;text-decoration:none">Enviar comprobante</a>
+        </p>
+        <p>🚫 Si faltas a tu hora, no se realiza devolución de la reserva.<br>
+           👉 Puedes reagendar con el mismo abono notificando como mínimo <b>24 horas antes</b>.</p>
+        <p style="font-size:12px;color:#666;margin-top:18px">
+          Gracias por tu preferencia 💅🏻<br>Vanessa Nails Studio
+        </p>
+      </div>
+    </div>
+  </div>`;
+}
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return jsonResponse({ success: false, error: "Solicitud vacía" });
+    }
+    let data;
+    try { data = JSON.parse(e.postData.contents); }
+    catch { return jsonResponse({ success: false, error: "JSON inválido" }); }
+    const nombre    = (data.nombre || data.name || "").trim();
+    const email     = (data.email || "").trim();
+    const telefono  = (data.telefono || data.phone || "").trim();
+    const fecha     = (data.fecha || data.date || "").trim(); // YYYY-MM-DD
+    const hora      = (data.hora  || data.start || "").trim(); // HH:mm
+    const serviceId = String(data.serviceId || "");
+    const durationMin = Number(data.durationMin || (SERVICE_MAP[serviceId]?.duration || 60));
+    const serviceName = data.servicio || SERVICE_MAP[serviceId]?.name || "Servicio";
+    if (!nombre || !email || !fecha || !hora) {
+      return jsonResponse({ success: false, error: "Faltan campos: nombre, email, fecha, hora" });
+    }
+    const probe = new Date(`${fecha}T${hora}:00`);
+    if (isNaN(probe.getTime())) return jsonResponse({ success: false, error: "Fecha/Hora inválidas" });
+    if (isDisabledDay(probe))   return jsonResponse({ success: false, error: "Este día no está disponible para reservas." });
+    const { start, end, startStr, endStr } = buildRfc3339(fecha, hora, durationMin);
+    if (hasConflictCalendarApp(CALENDAR_ID, start, end)) {
+      return jsonResponse({ success: false, error: "Horario no disponible (conflicto)" });
+    }
+    const cal = CalendarApp.getCalendarById(CALENDAR_ID);
+    const event = cal.createEvent(
+      `Cita: ${serviceName} con ${nombre}`,
+      start,
+      end,
+      {
+        description: [
+          `Cliente: ${nombre}`,
+          `Email: ${email}`,
+          `Teléfono: ${telefono}`,
+          `Servicio: ${serviceName}`,
+          `Duración: ${durationMin} min`
+        ].join("\n"),
+        guests: email + (OWNER_EMAIL ? "," + OWNER_EMAIL : ""),
+        sendInvites: true
+      }
+    );
+    const startLocal = Utilities.formatDate(start, TZ, "yyyy-MM-dd HH:mm");
+    const endLocal   = Utilities.formatDate(end,   TZ, "yyyy-MM-dd HH:mm");
+    appendToSheet([
+      new Date(), nombre, email, telefono,
+      serviceName, startLocal, endLocal, durationMin,
+      event.getId(), event.getHtmlLink()
+    ]);
+    const html = buildEmailHtml({
+      clientName: nombre,
+      fecha, hora, duracion: durationMin,
+      telefono, serviceName,
+      htmlLink: event.getHtmlLink()
+    });
+    MailApp.sendEmail({ to: email, subject: `✅ Confirmación de Reserva — ${serviceName}`, htmlBody: html });
+    if (OWNER_EMAIL) {
+      MailApp.sendEmail({ to: OWNER_EMAIL, subject: `Nueva Cita — ${serviceName} (${nombre})`, htmlBody: html });
+    }
+    return jsonResponse({ success: true, eventId: event.getId(), htmlLink: event.getHtmlLink(), start: startStr, end: endStr });
+  } catch (err) {
+    return jsonResponse({ success: false, error: String(err) });
+  }
+}
+function test_doPost() {
+  const e = { postData: { contents: JSON.stringify({
+    nombre: "Prueba VSCode",
+    email: "cliente@example.com",
+    telefono: "56911112222",
+    fecha: "2025-08-25",
+    hora: "10:00",
+    serviceId: 8,
+    durationMin: 90,
+    servicio: "Esmaltado Permanente"
+  })}};
+  const res = doPost(e);
+  Logger.log(res.getContent());
+}

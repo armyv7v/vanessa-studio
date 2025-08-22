@@ -10,7 +10,12 @@
     "lint": "next lint",
     "pages:build": "npx @cloudflare/next-on-pages",
     "preview": "npm run pages:build && wrangler pages dev",
-    "deploy": "npm run pages:build && npx wrangler pages deploy .vercel/output/static"
+    "deploy": "npm run pages:build && npx wrangler pages deploy .vercel/output/static",
+    "gs:login": "npx @google/clasp login",
+    "gs:whoami": "npx @google/clasp login --status",
+    "gs:push": "cd scripts/google-script && npx @google/clasp push",
+    "gs:pull": "cd scripts/google-script && npx @google/clasp pull",
+    "gs:deploy": "cd scripts/google-script && npx @google/clasp deploy"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.0.0",
