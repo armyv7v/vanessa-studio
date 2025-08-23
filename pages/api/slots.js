@@ -1,8 +1,8 @@
 ﻿// pages/api/slots.js
 export const config = { runtime: 'edge' };
 
-const OPEN_HOUR = 10;      // 10:00
-const CLOSE_HOUR = 19;     // 19:00 (último inicio posible 17:30 si STEP_MIN=30)
+const OPEN_HOUR = 9;      // 10:00
+const CLOSE_HOUR = 19;     // 19git:00 (último inicio posible 17:30 si STEP_MIN=30)
 const STEP_MIN = 30;       // pasos de 30 min
 const TIMEZONE = 'America/Santiago';
 
