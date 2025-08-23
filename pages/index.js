@@ -1,18 +1,58 @@
 ﻿// pages/index.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
-import { format, addDays } from 'date-fns';
+import { format, addDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-// === FLAGS DE CALENDARIO ===
-const ENABLE_SATURDAY = true;
-const ENABLE_SUNDAY   = true; // si lo pones en false, se ocultan todos los domingos
-const WEEKS_TO_SHOW   = 3;    // 3 semanas = 21 días
+// === Config UI Calendario ===
+// Mostrar mínimo 4 semanas
+const VISIBLE_DAYS = 28;
 
-// Desactivar domingos específicos del mes por su ordinal:
-// 1 = primer domingo del mes, 2 = segundo, etc.
-// Ejemplo: [1,3] desactiva DOM1 y DOM3 de cada mes.
-const DISABLED_SUNDAYS_ORDINALS = []; // <- ajusta a tu gusto, p.ej. [1,3]
+// ¿Habilitar sábados y domingos por defecto?
+const ENABLE_SATURDAY = true;
+const ENABLE_SUNDAY_DEFAULT = true; // si quieres deshabilitar domingo global, pon false
+
+// Domingos habilitados por mes (si ENABLE_SUNDAY_DEFAULT=false)
+// Formato: { 'YYYY-MM': [1, 3] } => habilita el 1er y 3er domingo de ese mes
+const ENABLED_SUNDAYS_BY_MONTH = {
+  // '2025-08': [2, 4],
+};
+
+// Servicios (duraciones deben calzar con servidor y GAS)
+const SERVICES = [
+  { id: 1, name: 'Retoque (Mantenimiento)', duration: 120 },
+  { id: 2, name: 'Reconstrucción Uñas Mordidas (Onicofagía)', duration: 180 },
+  { id: 3, name: 'Uñas Acrílicas', duration: 180 },
+  { id: 4, name: 'Uñas Polygel', duration: 180 },
+  { id: 5, name: 'Uñas Softgel', duration: 180 },
+  { id: 6, name: 'Kapping o Baño Polygel o Acrílico sobre uña natural', duration: 150 },
+  { id: 7, name: 'Reforzamiento Nivelación Rubber', duration: 150 },
+  { id: 8, name: 'Esmaltado Permanente', duration: 90 },
+];
+
+// Helpers
+function ymd(d) {
+  return format(d, 'yyyy-MM-dd');
+}
+
+function isSundayAllowed(d) {
+  if (ENABLE_SUNDAY_DEFAULT) return true; // permitido globalmente
+  const monthKey = format(d, 'yyyy-MM');
+  const day = d.getDate();
+  const dow = d.getDay(); // 0 = domingo
+  if (dow !== 0) return true;
+  const sundays = [];
+  // Construye lista ordinal de domingos del mes:
+  const first = new Date(d.getFullYear(), d.getMonth(), 1);
+  let cursor = first;
+  while (cursor.getMonth() === d.getMonth()) {
+    if (cursor.getDay() === 0) sundays.push(cursor.getDate());
+    cursor = addDays(cursor, 1);
+  }
+  const ordinal = sundays.indexOf(day) + 1; // 1-based
+  const allowed = ENABLED_SUNDAYS_BY_MONTH[monthKey] || [];
+  return allowed.includes(ordinal);
+}
 
 export default function Home() {
   const [selectedService, setSelectedService] = useState('');
@@ -25,81 +65,47 @@ export default function Home() {
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
 
-  const services = [
-    { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
-    { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
-    { id: 3, name: "Uñas Acrílicas", duration: 180 },
-    { id: 4, name: "Uñas Polygel", duration: 180 },
-    { id: 5, name: "Uñas Softgel", duration: 180 },
-    { id: 6, name: "Kapping o Baño Polygel o Acrílico sobre uña natural", duration: 150 },
-    { id: 7, name: "Reforzamiento Nivelación Rubber", duration: 150 },
-    { id: 8, name: "Esmaltado Permanente", duration: 90 }
-  ];
-
-  // --- Helper: ¿este domingo está deshabilitado por ordinal? (DOM1, DOM2, ...)
-  function isDisabledSunday(day) {
-    if (day.getDay() !== 0) return false; // sólo aplica a domingos
-    // calcular ordinal del domingo dentro del mes
-    let count = 0;
-    const cursor = new Date(day.getFullYear(), day.getMonth(), 1);
-    while (cursor.getMonth() === day.getMonth()) {
-      if (cursor.getDay() === 0) {
-        count++;
-        if (cursor.getDate() === day.getDate()) break;
-      }
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return DISABLED_SUNDAYS_ORDINALS.includes(count);
-  }
-
-  // === DÍAS A MOSTRAR: 4 semanas, incluye HOY, respeta sábado/domingo y domingos por ordinal
-  const getNextDays = () => {
+  const nextDays = useMemo(() => {
     const days = [];
-    const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()); // 00:00 hoy
-
-    for (let i = 0; i < WEEKS_TO_SHOW * 7; i++) {
-      const day = addDays(startOfToday, i);
-      const dow = day.getDay(); // 0=Dom, 6=Sáb
-
+    const today = startOfDay(new Date());
+    for (let i = 0; i < VISIBLE_DAYS; i++) {
+      const d = addDays(today, i); // incluye HOY
+      const dow = d.getDay(); // 0=dom,6=sab
       if (dow === 6 && !ENABLE_SATURDAY) continue;
-      if (dow === 0) {
-        if (!ENABLE_SUNDAY) continue;
-        if (isDisabledSunday(day)) continue; // DOM1/DOM3, etc.
-      }
-
-      days.push(day);
+      if (dow === 0 && !isSundayAllowed(d)) continue;
+      days.push(d);
     }
     return days;
-  };
+  }, []);
 
-  const nextDays = getNextDays();
-
-  // === Slots disponibles ===
-  const fetchAvailableSlots = async (date, serviceId) => {
+  // Fetch de slots
+  async function fetchAvailableSlots(date, serviceId) {
     try {
       setLoadingSlots(true);
       setErrorSlots(null);
 
       const formattedDate = format(date, 'yyyy-MM-dd');
-      const res = await fetch(`/api/slots?date=${formattedDate}&serviceId=${serviceId}`);
+      const buster = Date.now();
+      const res = await fetch(`/api/slots?date=${formattedDate}&serviceId=${serviceId}&_=${buster}`, {
+        cache: 'no-store',
+      });
 
-      if (!res.ok) {
-        let errText;
-        try { errText = await res.text(); } catch { errText = ''; }
-        throw new Error(errText || 'Error obteniendo slots disponibles');
-      }
+      const txt = await res.text();
+      let data;
+      try { data = JSON.parse(txt); } catch { throw new Error(txt || 'Respuesta inválida'); }
 
-      const data = await res.json();
-      setAvailableSlots(Array.isArray(data.times) ? data.times : []);
+      if (!res.ok) throw new Error(data.error || 'Error obteniendo slots');
+
+      setAvailableSlots(Array.isArray(data.availableSlots) ? data.availableSlots : []);
+      if (typeof window !== 'undefined') console.log('Availability meta:', data.meta);
     } catch (err) {
-      console.error('Error fetching slots:', err);
-      setErrorSlots(err.message || String(err));
+      console.error('Availability ERROR:', err);
+      setErrorSlots(JSON.stringify({ error: String(err) }));
       setAvailableSlots([]);
     } finally {
       setLoadingSlots(false);
     }
-  };
+  }
 
   useEffect(() => {
     if (selectedDate && selectedService) {
@@ -126,7 +132,7 @@ export default function Home() {
   };
 
   const handleClientInfoChange = (field, value) => {
-    setClientInfo(prev => ({ ...prev, [field]: value }));
+    setClientInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmitBooking = async (e) => {
@@ -134,41 +140,37 @@ export default function Home() {
     try {
       setBookingStatus({ loading: true });
 
-      const payload = {
-        serviceId: selectedService,
-        fecha: format(selectedDate, 'yyyy-MM-dd'),
-        hora: selectedTime,
-        nombre: clientInfo.name,
-        email: clientInfo.email,
-        telefono: clientInfo.phone
-      };
-
-      const response = await fetch('/api/book', {
+      const res = await fetch('/api/book', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          serviceId: selectedService,
+          date: format(selectedDate, 'yyyy-MM-dd'),
+          start: selectedTime,
+          client: clientInfo,
+        }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
+      if (!res.ok || data?.error) throw new Error(data?.error || 'Error al confirmar la cita');
 
-      if (response.ok && (data.ok || data.success)) {
-        setBookingStatus({ success: true, message: '¡Cita confirmada exitosamente!' });
-        setTimeout(() => {
-          setSelectedService('');
-          setSelectedDate(null);
-          setSelectedTime('');
-          setClientInfo({ name: '', email: '', phone: '' });
-          setStep(1);
-        }, 2500);
-      } else {
-        throw new Error(data.error || 'Error al confirmar la cita');
-      }
+      setBookingStatus({ success: true, message: '¡Cita confirmada exitosamente!' });
+
+      // Reseteo suave tras confirmar
+      setTimeout(() => {
+        setSelectedService('');
+        setSelectedDate(null);
+        setSelectedTime('');
+        setClientInfo({ name: '', email: '', phone: '' });
+        setStep(1);
+      }, 2000);
     } catch (err) {
-      setBookingStatus({ error: true, message: err.message || String(err) });
+      console.error('Error al confirmar cita:', err);
+      setBookingStatus({ error: true, message: String(err) });
     }
   };
 
-  const formatDate = (date) => date ? format(date, 'd MMMM yyyy', { locale: es }) : '';
+  const formatDate = (date) => (date ? format(date, 'd MMMM yyyy', { locale: es }) : '');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -187,11 +189,13 @@ export default function Home() {
         {/* Pasos */}
         <div className="mb-8">
           <div className="flex justify-center items-center mb-4">
-            {[1,2,3,4].map((num) => (
+            {[1, 2, 3, 4].map((num) => (
               <div key={num} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   step >= num ? 'bg-pink-600 text-white' : 'bg-gray-300 text-gray-600'
-                }`}>{num}</div>
+                }`}>
+                  {num}
+                </div>
                 {num < 4 && <div className={`w-16 h-1 ${step > num ? 'bg-pink-600' : 'bg-gray-300'}`}></div>}
               </div>
             ))}
@@ -204,15 +208,17 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Paso 1: Servicio */}
+        {/* Paso 1: Servicios */}
         {step === 1 && (
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">Selecciona tu servicio</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...services].sort((a,b) => a.duration - b.duration).map((service) => (
-                <div key={service.id}
+              {[...SERVICES].sort((a, b) => a.duration - b.duration).map((service) => (
+                <div
+                  key={service.id}
                   onClick={() => handleServiceSelect(service.id)}
-                  className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 overflow-hidden transform hover:-translate-y-1 hover:scale-105 h-full flex flex-col">
+                  className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 overflow-hidden transform hover:-translate-y-1 hover:scale-105 h-full flex flex-col"
+                >
                   <div className="p-6 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-4">
                       <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-200 transition-colors flex-shrink-0">
@@ -242,40 +248,32 @@ export default function Home() {
         {step === 2 && (
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-center">
-              Selecciona una fecha para {services.find(s => s.id === selectedService)?.name}
+              Selecciona una fecha para {SERVICES.find((s) => s.id === selectedService)?.name}
             </h2>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               {nextDays.map((day, idx) => {
-                const dayFormatted = format(day, 'yyyy-MM-dd');
-                const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-                const isPastDay = day < startOfToday; // hoy NO es pasado
-                const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === dayFormatted;
-                const isToday = day.getTime() === startOfToday.getTime();
+                const dayStr = ymd(day);
+                const isSelected = selectedDate && ymd(selectedDate) === dayStr;
+                const todayStr = ymd(new Date());
+                const isToday = dayStr === todayStr;
 
                 return (
                   <button
-                    key={idx}
-                    onClick={() => !isPastDay && handleDateSelect(day)}
-                    disabled={isPastDay}
+                    key={`${dayStr}-${idx}`}
+                    onClick={() => handleDateSelect(day)}
                     className={`p-3 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 ${
                       isSelected
                         ? 'bg-pink-600 text-white border-pink-600 transform scale-105'
-                        : isPastDay
-                          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                          : 'bg-white text-gray-800 border-gray-200 hover:border-pink-300 hover:shadow-sm'
+                        : 'bg-white text-gray-800 border-gray-200 hover:border-pink-300 hover:shadow-sm'
                     }`}
                   >
-                    <div className="font-medium">
-                      {isToday ? 'Hoy' : format(day, 'EEE', { locale: es })}
-                    </div>
+                    <div className="font-medium">{isToday ? 'Hoy' : format(day, 'EEE', { locale: es })}</div>
                     <div className="text-lg font-bold">{format(day, 'd')}</div>
                     <div className="text-xs">{format(day, 'MMM', { locale: es })}</div>
                   </button>
                 );
               })}
             </div>
-
             <div className="mt-6 text-center">
               <button onClick={() => setStep(1)} className="px-4 py-2 text-pink-600 hover:text-pink-800 transition-colors">
                 ← Volver a servicios
@@ -307,12 +305,19 @@ export default function Home() {
                 {loadingSlots ? (
                   <div className="text-center py-8">
                     <p className="text-gray-600 mb-4">Cargando horarios disponibles...</p>
-                    <div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div></div>
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+                    </div>
                   </div>
                 ) : availableSlots.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-gray-600 mb-4">No hay horarios disponibles para este día. Elige otro día.</p>
-                    <button onClick={() => setStep(2)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                    <p className="text-gray-600 mb-4">
+                      No hay horarios disponibles para este día. Elige otro día.
+                    </p>
+                    <button
+                      onClick={() => setStep(2)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                    >
                       ← Volver a fechas
                     </button>
                   </div>
@@ -323,8 +328,9 @@ export default function Home() {
                         key={slot}
                         onClick={() => handleTimeSelect(slot)}
                         className={`p-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 ${
-                          selectedTime === slot ? 'bg-pink-600 text-white transform scale-105'
-                                                : 'bg-white border border-gray-200 hover:border-pink-300 hover:shadow-sm'
+                          selectedTime === slot
+                            ? 'bg-pink-600 text-white transform scale-105'
+                            : 'bg-white border border-gray-200 hover:border-pink-300 hover:shadow-sm'
                         }`}
                       >
                         {slot}
@@ -339,17 +345,19 @@ export default function Home() {
               <button onClick={() => setStep(2)} className="px-4 py-2 text-pink-600 hover:text-pink-800 transition-colors">
                 ← Volver a fechas
               </button>
-
               {selectedTime && (
-                <button onClick={() => setStep(4)} className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50">
-                  Continuar
+                <button
+                    onClick={() => setStep(4)}
+                    className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50"
+                  >
+                    Continuar
                 </button>
               )}
             </div>
           </div>
         )}
 
-        {/* Paso 4: Datos */}
+        {/* Paso 4: Datos Cliente */}
         {step === 4 && (
           <div className="max-w-md mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-center">Tus datos</h2>
@@ -357,34 +365,86 @@ export default function Home() {
             <div className="bg-white p-6 rounded-lg shadow-md mb-6 border border-gray-200">
               <h3 className="font-semibold mb-3 text-lg">Resumen de tu cita:</h3>
               <div className="space-y-2">
-                <p className="flex justify-between"><span className="font-medium">Servicio:</span><span>{services.find(s => s.id === selectedService)?.name}</span></p>
-                <p className="flex justify-between"><span className="font-medium">Fecha:</span><span>{formatDate(selectedDate)}</span></p>
-                <p className="flex justify-between"><span className="font-medium">Hora:</span><span>{selectedTime}</span></p>
+                <p className="flex justify-between">
+                  <span className="font-medium">Servicio:</span>
+                  <span>{SERVICES.find((s) => s.id === selectedService)?.name}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="font-medium">Fecha:</span>
+                  <span>{formatDate(selectedDate)}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="font-medium">Hora:</span>
+                  <span>{selectedTime}</span>
+                </p>
               </div>
             </div>
 
             <form onSubmit={handleSubmitBooking} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
-                <input type="text" required value={clientInfo.name} onChange={(e) => handleClientInfoChange('name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors" placeholder="Tu nombre completo" />
+                <input
+                  type="text"
+                  required
+                  value={clientInfo.name}
+                  onChange={(e) => handleClientInfoChange('name', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                  placeholder="Tu nombre completo"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input type="email" required value={clientInfo.email} onChange={(e) => handleClientInfoChange('email', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors" placeholder="tu@email.com" />
+                <input
+                  type="email"
+                  required
+                  value={clientInfo.email}
+                  onChange={(e) => handleClientInfoChange('email', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                  placeholder="tu@email.com"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
-                <input type="tel" required value={clientInfo.phone} onChange={(e) => handleClientInfoChange('phone', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors" placeholder="+56 9 1234 5678" />
+                <input
+                  type="tel"
+                  required
+                  value={clientInfo.phone}
+                  onChange={(e) => handleClientInfoChange('phone', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                  placeholder="+56 9 1234 5678"
+                />
               </div>
 
               {bookingStatus && (
-                <div className={`mt-4 p-4 rounded-lg ${
-                  bookingStatus.loading ? 'bg-blue-100 text-blue-800' :
-                  bookingStatus.success ? 'bg-green-100 text-green-800' :
-                  bookingStatus.error ? 'bg-red-100 text-red-800' : ''}`}>
-                  {bookingStatus.loading && (<div className="flex items-center"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div><span>Confirmando cita...</span></div>)}
-                  {bookingStatus.success && (<div><p className="font-semibold">{bookingStatus.message}</p><p className="text-sm mt-1">Recibirás un email de confirmación.</p></div>)}
-                  {bookingStatus.error && (<div><p className="font-semibold">Error: {bookingStatus.message}</p><p className="text-sm mt-1">Por favor, inténtalo nuevamente.</p></div>)}
+                <div
+                  className={`mt-4 p-4 rounded-lg ${
+                    bookingStatus.loading
+                      ? 'bg-blue-100 text-blue-800'
+                      : bookingStatus.success
+                      ? 'bg-green-100 text-green-800'
+                      : bookingStatus.error
+                      ? 'bg-red-100 text-red-800'
+                      : ''
+                  }`}
+                >
+                  {bookingStatus.loading && (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                      <span>Confirmando cita...</span>
+                    </div>
+                  )}
+                  {bookingStatus.success && (
+                    <div>
+                      <p className="font-semibold">{bookingStatus.message}</p>
+                      <p className="text-sm mt-1">Recibirás un email de confirmación.</p>
+                    </div>
+                  )}
+                  {bookingStatus.error && (
+                    <div>
+                      <p className="font-semibold">Error: {bookingStatus.message}</p>
+                      <p className="text-sm mt-1">Por favor, inténtalo nuevamente.</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -392,7 +452,11 @@ export default function Home() {
                 <button type="button" onClick={() => setStep(3)} className="px-4 py-2 text-pink-600 hover:text-pink-800 transition-colors">
                   ← Volver a horarios
                 </button>
-                <button type="submit" disabled={bookingStatus?.loading} className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50">
+                <button
+                  type="submit"
+                  disabled={bookingStatus?.loading}
+                  className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50"
+                >
                   {bookingStatus?.loading ? 'Confirmando...' : 'Confirmar Cita'}
                 </button>
               </div>
