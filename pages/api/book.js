@@ -1,10 +1,11 @@
 // pages/api/book.js
-// Envia la reserva al Web App de Google Apps Script (doPost), que:
-//  - Inserta el evento en el Calendar secundario
-//  - Envía emails (cliente + owner)
-//  - Registra en Google Sheets
-
 export const config = { runtime: 'edge' };
+
+/**
+ * Reenvía la reserva al Google Apps Script (GAS) Web App
+ * Env vars requeridas:
+ *  - GAS_WEBAPP_URL   (URL del deploy de tu script)
+ */
 
 const SERVICE_MAP = {
   '1': { name: 'Retoque (Mantenimiento)', duration: 120 },
@@ -20,65 +21,71 @@ const SERVICE_MAP = {
 export default async function handler(req) {
   try {
     if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Método no permitido' }), {
+      return new Response(JSON.stringify({ error: 'Sólo POST' }), {
         status: 405,
-        headers: { 'content-type': 'application/json; charset=utf-8' },
+        headers: { 'content-type': 'application/json' },
       });
     }
 
     const body = await req.json();
     const { serviceId, date, start, client } = body || {};
     if (!serviceId || !date || !start || !client?.name || !client?.email) {
-      return new Response(JSON.stringify({ error: 'Faltan datos obligatorios (serviceId, date, start, client.name, client.email)' }), {
+      return new Response(JSON.stringify({ error: 'Parámetros incompletos' }), {
         status: 400,
-        headers: { 'content-type': 'application/json; charset=utf-8' },
+        headers: { 'content-type': 'application/json' },
       });
     }
 
     const svc = SERVICE_MAP[String(serviceId)] || { name: 'Servicio', duration: 60 };
-    const GS_WEBHOOK_URL = process.env.GS_WEBHOOK_URL;
-    if (!GS_WEBHOOK_URL) {
-      return new Response(JSON.stringify({ error: 'GS_WEBHOOK_URL no configurada' }), {
-        status: 500,
-        headers: { 'content-type': 'application/json; charset=utf-8' },
-      });
-    }
-
     const payload = {
       nombre: client.name,
       email: client.email,
       telefono: client.phone || '',
-      fecha: date,            // YYYY-MM-DD
-      hora: start,            // HH:mm
-      servicio: svc.name,
+      fecha: date,       // YYYY-MM-DD
+      hora: start,       // HH:mm
       serviceId: String(serviceId),
+      servicio: svc.name,
       durationMin: svc.duration,
     };
 
-    const res = await fetch(GS_WEBHOOK_URL, {
+    const gasUrl = process.env.GAS_WEBAPP_URL;
+    if (!gasUrl) {
+      return new Response(JSON.stringify({ error: 'Falta GAS_WEBAPP_URL' }), {
+        status: 500,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    const res = await fetch(gasUrl, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    const txt = await res.text().catch(() => '');
-    const data = (() => { try { return JSON.parse(txt); } catch { return { raw: txt }; } })();
-
-    if (!res.ok) {
-      return new Response(JSON.stringify({ error: `Apps Script ${res.status}`, detail: data }), {
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch {
+      return new Response(JSON.stringify({ error: `GAS no-JSON: ${text.slice(0, 300)}` }), {
         status: 502,
-        headers: { 'content-type': 'application/json; charset=utf-8' },
+        headers: { 'content-type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, result: data }), {
+    if (!res.ok || json?.success === false) {
+      return new Response(JSON.stringify({ error: json?.error || res.statusText }), {
+        status: 500,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true, ...json }), {
       status: 200,
-      headers: { 'content-type': 'application/json; charset=utf-8' },
+      headers: { 'content-type': 'application/json' },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { 'content-type': 'application/json; charset=utf-8' },
+      headers: { 'content-type': 'application/json' },
     });
   }
 }
