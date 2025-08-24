@@ -10,7 +10,7 @@ export const config = { runtime: 'edge' };
  */
 
 const TZ = 'America/Santiago';
-const OPEN_HOUR = 10;
+const OPEN_HOUR = 9;  // primer slot comienza 09:00
 const CLOSE_HOUR = 19; // último slot comienza 18:30
 const SLOT_MINUTES = 30;
 
