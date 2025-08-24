@@ -7,8 +7,8 @@ export const config = { runtime: 'edge' };
  */
 
 const TZ = 'America/Santiago';
-const OPEN_HOUR = 9;   // 09:00
-const CLOSE_HOUR = 19;  // último comienzo válido será 18:30
+const OPEN_HOUR = 9;   // 9:00
+const CLOSE_HOUR = 20;  // último comienzo válido será 18:30
 const SLOT_MINUTES = 30;
 
 const ENABLE_SATURDAY = true;
