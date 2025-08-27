@@ -13,7 +13,7 @@ const BANK_LINES = [
   "VANESSA MORALES — Cuenta Corriente 12700182876 — Banco Estado"
 ];
 // Horario comercial (validación de cortesía; la generación de slots la hace el front)
-const BUSINESS_HOURS = { start: "10:00", end: "18:00" };
+const BUSINESS_HOURS = { start: "10:00", end: "19:00" };
 // Desactivar sábados/domingos por semana del mes (SAT1, SAT3, SUN2, etc.)
 const DISABLED_DAYS = [
   // "SAT2", "SUN1"
