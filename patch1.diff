@@ -1,0 +1,88 @@
+﻿*** Begin Patch
+*** Update File: pages/api/slots.js
+@@
+ export const config = { runtime: 'edge' };
+ import { listPublicEvents } from '../../lib/google-calendar';
+ const SERVICE_DURATIONS = {
+   '1': 120, '2': 180, '3': 180, '4': 180, '5': 180, '6': 150, '7': 150, '8': 90,
+ };
+-function generateTimeSlots({ from, to, openHour=10, closeHour=19, slotMinutes=60, busy }) {
++function generateTimeSlots({ from, to, openHour=10, closeHour=19, slotMinutes=60, busy }) {
+   const slots = [];
+   const start = new Date(from);
+   const end = new Date(to);
+   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+-    for (let h = openHour; h < closeHour; h++) {
+-      const slotStart = new Date(d);
+-      slotStart.setHours(h, 0, 0, 0);
+-      const slotEnd = new Date(slotStart);
+-      slotEnd.setMinutes(slotEnd.getMinutes() + slotMinutes);
+-
+-      const overlapped = (busy || []).some((b) => {
+-        const bStart = new Date(b.start);
+-        const bEnd = new Date(b.end);
+-        return slotStart < bEnd && slotEnd > bStart;
+-      });
+-
+-      slots.push({ start: slotStart.toISOString(), end: slotEnd.toISOString(), available: !overlapped });
+-    }
++    // intervalos cada 30 minutos
++    for (let h = openHour; h < closeHour; h++) {
++      for (let m = 0; m < 60; m += 30) {
++        const slotStart = new Date(d);
++        slotStart.setHours(h, m, 0, 0);
++        const slotEnd = new Date(slotStart);
++        slotEnd.setMinutes(slotEnd.getMinutes() + slotMinutes);
++
++        const overlapped = (busy || []).some((b) => {
++          const bStart = new Date(b.start);
++          const bEnd = new Date(b.end);
++          return slotStart < bEnd && slotEnd > bStart;
++        });
++
++        slots.push({ start: slotStart.toISOString(), end: slotEnd.toISOString(), available: !overlapped });
++      }
++    }
+   }
+   return slots;
+ }
+ export default async function handler(req) {
+   try {
+-    const { searchParams } = new URL(req.url);
+-    const date = searchParams.get('date');
+-    const serviceId = searchParams.get('serviceId');
++    const { searchParams } = new URL(req.url);
++    const date = searchParams.get('date');
++    const serviceId = searchParams.get('serviceId');
++    const isExtra = searchParams.get('extra') === '1';
+@@
+-    const { busy } = await listPublicEvents({ timeMin: from, timeMax: to });
++    const { busy } = await listPublicEvents({ timeMin: from, timeMax: to });
+-    const slots = generateTimeSlots({
+-      from, to, openHour: 10, closeHour: 19, slotMinutes, busy,
+-    });
++    const slots = generateTimeSlots({
++      from,
++      to,
++      openHour: isExtra ? 18 : 10,
++      closeHour: isExtra ? 20 : 19,
++      slotMinutes,
++      busy,
++    });
+-    const times = slots.filter(s => s.available).map(s => new Date(s.start).toISOString());
++    const times = slots
++      .filter(s => s.available)
++      .map(s => {
++        const d = new Date(s.start);
++        return d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
++      });
+     return new Response(JSON.stringify({
+       from, to, busy, slots, availableSlots: times,
+     }), { headers: { 'content-type': 'application/json' }, status: 200 });
+   } catch (err) {
+     return new Response(JSON.stringify({ error: String(err) }), {
+       headers: { 'content-type': 'application/json' }, status: 500
+     });
+   }
+ }
+*** End Patch
