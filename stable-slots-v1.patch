@@ -1,0 +1,188 @@
+*** /dev/null
+--- b/pages/api/slots.js
+@@
++// pages/api/slots.js
++export const config = { runtime: 'edge' };
++
++/**
++ * Lógica “estable” acordada:
++ * - Horario normal: inicios cada 30 min de 10:00 a 17:30 (inclusive).
++ *   Si un servicio empieza 17:30 y termina después de 18:00, se permite si no choca con Calendar.
++ * - Extra cupo (kind=extra-1): inicios cada 30 min de 18:00 a 20:00 (inclusive).
++ *   Si un servicio empieza 20:00 y termina después de 20:00, se permite si no choca.
++ * - Se filtran slots pasados “hoy” con TZ America/Santiago.
++ * - Ambos cruzan contra el MISMO calendario (busy) para bloquearse mutuamente.
++ *
++ * NOTA TZ: Para robustez operativa, usamos un offset configurable "-04:00" vía env.
++ * Si cambia a horario de verano, ajusta NEXT_PUBLIC_TZ_OFFSET a "-03:00" en .env.local.
++ */
++
++const SERVICE_DURATIONS = {
++  '1': 120,
++  '2': 180,
++  '3': 180,
++  '4': 180,
++  '5': 180,
++  '6': 150,
++  '7': 150,
++  '8': 90,
++};
++
++// Paso en minutos
++const STEP_MIN = 30;
++
++// Ventanas base (minutos desde medianoche, en hora local)
++const NORMAL_OPEN_MIN = 10 * 60;              // 10:00
++const NORMAL_LAST_START_MIN = 17 * 60 + 30;   // 17:30 (inclusive)
++
++const EXTRA_OPEN_MIN = 18 * 60;               // 18:00
++const EXTRA_LAST_START_MIN = 20 * 60;         // 20:00 (inclusive)
++
++// Offset zona horaria (ej: "-04:00" o "-03:00")
++const TZ_OFFSET = process.env.NEXT_PUBLIC_TZ_OFFSET || '-04:00';
++
++// Helper: construir ISO local con offset explícito (no convierte a UTC)
++function isoLocalWithOffset(dateStr, minutesFromMidnight) {
++  const hh = String(Math.floor(minutesFromMidnight / 60)).padStart(2, '0');
++  const mm = String(minutesFromMidnight % 60).padStart(2, '0');
++  return `${dateStr}T${hh}:${mm}:00.000${TZ_OFFSET}`;
++}
++
++// Helper: parse RFC3339 string (con offset) a milisegundos UTC (Date.parse maneja offset)
++function toUTCms(rfc3339) {
++  return Date.parse(rfc3339);
++}
++
++// Convierte una lista de eventos ocupados (RFC3339) a rangos [msUTCstart, msUTCend)
++function busyToRanges(busy = []) {
++  return (busy || []).map(b => {
++    const s = toUTCms(b.start);
++    const e = toUTCms(b.end);
++    return [s, e];
++  }).filter(([s, e]) => Number.isFinite(s) && Number.isFinite(e) && e > s);
++}
++
++// Chequea si [candStartMs, candEndMs) se solapa con algún rango ocupado
++function overlaps(busyRanges, candStartMs, candEndMs) {
++  return busyRanges.some(([bs, be]) => candStartMs < be && candEndMs > bs);
++}
++
++// Devuelve minuto actual de “hoy” en America/Santiago según offset fijo
++function nowLocalMinutes(dateStr) {
++  // Tomamos el “ahora” real en UTC
++  const nowUtc = new Date();
++  // Lo expresamos como ISO con offset fijo para el día consultado
++  // Estrategia: generar ISO con fecha del día consultado y la hora/min de "ahora" local estimada.
++  // Simplificación: si el “dateStr” es hoy (en TZ local), filtraremos por hora actual.
++  // Para saber si “dateStr” es hoy local, calculamos “hoy” local con el mismo offset.
++  const todayLocalISO = new Date(nowUtc.getTime() - offsetMsFromOffset(TZ_OFFSET)).toISOString().slice(0,10);
++  if (todayLocalISO !== dateStr) return -1; // no filtrar (no es hoy)
++
++  const local = new Date(nowUtc.getTime() - offsetMsFromOffset(TZ_OFFSET));
++  return local.getHours() * 60 + local.getMinutes();
++}
++
++function offsetMsFromOffset(off) {
++  // off formato "-04:00" / "-03:00"
++  const m = /^([+-])(\d{2}):(\d{2})$/.exec(off);
++  if (!m) return 0;
++  const sign = m[1] === '-' ? -1 : 1;
++  const hh = parseInt(m[2],10);
++  const mm = parseInt(m[3],10);
++  return sign * (hh*60 + mm) * 60000 * -1; 
++  // *-1 porque pasar de UTC a local: local = utc + offset; aquí queremos utc->local
++}
++
++// Genera slots base (minutos inicio) dada una ventana y paso
++function generateStarts(minStart, lastStartIncl, step = STEP_MIN) {
++  const out = [];
++  for (let m = minStart; m <= lastStartIncl; m += step) out.push(m);
++  return out;
++}
++
++// Formatea “HH:mm”
++function fmtHM(minutes) {
++  const h = String(Math.floor(minutes/60)).padStart(2,'0');
++  const m = String(minutes%60).padStart(2,'0');
++  return `${h}:${m}`;
++}
++
++// Llamada a Calendar rápida (ya tienes implementado en tu proyecto listPublicEvents)
++import { listPublicEvents } from '../../lib/google-calendar';
++
++export default async function handler(req) {
++  try {
++    const { searchParams } = new URL(req.url);
++    const date = searchParams.get('date');         // YYYY-MM-DD
++    const serviceId = searchParams.get('serviceId') || '8';
++    const kind = searchParams.get('kind') || 'normal'; // 'normal' | 'extra-1'
++
++    if (!date) {
++      return new Response(JSON.stringify({ error: 'Falta date (YYYY-MM-DD)' }), {
++        status: 400,
++        headers: { 'content-type': 'application/json' }
++      });
++    }
++
++    const duration = SERVICE_DURATIONS[serviceId] || 60;
++
++    // Ventana según kind
++    const [minStart, lastStartIncl] = kind === 'extra-1'
++      ? [EXTRA_OPEN_MIN, EXTRA_LAST_START_MIN]
++      : [NORMAL_OPEN_MIN, NORMAL_LAST_START_MIN];
++
++    // Busy del día (min a max con holgura)
++    const timeMin = `${date}T00:00:00.000${TZ_OFFSET}`;
++    const timeMax = `${date}T23:59:59.999${TZ_OFFSET}`;
++    const { busy = [] } = await listPublicEvents({ timeMin, timeMax });
++    const busyRanges = busyToRanges(busy);
++
++    // “Ahora” local en minutos (o -1 si no es hoy)
++    const nowMin = nowLocalMinutes(date);
++
++    // Generar candidatos
++    const starts = generateStarts(minStart, lastStartIncl, STEP_MIN);
++    const slots = [];
++    const times = [];
++
++    for (const startMin of starts) {
++      // Filtrar pasados si es hoy
++      if (nowMin >= 0 && startMin < nowMin) continue;
++
++      const slotStartIso = isoLocalWithOffset(date, startMin);
++      const slotEndIso = isoLocalWithOffset(date, startMin + duration);
++
++      const sMs = toUTCms(slotStartIso);
++      const eMs = toUTCms(slotEndIso);
++      const free = !overlaps(busyRanges, sMs, eMs);
++
++      slots.push({
++        start: slotStartIso,
++        end: slotEndIso,
++        available: free,
++      });
++      if (free) times.push(fmtHM(startMin));
++    }
++
++    return new Response(
++      JSON.stringify({
++        from: date,
++        to: date,
++        kind,
++        serviceId,
++        slotMinutes: duration,
++        tzOffset: TZ_OFFSET,
++        busy,
++        slots,
++        times,
++        availableSlots: times,
++      }),
++      { headers: { 'content-type': 'application/json' }, status: 200 }
++    );
++  } catch (err) {
++    return new Response(JSON.stringify({ error: String(err) }), {
++      status: 500,
++      headers: { 'content-type': 'application/json' }
++    });
++  }
++}

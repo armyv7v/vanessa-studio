@@ -1,9 +1,4 @@
-import "../styles/globals.css";
-
-/**
- * Envoltorio global de Next.js. Aquí importamos Tailwind y podemos añadir
- * providers de contexto si los necesitáramos más adelante.
- */
+﻿import "../styles/globals.css";
 export default function App({ Component, pageProps }) {
   return <Component {...pageProps} />;
 }
