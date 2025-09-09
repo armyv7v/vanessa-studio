@@ -1,7 +1,6 @@
 // pages/api/book.js
 export const config = { runtime: 'edge' };
 
-// Valida un email simple
 function isEmailValid(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -31,8 +30,8 @@ export default async function handler(req) {
       date,     // YYYY-MM-DD
       start,    // HH:mm
       client,   // { name, email, phone }
-      extraCup, // boolean (true => extra cupo)
-      durationOverrideMin, // opcional
+      extraCup, // boolean
+      durationOverrideMin, // optional
     } = body || {};
 
     if (!serviceId || !date || !start || !client?.name || !client?.email) {
@@ -46,7 +45,6 @@ export default async function handler(req) {
       });
     }
 
-    // GAS: Calendar + Sheets + correo (normal/extra)
     const payload = {
       nombre: client.name,
       email: client.email,

@@ -8,17 +8,17 @@ function Write-File {
     New-Item -ItemType Directory -Path $dir -Force | Out-Null
   }
   Set-Content -Path $Path -Value $Content -Encoding UTF8
-  Write-Host "✓ Wrote $Path"
+  Write-Host ("✓ Wrote {0}" -f $Path)
 }
 
 Write-Host "== Limpieza de artefactos =="
 $gitattrib = "pages/api/.gitattributes"
 if (Test-Path $gitattrib) {
   Remove-Item $gitattrib -Force
-  Write-Host "✓ Removed $gitattrib"
+  Write-Host "✓ Removed pages/api/.gitattributes"
 }
 
-Write-Host "== Actualizando /api/book (Edge + GAS) =="
+Write-Host "== Escribiendo pages/api/book.js (runtime edge) =="
 $book = @'
 export const runtime = 'edge';
 
@@ -67,7 +67,7 @@ export default async function handler(req) {
       });
     }
 
-    // GAS hace: Calendar + Sheets + correo según normal/extra
+    // GAS: Calendar + Sheets + correo (normal/extra)
     const payload = {
       nombre: client.name,
       email: client.email,
@@ -109,7 +109,7 @@ export default async function handler(req) {
 '@
 Write-File "pages/api/book.js" $book
 
-Write-Host "== Actualizando /api/slots (Edge + Luxon + normal/extra) =="
+Write-Host "== Escribiendo pages/api/slots.js (runtime edge + Luxon) =="
 $slots = @'
 export const runtime = 'edge';
 
@@ -134,18 +134,18 @@ function parseQuery(url) {
   return Object.fromEntries(u.searchParams.entries());
 }
 
-// Genera inicios cada 30 min en una ventana (incluye último inicio permitido)
+// Genera inicios cada 30 min
 function buildSlots(dateISO, mode, serviceId) {
   const durationMin = SERVICE_MAP[String(serviceId)] || 90;
   const base = DateTime.fromISO(dateISO, { zone: TZ });
 
   let openHour, lastStartHour;
   if (mode === 'extra') {
-    // Extra: inicios 18:00..20:00 (inclusive)
+    // Extra: 18:00 a 20:00 (inclusive)
     openHour = 18;
     lastStartHour = 20;
   } else {
-    // Normal: inicios 10:00..17:30 (inclusive)
+    // Normal: 10:00 a 17:30 (inclusive)
     openHour = 10;
     lastStartHour = 17.5; // 17:30
   }
@@ -256,7 +256,10 @@ Write-File "pages/api/slots.js" $slots
 
 Write-Host "== Registrando cambios en git =="
 git add -A
-git commit -m "fix(edge): rewrite /api/book and /api/slots for Edge (GAS + Luxon); remove pages/api/.gitattributes" | Out-Null
-Write-Host "✓ Commit listo. Ejecuta ahora:"
-Write-Host "   npm i luxon"
-Write-Host "   git push origin main"
+git commit -m "chore(edge): rewrite /api/book and /api/slots (Edge + Luxon) and remove pages/api/.gitattributes" | Out-Null
+
+Write-Host ""
+Write-Host "✓ Commit listo."
+Write-Host "Instala dependencia y empuja al repo:"
+Write-Host "  npm i luxon"
+Write-Host "  git push origin main"
