@@ -1,105 +1,87 @@
 // pages/api/book.js
+export const config = { runtime: 'edge' };
 
-// Nota: runtime Node (no Edge) para facilitar depuración y compatibilidad
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+// Valida un email simple
+function isEmailValid(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
-  const gasUrl = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
-  if (!gasUrl) {
-    return res.status(500).json({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL' });
-  }
-
-  // Debe calzar con UI/GAS
-  const SERVICE_MAP = {
-    '1': { name: 'Retoque (Mantenimiento)', duration: 120 },
-    '2': { name: 'Reconstrucción Uñas Mordidas (Onicofagía)', duration: 180 },
-    '3': { name: 'Uñas Acrílicas', duration: 180 },
-    '4': { name: 'Uñas Polygel', duration: 180 },
-    '5': { name: 'Uñas Softgel', duration: 180 },
-    '6': { name: 'Kapping o Baño Polygel o Acrílico sobre uña natural', duration: 150 },
-    '7': { name: 'Reforzamiento Nivelación Rubber', duration: 150 },
-    '8': { name: 'Esmaltado Permanente', duration: 90 }
-  };
-
+export default async function handler(req) {
   try {
-    const body = req.body || {};
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+        status: 405,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const GAS_URL  = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
+    const CALENDAR = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID || '';
+    const TZ       = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
+
+    if (!GAS_URL) {
+      return new Response(JSON.stringify({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = await req.json();
     const {
-      serviceId,       // número o string
-      date,            // 'YYYY-MM-DD'
-      start,           // 'HH:mm' (preferido) — puede venir como '10:00' o '10:00:00'
-      hora,            // compat: 'HH:mm' si el front envía este campo
-      client,          // { name, email, phone }
-      includeExtra,    // booleano (extra cupo)
-      durationMin      // opcional; si no viene, usamos SERVICE_MAP
-    } = body;
+      serviceId,
+      date,     // YYYY-MM-DD
+      start,    // HH:mm
+      client,   // { name, email, phone }
+      extraCup, // boolean (true => extra cupo)
+      durationOverrideMin, // opcional
+    } = body || {};
 
-    const sid = String(serviceId || '');
-    const svc = SERVICE_MAP[sid] || {};
-
-    const hhmmRaw = (start || hora || '').toString();
-    const hhmm = hhmmRaw.slice(0, 5); // normaliza 'HH:mm:ss' → 'HH:mm'
-
-    const dur = Number(
-      typeof durationMin === 'number' ? durationMin : (svc.duration ?? 60)
-    );
-
-    // Validaciones mínimas
-    if (!sid || !svc.name) {
-      return res.status(400).json({ error: 'serviceId inválido o desconocido' });
+    if (!serviceId || !date || !start || !client?.name || !client?.email) {
+      return new Response(JSON.stringify({ error: 'Datos incompletos' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
     }
-    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return res.status(400).json({ error: 'Fecha inválida (use YYYY-MM-DD)' });
-    }
-    if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) {
-      return res.status(400).json({ error: 'Hora inválida (use HH:mm)' });
-    }
-    if (!client?.name || !client?.email) {
-      return res.status(400).json({ error: 'Faltan datos del cliente (name, email)' });
-    }
-    if (!Number.isFinite(dur) || dur <= 0) {
-      return res.status(400).json({ error: 'Duración inválida' });
+    if (!isEmailValid(client.email)) {
+      return new Response(JSON.stringify({ error: 'Email inválido' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    // Payload para GAS (Apps Script)
+    // GAS: Calendar + Sheets + correo (normal/extra)
     const payload = {
       nombre: client.name,
       email: client.email,
       telefono: client.phone || '',
       fecha: date,
-      hora: hhmm,
-      serviceId: sid,
-      servicio: svc.name,
-      durationMin: dur,
-      includeExtra: Boolean(includeExtra),
-      source: 'web'
+      hora: start,
+      serviceId: String(serviceId),
+      extraCup: !!extraCup,
+      durationMin: durationOverrideMin ? Number(durationOverrideMin) : undefined,
+      calendarId: CALENDAR,
+      tz: TZ,
     };
 
-    // Llamada al GAS
-    const gasResp = await fetch(gasUrl, {
+    const r = await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      redirect: 'follow',
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
-    const text = await gasResp.text();
-    let json;
-    try { json = JSON.parse(text); } catch { json = { raw: text }; }
+    const text = await r.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
-    // El GAS devuelve { success: true, ... } si todo bien
-    if (!gasResp.ok || json?.success === false) {
-      // Pasamos el error tal cual para depurar rápido
-      return res.status(500).json({ error: json?.error || `GAS ${gasResp.status}: ${text}` });
+    if (!r.ok || data?.success === false) {
+      return new Response(JSON.stringify({ error: data?.error || 'GAS error', data }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return res.status(200).json({
-      success: true,
-      durationMin: dur,
-      ...json
+    return new Response(JSON.stringify({ success: true, data }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return res.status(500).json({ error: String(err) });
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
+    });
   }
 }

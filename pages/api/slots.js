@@ -1,169 +1,142 @@
 ﻿// pages/api/slots.js
-import { DateTime, Interval } from "luxon";
-import { listPublicEvents } from "../../lib/google-calendar";
+export const config = { runtime: 'edge' };
 
-export const config = { runtime: "edge" };
+import { DateTime, Interval } from 'luxon';
 
-// Zona horaria base del negocio
-const TZ = "America/Santiago";
+const TZ = 'America/Santiago';
 
-// Duración por servicio (minutos)
-const SERVICE_DURATIONS = {
-  "1": 120,
-  "2": 180,
-  "3": 180,
-  "4": 180,
-  "5": 180,
-  "6": 150,
-  "7": 150,
-  "8": 90, // Esmaltado Permanente
+// Duración por servicio (min)
+const SERVICE_MAP = {
+  '1': 120,
+  '2': 180,
+  '3': 180,
+  '4': 180,
+  '5': 180,
+  '6': 150,
+  '7': 150,
+  '8': 90,
 };
 
-// Ventanas de inicio permitidas (inclusivas), en minutos desde 00:00
-const HALF_HOUR = 30;
+function parseQuery(url) {
+  const u = new URL(url);
+  return Object.fromEntries(u.searchParams.entries());
+}
 
-// Normal: 10:00 → 17:30 (inclusive)
-const NORMAL_START_MIN = 10 * 60;       // 600
-const NORMAL_LAST_START_MIN = 17 * 60 + 30; // 1050
+// Genera inicios cada 30 min
+function buildSlots(dateISO, mode, serviceId) {
+  const durationMin = SERVICE_MAP[String(serviceId)] || 90;
+  const base = DateTime.fromISO(dateISO, { zone: TZ });
 
-// Extra cupo: 18:00 → 20:00 (inclusive)
-const EXTRA_START_MIN = 18 * 60;        // 1080
-const EXTRA_LAST_START_MIN = 20 * 60;   // 1200
+  let openHour, lastStartHour;
+  if (mode === 'extra') {
+    // Extra: 18:00 a 20:00 (inclusive)
+    openHour = 18;
+    lastStartHour = 20;
+  } else {
+    // Normal: 10:00 a 17:30 (inclusive)
+    openHour = 10;
+    lastStartHour = 17.5; // 17:30
+  }
 
-// Helper: genera minutos [a, b] cada 30
-function rangeMinutesEvery30(a, b) {
+  const first = base.set({ hour: Math.floor(openHour), minute: (openHour % 1) ? 30 : 0, second: 0, millisecond: 0 });
+  const lastStart = base.set({
+    hour: Math.floor(lastStartHour),
+    minute: (lastStartHour % 1) ? 30 : 0,
+    second: 0,
+    millisecond: 0
+  });
+
   const out = [];
-  for (let m = a; m <= b; m += HALF_HOUR) out.push(m);
+  for (let t = first; t <= lastStart; t = t.plus({ minutes: 30 })) {
+    out.push({ start: t, end: t.plus({ minutes: durationMin }) });
+  }
   return out;
 }
 
-// Normaliza ocupados desde Google Calendar items o busy[]
-function normalizeBusy(resp) {
-  // Soporta {items:[{start/end}]} o {busy:[{start/end}]}
-  const list = resp?.items || resp?.busy || [];
-  return list
-    .map((it) => {
-      const s = it.start?.dateTime || it.start?.date;
-      const e = it.end?.dateTime || it.end?.date;
-      if (!s || !e) return null;
-      return {
-        start: DateTime.fromISO(s, { zone: TZ }),
-        end: DateTime.fromISO(e, { zone: TZ }),
-      };
-    })
-    .filter(Boolean)
-    .filter(({ start, end }) => start.isValid && end.isValid);
+async function fetchBusy(dateISO, apiKey, calendarId) {
+  const dayStart = DateTime.fromISO(dateISO, { zone: TZ }).startOf('day');
+  const dayEnd = dayStart.endOf('day');
+  const timeMin = encodeURIComponent(dayStart.toISO());
+  const timeMax = encodeURIComponent(dayEnd.toISO());
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?key=${encodeURIComponent(apiKey)}&singleEvents=true&orderBy=startTime&timeMin=${timeMin}&timeMax=${timeMax}&showDeleted=false`;
+
+  const r = await fetch(url);
+  if (!r.ok) {
+    const e = await r.text();
+    throw new Error(`Google Calendar ${r.status}: ${e}`);
+  }
+  const data = await r.json();
+
+  const intervals = [];
+  for (const ev of data.items || []) {
+    const s = ev.start?.dateTime || ev.start?.date;
+    const e = ev.end?.dateTime || ev.end?.date;
+    if (!s || !e) continue;
+    const si = DateTime.fromISO(s, { zone: TZ });
+    const ei = DateTime.fromISO(e, { zone: TZ });
+    if (!si.isValid || !ei.isValid) continue;
+    intervals.push(Interval.fromDateTimes(si, ei));
+  }
+  return intervals;
 }
 
-// Chequea cruce de intervalos
-function overlaps(aStart, aEnd, bStart, bEnd) {
-  // a<bEnd && aEnd>bStart
-  return aStart < bEnd && aEnd > bStart;
+function filterPastToday(slots, now) {
+  return slots.filter(s => s.start >= now);
 }
+
+const fmt = (dt) => dt.toFormat('HH:mm');
 
 export default async function handler(req) {
   try {
-    const { searchParams } = new URL(req.url);
+    const q = parseQuery(req.url);
+    const date = q.date;               // 'YYYY-MM-DD'
+    const serviceId = q.serviceId || '8';
+    const mode = q.mode === 'extra' ? 'extra' : 'normal';
 
-    // Parámetros
-    const dateStr = searchParams.get("date");        // YYYY-MM-DD (requerido)
-    const serviceId = String(searchParams.get("serviceId") || "8");
-    const mode = searchParams.get("mode") || "normal"; // "normal" | "extra"
+    const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
+    const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
 
-    if (!dateStr) {
-      return new Response(
-        JSON.stringify({ error: "Falta parámetro 'date' (YYYY-MM-DD)" }),
-        { status: 400, headers: { "content-type": "application/json" } }
-      );
-    }
-
-    // Duración del servicio
-    const duration = SERVICE_DURATIONS[serviceId] || 60;
-
-    // Día base en TZ local
-    const day = DateTime.fromISO(dateStr, { zone: TZ }).startOf("day");
-    if (!day.isValid) {
-      return new Response(
-        JSON.stringify({ error: "Fecha inválida" }),
-        { status: 400, headers: { "content-type": "application/json" } }
-      );
-    }
-
-    // Ventana de consulta al Calendar (todo el día)
-    const timeMin = day.toISO();
-    const timeMax = day.plus({ days: 1 }).toISO();
-
-    // Traer eventos ocupados del calendario
-    // (Asegúrate que NEXT_PUBLIC_GCAL_API_KEY y NEXT_PUBLIC_GCAL_CALENDAR_ID estén seteados)
-    const busyResp = await listPublicEvents({
-      timeMin,
-      timeMax,
-    });
-    const busy = normalizeBusy(busyResp);
-
-    // Generar posibles inicios según modo
-    let startMin, lastStartMin;
-    if (mode === "extra") {
-      startMin = EXTRA_START_MIN;
-      lastStartMin = EXTRA_LAST_START_MIN;
-    } else {
-      startMin = NORMAL_START_MIN;
-      lastStartMin = NORMAL_LAST_START_MIN;
-    }
-
-    const starts = rangeMinutesEvery30(startMin, lastStartMin);
-
-    // “Ahora” en TZ negocio para filtrar horas pasadas solo si es hoy
-    const now = DateTime.now().setZone(TZ);
-    const isToday = now.hasSame(day, "day");
-
-    const slots = [];
-    const availableSlots = [];
-
-    for (const m of starts) {
-      const slotStart = day.plus({ minutes: m });
-      const slotEnd = slotStart.plus({ minutes: duration });
-
-      // Filtrar horas pasadas solo si es hoy
-      if (isToday && slotStart <= now) {
-        continue;
-      }
-
-      // Verificar cruce con ocupados
-      const isOverlapped = busy.some(({ start, end }) =>
-        overlaps(slotStart, slotEnd, start, end)
-      );
-
-      const ok = !isOverlapped;
-
-      slots.push({
-        start: slotStart.toISO(),
-        end: slotEnd.toISO(),
-        available: ok,
+    if (!date) {
+      return new Response(JSON.stringify({ error: 'Falta date' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
       });
-
-      if (ok) {
-        // Lo que consume el front (HH:mm en TZ local)
-        availableSlots.push(slotStart.toFormat("HH:mm"));
-      }
+    }
+    if (!apiKey || !calendarId) {
+      return new Response(JSON.stringify({ error: 'Faltan credenciales de Calendar' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(
-      JSON.stringify({
-        date: day.toISODate(),
-        tz: TZ,
-        mode,
-        serviceId,
-        durationMin: duration,
-        availableSlots,
-        slots,
-      }),
-      { status: 200, headers: { "content-type": "application/json" } }
-    );
+    let slots = buildSlots(date, mode, serviceId);
+
+    // Filtrar “hoy” los slots pasados
+    const now = DateTime.now().setZone(TZ);
+    const day = DateTime.fromISO(date, { zone: TZ });
+    if (day.hasSame(now, 'day')) {
+      slots = filterPastToday(slots, now.startOf('minute'));
+    }
+
+    // Cruce con calendario
+    const busyIntervals = await fetchBusy(date, apiKey, calendarId);
+    const free = slots.filter(s => {
+      const slotI = Interval.fromDateTimes(s.start, s.end);
+      return !busyIntervals.some(bi => bi && bi.overlaps(slotI));
+    });
+
+    const times = free.map(s => fmt(s.start));
+
+    return new Response(JSON.stringify({
+      date,
+      mode,
+      serviceId: String(serviceId),
+      times,
+      availableSlots: times,
+      tz: TZ
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: String(err) }),
-      { status: 500, headers: { "content-type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
