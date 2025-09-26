@@ -52,24 +52,23 @@ export default function Home() {
       setErrorSlots(null);
 
       const formattedDate = format(date, 'yyyy-MM-dd');
-      // Horario normal => SIN extra=1
-      const res = await fetch(`/api/slots?date=${formattedDate}&serviceId=${serviceId}`);
-      const text = await res.text();
-
-      if (!res.ok) {
-        let errMsg = 'Error obteniendo slots disponibles';
-        try {
-          const errJson = JSON.parse(text);
-          errMsg = errJson.error || errJson.message || errMsg;
-        } catch (_) {}
-        throw new Error(errMsg);
+      
+      // ¡Importante! Asegúrate de que esta variable de entorno esté disponible en el cliente.
+      // Debe estar prefijada con NEXT_PUBLIC_ en tu archivo .env.local
+      if (!process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL) {
+        throw new Error("La URL del webhook no está configurada. Revisa la variable de entorno NEXT_PUBLIC_GAS_WEBHOOK_URL.");
       }
 
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        throw new Error('Respuesta inválida del servidor');
+      const gasUrl = new URL(process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL);
+      gasUrl.searchParams.append('date', formattedDate);
+      gasUrl.searchParams.append('serviceId', serviceId);
+      // Para horario normal, no se agrega el parámetro 'mode'
+
+      const res = await fetch(gasUrl.toString());
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Error obteniendo horarios disponibles');
       }
 
       // Tolerante: `availableSlots` (["HH:mm"]) o `times`
@@ -126,22 +125,23 @@ export default function Home() {
         throw new Error('Falta NEXT_PUBLIC_GAS_WEBHOOK_URL');
       }
 
-      const response = await fetch('/api/book', {
+      const payload = {
+        serviceId: selectedService,
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        start: selectedTime,
+        client: clientInfo,
+        extraCupo: false // Horario normal
+      };
+
+      const response = await fetch(process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Horario normal => extraCupo: false
-        body: JSON.stringify({
-          serviceId: selectedService,
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          start: selectedTime,
-          client: clientInfo,
-          extraCupo: false
-        })
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // GAS prefiere text/plain para POST
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.status === 'success') {
         setBookingStatus({ success: true, message: '¡Cita confirmada exitosamente!' });
         // Reset suave después de 3s
         setTimeout(() => {
