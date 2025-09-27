@@ -38,6 +38,7 @@ export default function ExtraCup() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
+  const [isFetchingClient, setIsFetchingClient] = useState(false);
 
   const nextDays = getNextDays(35);
 
@@ -90,6 +91,33 @@ export default function ExtraCup() {
     setClientInfo(prev => ({ ...prev, [field]: value }));
   }
 
+  const handleEmailBlur = async (e) => {
+    const email = e.target.value;
+    // Validación básica para no hacer llamadas vacías
+    if (!email || !email.includes('@')) {
+      return;
+    }
+
+    try {
+      setIsFetchingClient(true);
+      const res = await fetch(`/api/client?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+
+      if (res.ok && data.client) {
+        // Autocompletar el formulario si se encuentra el cliente
+        setClientInfo(prev => ({
+          ...prev,
+          name: data.client.name || prev.name,
+          phone: data.client.phone || prev.phone,
+        }));
+      }
+    } catch (error) {
+      console.error("Error al autocompletar datos del cliente:", error);
+    } finally {
+      setIsFetchingClient(false);
+    }
+  };
+
   async function handleSubmitBooking(e) {
     e.preventDefault();
     try {
@@ -99,7 +127,7 @@ export default function ExtraCup() {
         serviceId: selectedService,
         date: format(selectedDate, 'yyyy-MM-dd'),
         start: selectedTime, // HH:mm
-        extraCup: true,      // clave: EXTRA CUPO
+        extraCupo: true,     // clave: EXTRA CUPO (unificado)
         client: clientInfo,
       };
 
@@ -368,14 +396,22 @@ export default function ExtraCup() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={clientInfo.email}
-                  onChange={(e) => handleClientInfoChange('email', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
-                  placeholder="tu@email.com"
-                />
+                <div className="relative">
+                  <input
+                    type="email"
+                    required
+                    value={clientInfo.email}
+                    onChange={(e) => handleClientInfoChange('email', e.target.value)}
+                    onBlur={handleEmailBlur}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                    placeholder="tu@email.com"
+                  />
+                  {isFetchingClient && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>

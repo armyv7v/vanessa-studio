@@ -47,12 +47,23 @@ function doOptions(e) {
  * Maneja las solicitudes GET para obtener horarios disponibles.
  */
 function doGet(e) {
-  // Solución robusta para CORS: Devolver la respuesta con la cabecera correcta.
-  // Esto maneja redirecciones de Google que a veces eliminan la cabecera.
   const response = ContentService.createTextOutput();
   response.setMimeType(ContentService.MimeType.JSON);
   response.setHeader('Access-Control-Allow-Origin', '*');
   try {
+    const action = e.parameter.action;
+
+    // Acción para autocompletar datos del cliente
+    if (action === 'getClient') {
+      const email = e.parameter.email;
+      if (!email) throw new Error("Parámetro 'email' es requerido");
+      
+      const clientData = getClientByEmail(email);
+      response.setContent(JSON.stringify({ client: clientData }));
+      return response;
+    }
+
+    // Acción por defecto: obtener horarios
     const date = e.parameter.date; // 'YYYY-MM-DD'
     const serviceId = e.parameter.serviceId;
     const mode = e.parameter.mode || 'normal'; // 'normal' o 'extra'
@@ -75,6 +86,29 @@ function doGet(e) {
     response.setContent(JSON.stringify({ error: "Error interno del servidor: " + String(err) }));
     return response;
   }
+}
+
+/**
+ * Busca los datos más recientes de un cliente por su email en la hoja de cálculo.
+ * @param {string} email El email del cliente a buscar.
+ * @returns {object|null} Un objeto con {name, phone} o null si no se encuentra.
+ */
+function getClientByEmail(email) {
+  if (!email) return null;
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) return null;
+
+  const data = sh.getDataRange().getValues();
+  // Busca desde la última fila hacia arriba para obtener los datos más recientes.
+  for (let i = data.length - 1; i >= 1; i--) { // i >= 1 para saltar la cabecera
+    const row = data[i];
+    // Asume que las columnas son: A:Timestamp, B:Nombre, C:Email, D:Teléfono
+    if (row[2] && row[2].toString().trim().toLowerCase() === email.trim().toLowerCase()) {
+      return { name: row[1] || "", phone: row[3] || "" };
+    }
+  }
+  return null; // No se encontró el cliente
 }
 
 /**
@@ -237,7 +271,7 @@ function doPost(e) {
     const fecha     = (data.fecha || data.date || "").trim(); // YYYY-MM-DD
     const hora      = (data.hora  || data.start || "").trim(); // HH:mm
     const serviceId = String(data.serviceId || "");
-    const extraCupo = !!data.extraCupo;
+    const extraCupo = !!(data.extraCupo || data.extraCup); // Acepta ambos para retrocompatibilidad
     const durationMin = Number(data.durationMin || (SERVICE_MAP[serviceId]?.duration || 60));
     const serviceName = data.servicio || SERVICE_MAP[serviceId]?.name || "Servicio";
 

@@ -20,6 +20,7 @@ export default function Home() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
+  const [isFetchingClient, setIsFetchingClient] = useState(false);
 
   // Debe calzar con tu mapeo del back/GAS
   const services = [
@@ -103,21 +104,56 @@ export default function Home() {
     }));
   };
 
+  const handleEmailBlur = async (e) => {
+    const email = e.target.value;
+    // Validación básica para no hacer llamadas vacías
+    if (!email || !email.includes('@')) {
+      return;
+    }
+
+    try {
+      setIsFetchingClient(true);
+      const res = await fetch(`/api/client?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+
+      if (res.ok && data.client) {
+        // Autocompletar el formulario si se encuentra el cliente
+        setClientInfo(prev => ({
+          ...prev,
+          name: data.client.name || prev.name,
+          phone: data.client.phone || prev.phone,
+        }));
+      }
+    } catch (error) {
+      console.error("Error al autocompletar datos del cliente:", error);
+      // No mostramos error al usuario, simplemente no se autocompleta.
+    } finally {
+      setIsFetchingClient(false);
+    }
+  };
+
   const handleSubmitBooking = async (e) => {
     e.preventDefault();
     try {
       setBookingStatus({ loading: true });
 
-      const payload = {
-        serviceId: selectedService,
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        start: selectedTime,
-        client: clientInfo,
-        extraCupo: false // Horario normal
-      };
+      const response = await fetch("/api/book", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          serviceId: selectedService,
+          date: format(selectedDate, "yyyy-MM-dd"),
+          start: selectedTime,
+          client: clientInfo,
+          extraCupo: false, // Horario normal
+        }),
+      });
 
-      await bookAppointment(payload);
+      const data = await response.json();
 
+      if (response.ok) {
         setBookingStatus({ success: true, message: '¡Cita confirmada exitosamente!' });
         // Reset suave después de 3s
         setTimeout(() => {
@@ -127,7 +163,9 @@ export default function Home() {
           setClientInfo({ name: '', email: '', phone: '' });
           setStep(1);
         }, 3000);
-
+      } else {
+        throw new Error(data.error || "Error al confirmar la cita");
+      }
     } catch (error) {
       console.error('Error al confirmar cita:', error);
       setBookingStatus({ error: true, message: error.message });
@@ -405,14 +443,22 @@ export default function Home() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Email *
                 </label>
-                <input
-                  type="email"
-                  required
-                  value={clientInfo.email}
-                  onChange={(e) => handleClientInfoChange('email', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
-                  placeholder="tu@email.com"
-                />
+                <div className="relative">
+                  <input
+                    type="email"
+                    required
+                    value={clientInfo.email}
+                    onChange={(e) => handleClientInfoChange('email', e.target.value)}
+                    onBlur={handleEmailBlur}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-colors"
+                    placeholder="tu@email.com"
+                  />
+                  {isFetchingClient && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
