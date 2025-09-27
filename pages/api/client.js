@@ -5,15 +5,22 @@ export const config = { runtime: 'edge' };
  * API Route para actuar como proxy y buscar datos de un cliente por su email.
  * Esto evita errores de CORS, ya que la llamada a Google se hace desde el servidor.
  */
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const { email } = req.query;
+  const { searchParams } = new URL(req.url);
+  const email = searchParams.get('email');
 
   if (!email) {
-    return res.status(400).json({ error: 'El parámetro email es requerido' });
+    return new Response(JSON.stringify({ error: 'El parámetro email es requerido' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
@@ -21,7 +28,7 @@ export default async function handler(req, res) {
   if (!GAS_URL) {
     return res.status(500).json({ error: 'La URL del webhook no está configurada en el servidor.' });
   }
-
+  
   try {
     const url = new URL(GAS_URL);
     url.searchParams.append('action', 'getClient');
@@ -35,10 +42,16 @@ export default async function handler(req, res) {
     }
 
     // Devuelve los datos del cliente (o null si no se encontró) al frontend
-    res.status(200).json(data);
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
     console.error('Error en /api/client:', error);
-    res.status(500).json({ error: error.message || 'Error interno del servidor' });
+    return new Response(JSON.stringify({ error: error.message || 'Error interno del servidor' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
