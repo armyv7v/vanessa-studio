@@ -1,4 +1,5 @@
 // pages/api/client.js
+export const config = { runtime: 'edge' };
 
 /**
  * API Route para actuar como proxy y buscar datos de un cliente por su email.
@@ -41,4 +42,3 @@ export default async function handler(req, res) {
     res.status(500).json({ error: error.message || 'Error interno del servidor' });
   }
 }
-
