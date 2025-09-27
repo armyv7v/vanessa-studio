@@ -33,6 +33,17 @@ const SERVICE_MAP = {
 };
 
 /**
+ * Maneja las solicitudes OPTIONS (preflight) para CORS.
+ * Esto es crucial para que las solicitudes GET y POST desde el navegador funcionen.
+ */
+function doOptions(e) {
+  return ContentService.createTextOutput()
+    .setHeader('Access-Control-Allow-Origin', '*') // O tu dominio específico
+    .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
+/**
  * Maneja las solicitudes GET para obtener horarios disponibles.
  */
 function doGet(e) {

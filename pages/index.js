@@ -51,8 +51,17 @@ export default function Home() {
     try {
       setLoadingSlots(true);
       setErrorSlots(null);
-      const slots = await getAvailableSlots(date, serviceId, 'normal');
-      setAvailableSlots(slots);
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      // Llamamos a nuestra nueva API Route
+      const res = await fetch(`/api/slots?date=${formattedDate}&serviceId=${serviceId}&mode=normal`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Error obteniendo los horarios');
+      }
+
+      const list = data.availableSlots || data.times || [];
+      setAvailableSlots(Array.isArray(list) ? list : []);
     } catch (error) {
       console.error('Error fetching slots:', error);
       setErrorSlots(error.message || String(error));

@@ -52,18 +52,15 @@ export default function ExtraCup() {
       setLoadingSlots(true);
       setErrorSlots(null);
       const yyyyMMdd = format(dateObj, 'yyyy-MM-dd');
-      // ¡Importante! Asegúrate de que esta variable de entorno esté disponible en el cliente.
-      // Debe estar prefijada con NEXT_PUBLIC_ en tu archivo .env.local
-      if (!process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL) {
-        throw new Error("La URL del webhook no está configurada. Revisa la variable de entorno NEXT_PUBLIC_GAS_WEBHOOK_URL.");
-      }
-      const gasUrl = new URL(process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL);
-      gasUrl.searchParams.append('date', yyyyMMdd);
-      gasUrl.searchParams.append('serviceId', serviceId);
-      gasUrl.searchParams.append('mode', 'extra');
-      const res = await fetch(gasUrl.toString());
+      // Usamos nuestra API Route, que es la forma correcta para evitar CORS.
+      const url = `/api/slots?date=${yyyyMMdd}&serviceId=${serviceId}&mode=extra`;
+      const res = await fetch(url);
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Error cargando horarios');
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Error cargando horarios');
+      }
+
       const arr = Array.isArray(data.availableSlots) ? data.availableSlots : (data.times || []);
       setAvailableSlots(arr || []);
     } catch (err) {
@@ -98,26 +95,23 @@ export default function ExtraCup() {
     try {
       setBookingStatus({ loading: true });
 
-      if (!process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL) {
-        throw new Error("La URL del webhook no está configurada. Revisa la variable de entorno NEXT_PUBLIC_GAS_WEBHOOK_URL.");
-      }
-
       const payload = {
         serviceId: selectedService,
         date: format(selectedDate, 'yyyy-MM-dd'),
         start: selectedTime, // HH:mm
-        extraCupo: true,      // clave: EXTRA CUPO (corregido a extraCupo)
+        extraCup: true,      // clave: EXTRA CUPO
         client: clientInfo,
       };
 
-      const res = await fetch(process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL, {
+      // Usamos nuestra API Route /api/book
+      const res = await fetch("/api/book", {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // GAS prefiere text/plain para POST
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       const data = await res.json();
-      if (!res.ok || data.status !== 'success') {
+      if (!res.ok || data?.error) {
         throw new Error(data?.error || 'Error al confirmar la cita');
       }
 
@@ -134,10 +128,6 @@ export default function ExtraCup() {
       setBookingStatus({ error: true, message: String(err.message || err) });
     }
   }
-
-  // Corregido: el payload de reserva usaba 'extraCup', pero el de la página principal usaba 'extraCupo'.
-  // Unificamos a 'extraCupo' para consistencia con el backend.
-  // Si tu Google Apps Script espera 'extraCup', cambia 'extraCupo: true' a 'extraCup: true' arriba.
 
   const formatDate = (date) => date ? format(date, 'd MMMM yyyy', { locale: es }) : '';
 
