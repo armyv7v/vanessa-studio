@@ -13,7 +13,10 @@ const BANK_LINES = [
   "VANESSA MORALES — Cuenta RUT 27774310-8 — Banco Estado",
   "VANESSA MORALES — Cuenta Corriente 12700182876 — Banco Estado"
 ];
+// Horarios de atención
 const BUSINESS_HOURS = { start: "10:00", end: "18:00" };
+const EXTRA_HOURS    = { start: "18:00", end: "20:00" };
+const SLOT_STEP_MIN  = 30; // Intervalo de los slots, en minutos
 const DISABLED_DAYS = [
   // Ejemplos: "SAT1", "SAT3", "SUN2"
 ];
@@ -28,6 +31,106 @@ const SERVICE_MAP = {
   "7": { name: "Reforzamiento Nivelación Rubber", duration: 150 },
   "8": { name: "Esmaltado Permanente", duration: 90 }
 };
+
+/**
+ * Maneja las solicitudes GET para obtener horarios disponibles.
+ */
+function doGet(e) {
+  // Solución robusta para CORS: Devolver la respuesta con la cabecera correcta.
+  // Esto maneja redirecciones de Google que a veces eliminan la cabecera.
+  const response = ContentService.createTextOutput();
+  response.setMimeType(ContentService.MimeType.JSON);
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  try {
+    const date = e.parameter.date; // 'YYYY-MM-DD'
+    const serviceId = e.parameter.serviceId;
+    const mode = e.parameter.mode || 'normal'; // 'normal' o 'extra'
+
+    if (!date || !serviceId) {
+      return jsonResponse({ error: "Faltan parámetros 'date' o 'serviceId'" }, 400);
+    }
+
+    const service = SERVICE_MAP[serviceId];
+    if (!service) {
+      return jsonResponse({ error: "Servicio no válido" }, 400);
+    }
+
+    const availableSlots = getAvailableSlotsForDay(date, service.duration, mode);
+    
+    response.setContent(JSON.stringify({ availableSlots: availableSlots }));
+    return response;
+
+  } catch (err) {
+    response.setContent(JSON.stringify({ error: "Error interno del servidor: " + String(err) }));
+    return response;
+  }
+}
+
+/**
+ * Calcula los horarios disponibles para un día, servicio y modo específicos.
+ */
+function getAvailableSlotsForDay(dateStr, durationMin, mode) {
+  const targetDate = new Date(dateStr + "T00:00:00");
+  if (isNaN(targetDate.getTime())) {
+    throw new Error("Fecha inválida: " + dateStr);
+  }
+
+  // 1. Verificar si el día está deshabilitado
+  if (isDisabledDay(targetDate)) {
+    return [];
+  }
+
+  // 2. Definir la ventana de tiempo según el modo
+  const hours = (mode === 'extra') ? EXTRA_HOURS : BUSINESS_HOURS;
+  const [startHour, startMin] = hours.start.split(':').map(Number);
+  const [endHour, endMin] = hours.end.split(':').map(Number);
+
+  const dayStart = new Date(targetDate);
+  dayStart.setHours(startHour, startMin, 0, 0);
+
+  const dayEnd = new Date(targetDate);
+  dayEnd.setHours(endHour, endMin, 0, 0);
+
+  // 3. Obtener eventos existentes en el calendario para ese día
+  const cal = CalendarApp.getCalendarById(CALENDAR_ID);
+  const busySlots = cal.getEvents(dayStart, dayEnd).map(function(ev) {
+    return { start: ev.getStartTime(), end: ev.getEndTime() };
+  });
+
+  // 4. Generar todos los posibles slots y filtrar los no disponibles
+  const availableSlots = [];
+  let cursor = new Date(dayStart);
+
+  while (cursor < dayEnd) {
+    const slotStart = new Date(cursor);
+    const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
+
+    // El slot es válido si comienza antes de la hora de cierre de la ventana.
+    // Para el horario normal, también debe terminar antes de la hora de cierre.
+    // Para el horario extra, puede terminar después.
+    const isValidWindow = (mode === 'extra') ? (slotStart < dayEnd) : (slotEnd <= dayEnd);
+
+    if (isValidWindow) {
+      // Verificar si hay conflicto con algún evento existente
+      const hasConflict = busySlots.some(function(busy) {
+        return (slotStart < busy.end) && (slotEnd > busy.start);
+      });
+
+      // Verificar si el slot ya pasó (si es para hoy)
+      const now = new Date();
+      const isPast = (slotStart < now);
+
+      if (!hasConflict && !isPast) {
+        availableSlots.push(Utilities.formatDate(slotStart, TZ, "HH:mm"));
+      }
+    }
+
+    // Mover el cursor al siguiente slot
+    cursor.setMinutes(cursor.getMinutes() + SLOT_STEP_MIN);
+  }
+
+  return availableSlots;
+}
 
 function buildRfc3339(dateStr, timeStr, minutesToAdd) {
   if (!dateStr || !timeStr) throw new Error("dateStr/timeStr requeridos");
@@ -99,9 +202,13 @@ function buildEmailHtml({ clientName, fecha, hora, duracion, telefono, serviceNa
   </div>`;
 }
 
-function jsonResponse(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
+function jsonResponse(obj, statusCode) {
+  const response = ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+  
+  // ¡Esta es la clave para solucionar el error de CORS!
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  return response; // Esta función ahora es un helper, doGet tiene la lógica principal.
 }
 
 function doPost(e) {
@@ -119,6 +226,7 @@ function doPost(e) {
     const fecha     = (data.fecha || data.date || "").trim(); // YYYY-MM-DD
     const hora      = (data.hora  || data.start || "").trim(); // HH:mm
     const serviceId = String(data.serviceId || "");
+    const extraCupo = !!data.extraCupo;
     const durationMin = Number(data.durationMin || (SERVICE_MAP[serviceId]?.duration || 60));
     const serviceName = data.servicio || SERVICE_MAP[serviceId]?.name || "Servicio";
 
@@ -136,7 +244,8 @@ function doPost(e) {
     }
 
     const cal = CalendarApp.getCalendarById(CALENDAR_ID);
-    const event = cal.createEvent(
+    const eventTitle = `Cita: ${serviceName} con ${nombre}` + (extraCupo ? " (EXTRA)" : "");
+    const event = cal.createEvent(eventTitle,
       `Cita: ${serviceName} con ${nombre}`,
       start,
       end,
@@ -146,7 +255,8 @@ function doPost(e) {
           `Email: ${email}`,
           `Teléfono: ${telefono}`,
           `Servicio: ${serviceName}`,
-          `Duración: ${durationMin} min`
+          `Duración: ${durationMin} min`,
+          `Modalidad: ${extraCupo ? 'Extra Cupo' : 'Normal'}`
         ].join("\\n"),
         guests: email + (OWNER_EMAIL ? "," + OWNER_EMAIL : ""),
         sendInvites: true
@@ -157,7 +267,7 @@ function doPost(e) {
     const endLocal   = Utilities.formatDate(end,   TZ, "yyyy-MM-dd HH:mm");
     appendToSheet([
       new Date(), nombre, email, telefono,
-      serviceName, startLocal, endLocal, durationMin,
+      serviceName, startLocal, endLocal, durationMin, extraCupo ? "SI" : "NO",
       event.getId(), event.getHtmlLink()
     ]);
 

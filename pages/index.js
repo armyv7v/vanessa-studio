@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getAvailableSlots, bookAppointment } from '../lib/api'; // Asumiendo que creas este archivo
 
 export default function Home() {
   const [selectedService, setSelectedService] = useState('');
@@ -50,30 +51,8 @@ export default function Home() {
     try {
       setLoadingSlots(true);
       setErrorSlots(null);
-
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      
-      // ¡Importante! Asegúrate de que esta variable de entorno esté disponible en el cliente.
-      // Debe estar prefijada con NEXT_PUBLIC_ en tu archivo .env.local
-      if (!process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL) {
-        throw new Error("La URL del webhook no está configurada. Revisa la variable de entorno NEXT_PUBLIC_GAS_WEBHOOK_URL.");
-      }
-
-      const gasUrl = new URL(process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL);
-      gasUrl.searchParams.append('date', formattedDate);
-      gasUrl.searchParams.append('serviceId', serviceId);
-      // Para horario normal, no se agrega el parámetro 'mode'
-
-      const res = await fetch(gasUrl.toString());
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || 'Error obteniendo horarios disponibles');
-      }
-
-      // Tolerante: `availableSlots` (["HH:mm"]) o `times`
-      const list = data.availableSlots || data.times || [];
-      setAvailableSlots(Array.isArray(list) ? list : []);
+      const slots = await getAvailableSlots(date, serviceId, 'normal');
+      setAvailableSlots(slots);
     } catch (error) {
       console.error('Error fetching slots:', error);
       setErrorSlots(error.message || String(error));
@@ -120,11 +99,6 @@ export default function Home() {
     try {
       setBookingStatus({ loading: true });
 
-      // Validación amistosa por si falta el webhook
-      if (!process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL) {
-        throw new Error('Falta NEXT_PUBLIC_GAS_WEBHOOK_URL');
-      }
-
       const payload = {
         serviceId: selectedService,
         date: format(selectedDate, 'yyyy-MM-dd'),
@@ -133,15 +107,8 @@ export default function Home() {
         extraCupo: false // Horario normal
       };
 
-      const response = await fetch(process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // GAS prefiere text/plain para POST
-        body: JSON.stringify(payload)
-      });
+      await bookAppointment(payload);
 
-      const data = await response.json();
-
-      if (response.ok && data.status === 'success') {
         setBookingStatus({ success: true, message: '¡Cita confirmada exitosamente!' });
         // Reset suave después de 3s
         setTimeout(() => {
@@ -151,9 +118,7 @@ export default function Home() {
           setClientInfo({ name: '', email: '', phone: '' });
           setStep(1);
         }, 3000);
-      } else {
-        throw new Error(data.error || 'Error al confirmar la cita');
-      }
+
     } catch (error) {
       console.error('Error al confirmar cita:', error);
       setBookingStatus({ error: true, message: error.message });
