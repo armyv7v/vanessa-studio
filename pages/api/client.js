@@ -26,9 +26,12 @@ export default async function handler(req) {
   const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
 
   if (!GAS_URL) {
-    return res.status(500).json({ error: 'La URL del webhook no está configurada en el servidor.' });
+    return new Response(JSON.stringify({ error: 'La URL del webhook no está configurada en el servidor.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-  
+
   try {
     const url = new URL(GAS_URL);
     url.searchParams.append('action', 'getClient');
