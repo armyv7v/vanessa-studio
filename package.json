@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "pages:build": "npx @cloudflare/next-on-pages@1",
+    "pages:build": "npx @cloudflare/next-on-pages@1 --compatibility-flag=nodejs_compat",
     "preview": "npm run pages:build && npx wrangler pages dev .vercel/output/static",
     "deploy": "npm run pages:build && npx wrangler pages deploy .vercel/output/static --commit-dirty=true",
     "gs:login": "npx @google/clasp login",

@@ -1,31 +1,21 @@
 // pages/api/client.js
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { searchParams } = new URL(req.url);
-  const email = searchParams.get('email');
+  const { email } = req.query;
 
   if (!email) {
-    return new Response(JSON.stringify({ error: 'El parámetro email es requerido' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(400).json({ error: 'El parámetro email es requerido' });
   }
 
   const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
   const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
 
   if (!apiKey || !calendarId) {
-    return new Response(JSON.stringify({ error: 'Faltan credenciales de Calendar en el servidor' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: 'Faltan credenciales de Calendar en el servidor' });
   }
 
   try {
@@ -51,23 +41,14 @@ export default async function handler(req) {
           name: nameMatch[1].trim(),
           phone: phoneMatch ? phoneMatch[1].trim() : '',
         };
-        return new Response(JSON.stringify({ client: clientData }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(200).json({ client: clientData });
       }
     }
 
     // If no client data is found in any event description
-    return new Response(JSON.stringify({ client: null }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json({ client: null });
   } catch (error) {
     console.error('Error en /api/client:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Error interno del servidor' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: error.message || 'Error interno del servidor' });
   }
 }
