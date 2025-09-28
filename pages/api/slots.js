@@ -1,6 +1,4 @@
-﻿// pages/api/slots.js
-
-import { DateTime, Interval } from 'luxon';
+﻿﻿import { DateTime, Interval } from 'luxon';
 
 const TZ = 'America/Santiago';
 
@@ -15,11 +13,6 @@ const SERVICE_MAP = {
   '7': 150,
   '8': 90,
 };
-
-function parseQuery(url) {
-  const u = new URL(url);
-  return Object.fromEntries(u.searchParams.entries());
-}
 
 // Genera inicios cada 30 min
 function buildSlots(dateISO, mode, serviceId) {
@@ -85,25 +78,18 @@ function filterPastToday(slots, now) {
 
 const fmt = (dt) => dt.toFormat('HH:mm');
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   try {
-    const q = parseQuery(req.url);
-    const date = q.date;               // 'YYYY-MM-DD'
-    const serviceId = q.serviceId || '8';
-    const mode = q.mode === 'extra' ? 'extra' : 'normal';
+    const { date, serviceId = '8', mode = 'normal' } = req.query;
 
     const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
     const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
 
     if (!date) {
-      return new Response(JSON.stringify({ error: 'Falta date' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(400).json({ error: 'Falta date' });
     }
     if (!apiKey || !calendarId) {
-      return new Response(JSON.stringify({ error: 'Faltan credenciales de Calendar' }), {
-        status: 500, headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(500).json({ error: 'Faltan credenciales de Calendar' });
     }
 
     let slots = buildSlots(date, mode, serviceId);
@@ -124,18 +110,16 @@ export default async function handler(req) {
 
     const times = free.map(s => fmt(s.start));
 
-    return new Response(JSON.stringify({
+    res.status(200).json({
       date,
       mode,
       serviceId: String(serviceId),
       times,
       availableSlots: times,
       tz: TZ
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    });
+    res.status(500).json({ error: String(err) });
   }
 }

@@ -4,13 +4,10 @@ function isEmailValid(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-        status: 405,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
     const GAS_URL  = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
@@ -18,12 +15,10 @@ export default async function handler(req) {
     const TZ       = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
 
     if (!GAS_URL) {
-      return new Response(JSON.stringify({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL' }), {
-        status: 500, headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(500).json({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL' });
     }
 
-    const body = await req.json();
+    const body = req.body;
     const {
       serviceId,
       date,     // YYYY-MM-DD
@@ -34,14 +29,10 @@ export default async function handler(req) {
     } = body || {};
 
     if (!serviceId || !date || !start || !client?.name || !client?.email) {
-      return new Response(JSON.stringify({ error: 'Datos incompletos' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(400).json({ error: 'Datos incompletos' });
     }
     if (!isEmailValid(client.email)) {
-      return new Response(JSON.stringify({ error: 'Email inválido' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(400).json({ error: 'Email inválido' });
     }
 
     const payload = {
@@ -63,22 +54,18 @@ export default async function handler(req) {
       body: JSON.stringify(payload),
     });
 
-    const text = await r.text();
+    const text = await r.text(); // Google Apps Script a veces no devuelve JSON válido
     let data;
     try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
     if (!r.ok || data?.success === false) {
-      return new Response(JSON.stringify({ error: data?.error || 'GAS error', data }), {
-        status: 500, headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(500).json({ error: data?.error || 'GAS error', data });
     }
 
-    return new Response(JSON.stringify({ success: true, data }), {
-      status: 200, headers: { 'Content-Type': 'application/json' },
-    });
+    res.status(200).json({ success: true, data });
+
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500, headers: { 'Content-Type': 'application/json' },
-    });
+    console.error("Error en /api/book:", err);
+    res.status(500).json({ error: String(err) });
   }
 }
