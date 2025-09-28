@@ -1,4 +1,4 @@
-/**
+/** 
  * WebApp de reservas — Vanessa Nails Studio
  * Edita y despliega con clasp sin cambiar la URL del WebApp.
  */
@@ -262,12 +262,15 @@ function buildEmailHtml({ clientName, fecha, hora, duracion, telefono, serviceNa
 function jsonResponse(obj, statusCode) {
   const response = ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
-  
-  // ¡Esta es la clave para solucionar el error de CORS!
   response.setHeader('Access-Control-Allow-Origin', '*');
-  return response; // Esta función ahora es un helper, doGet tiene la lógica principal.
+  return response;
 }
 
+/**
+ * doPost unificado:
+ * - Maneja action: 'saveSubscription'
+ * - Crea evento de reserva, guarda en hoja y envía emails de confirmación
+ */
 function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) {
@@ -277,13 +280,20 @@ function doPost(e) {
     try { data = JSON.parse(e.postData.contents); }
     catch { return jsonResponse({ success: false, error: "JSON inválido" }); }
 
+    // --- Acción: guardar suscripción push ---
+    if (data.action === 'saveSubscription') {
+      saveSubscription(data);
+      return jsonResponse({ success: true });
+    }
+
+    // --- Lógica de reserva de cita (existente) ---
     const nombre    = (data.nombre || data.name || "").trim();
     const email     = (data.email || "").trim();
     const telefono  = (data.telefono || data.phone || "").trim();
     const fecha     = (data.fecha || data.date || "").trim(); // YYYY-MM-DD
     const hora      = (data.hora  || data.start || "").trim(); // HH:mm
     const serviceId = String(data.serviceId || "");
-    const extraCupo = !!(data.extraCupo || data.extraCup); // Acepta ambos para retrocompatibilidad
+    const extraCupo = !!(data.extraCupo || data.extraCup); // retrocompatibilidad
     const durationMin = Number(data.durationMin || (SERVICE_MAP[serviceId]?.duration || 60));
     const serviceName = data.servicio || SERVICE_MAP[serviceId]?.name || "Servicio";
 
@@ -302,23 +312,19 @@ function doPost(e) {
 
     const cal = CalendarApp.getCalendarById(CALENDAR_ID);
     const eventTitle = `Cita: ${serviceName} con ${nombre}` + (extraCupo ? " (EXTRA)" : "");
-    const event = cal.createEvent(eventTitle,
-      `Cita: ${serviceName} con ${nombre}`,
-      start,
-      end,
-      {
-        description: [
-          `Cliente: ${nombre}`,
-          `Email: ${email}`,
-          `Teléfono: ${telefono}`,
-          `Servicio: ${serviceName}`,
-          `Duración: ${durationMin} min`,
-          `Modalidad: ${extraCupo ? 'Extra Cupo' : 'Normal'}`
-        ].join("\\n"),
-        guests: email + (OWNER_EMAIL ? "," + OWNER_EMAIL : ""),
-        sendInvites: true
-      }
-    );
+    // Nota: La firma correcta de createEvent es (title, startTime, endTime, options)
+    const event = cal.createEvent(eventTitle, start, end, {
+      description: [
+        `Cliente: ${nombre}`,
+        `Email: ${email}`,
+        `Teléfono: ${telefono}`,
+        `Servicio: ${serviceName}`,
+        `Duración: ${durationMin} min`,
+        `Modalidad: ${extraCupo ? 'Extra Cupo' : 'Normal'}`
+      ].join("\n"),
+      guests: email + (OWNER_EMAIL ? "," + OWNER_EMAIL : ""),
+      sendInvites: true
+    });
 
     const startLocal = Utilities.formatDate(start, TZ, "yyyy-MM-dd HH:mm");
     const endLocal   = Utilities.formatDate(end,   TZ, "yyyy-MM-dd HH:mm");
@@ -380,62 +386,229 @@ function saveSubscription(data) {
   sh.appendRow([email, JSON.stringify(subscription)]);
 }
 
+/* ============================================================
+   ========== RECORDATORIO DE MANTENIMIENTO (20 DÍAS) =========
+   ============================================================ */
+
 /**
- * Modifica doPost para manejar la nueva acción 'saveSubscription'.
+ * HTML del recordatorio manteniendo el look & feel del Studio.
  */
-function doPost(e) {
-  try {
-    if (!e || !e.postData || !e.postData.contents) {
-      return jsonResponse({ success: false, error: "Solicitud vacía" });
+function buildMaintenanceReminderHtml({ clientName, lastDateStr, serviceName }) {
+  const whatsLink = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
+    `Hola Vanessa 💖 Quiero agendar mi *mantenimiento*. Soy ${clientName}.`
+  )}`;
+
+  return `
+  <div style="font-family:Arial,sans-serif;color:#333;line-height:1.6">
+    <div style="max-width:560px;margin:auto;border:1px solid #f2d7e2;border-radius:12px;overflow:hidden">
+      <div style="background:#fef0f5;padding:16px 20px">
+        <h2 style="margin:0;color:#d63384">💅 Recordatorio de Mantenimiento</h2>
+      </div>
+      <div style="padding:20px">
+        <p>Hola <b>${clientName}</b>, ¡esperamos que estés disfrutando tus uñas! ✨</p>
+        <p>Hoy se cumplen <b>20 días</b> desde tu última visita
+          ${lastDateStr ? `(<b>${lastDateStr}</b>)` : ""} ${serviceName ? `para <b>${serviceName}</b>` : ""}.
+        </p>
+
+        <div style="background:#fff7fb;border:1px solid #f2d7e2;border-radius:10px;padding:14px;margin:14px 0">
+          <p style="margin:0 0 8px 0"><b>Para mantenerlas perfectas:</b></p>
+          <ul style="margin:0 0 0 18px;padding:0">
+            <li><b>Mantenimiento ideal:</b> cada <b>21 días</b> (máximo <b>30 días</b>, sin excepción).</li>
+            <li><b>Beneficios:</b> forma y brillo intactos, menos quiebres/desprendimientos y uñas más saludables.</li>
+            <li><b>Bienestar personal:</b> manos siempre prolijas y listas para todo 💖.</li>
+          </ul>
+        </div>
+
+        <div style="background:#fffaf0;border:1px solid #f2d7e2;border-radius:10px;padding:14px;margin:14px 0">
+          <p style="margin:0"><b>Si superas los 30 días:</b> debemos realizar un
+            <b>retiro completo</b> de la estructura anterior para evitar <b>acumulación de humedad</b>
+            y prevenir <b>posibles hongos</b>. Es por tu salud y seguridad 🙏.</p>
+        </div>
+
+        <p style="margin:16px 0 10px">¿Agendamos tu mantención?</p>
+        <p>
+          <a href="${whatsLink}"
+             style="display:inline-block;background:#d63384;color:#fff;padding:10px 16px;border-radius:8px;
+                    text-decoration:none;font-weight:bold">Reservar por WhatsApp</a>
+        </p>
+
+        <p style="font-size:12px;color:#666;margin-top:18px">
+          Gracias por confiar en <b>Vanessa Nails Studio</b> 💅🏻<br>
+          Queremos que tus uñas siempre luzcan bellas, impecables y <b>saludables</b>.
+        </p>
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
+ * Escaneo diario: toma la última cita por email y envía recordatorio si hoy = +20 días.
+ */
+function sendMaintenanceReminders() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) return;
+
+  const data = sh.getDataRange().getValues();
+  if (data.length <= 1) return; // solo cabecera
+
+  // Indices según appendToSheet en doPost:
+  // A:Timestamp, B:Nombre, C:Email, D:Teléfono, E:Servicio,
+  // F:startLocal (yyyy-MM-dd HH:mm), G:endLocal, H:durationMin, I:Extra, J:eventId, K:htmlLink
+  const IDX = { NAME: 1, EMAIL: 2, SERVICE: 4, START_LOCAL: 5, EVENT_ID: 9 };
+
+  // Mapa: email -> { name, service, startDate (Date), startStr, eventId }
+  const lastByEmail = {};
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const email = (row[IDX.EMAIL] || "").toString().trim().toLowerCase();
+    if (!email) continue;
+
+    const name = row[IDX.NAME] || "";
+    const service = row[IDX.SERVICE] || "";
+    const startStr = (row[IDX.START_LOCAL] || "").toString(); // "yyyy-MM-dd HH:mm" en TZ
+    const eventId = row[IDX.EVENT_ID] || "";
+
+    if (!startStr) continue;
+
+    // Parse seguro en TZ
+    const parts = startStr.split(" ");
+    if (parts.length < 2) continue;
+    const [d, t] = parts;
+    const [Y, M, D] = d.split("-").map(Number);
+    const [h, m] = t.split(":").map(Number);
+    const startDate = new Date(Y, (M - 1), D, h, m, 0, 0);
+
+    // Guardar solo la más reciente por email
+    const prev = lastByEmail[email];
+    if (!prev || startDate > prev.startDate) {
+      lastByEmail[email] = { name, service, startDate, startStr: d, eventId };
     }
-    let data;
-    try { data = JSON.parse(e.postData.contents); }
-    catch { return jsonResponse({ success: false, error: "JSON inválido" }); }
+  }
 
-    // --- Manejo de acciones ---
-    if (data.action === 'saveSubscription') {
-      saveSubscription(data);
-      return jsonResponse({ success: true });
+  // Hoy (solo fecha) en TZ
+  const now = new Date();
+  const todayStr = Utilities.formatDate(now, TZ, "yyyy-MM-dd");
+  const [tY, tM, tD] = todayStr.split("-").map(Number);
+  const today = new Date(tY, tM - 1, tD, 0, 0, 0, 0);
+
+  Object.keys(lastByEmail).forEach(email => {
+    const rec = lastByEmail[email];
+    // Solo fecha (sin hora) de la última cita
+    const lastDateOnly = new Date(rec.startDate.getFullYear(), rec.startDate.getMonth(), rec.startDate.getDate());
+    const diffDays = Math.floor((today - lastDateOnly) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 20) {
+      // Evitar duplicados
+      if (hasReminderLogged(email, rec.startStr, "REMINDER20")) return;
+
+      const html = buildMaintenanceReminderHtml({
+        clientName: rec.name || "Bella",
+        lastDateStr: Utilities.formatDate(rec.startDate, TZ, "dd-MM-yyyy"),
+        serviceName: rec.service || ""
+      });
+
+      const subject = "💖 Recordatorio de Mantenimiento — Vanessa Nails Studio";
+      try {
+        MailApp.sendEmail({ to: email, subject, htmlBody: html });
+        if (OWNER_EMAIL) {
+          MailApp.sendEmail({
+            to: OWNER_EMAIL,
+            subject: `Recordatorio enviado (20 días) — ${rec.name} <${email}>`,
+            htmlBody: html
+          });
+        }
+        logReminderSent(email, rec.startStr, "REMINDER20");
+      } catch (err) {
+        Logger.log("Error enviando recordatorio a " + email + ": " + err);
+      }
     }
+  });
+}
 
-    // --- Lógica de reserva de cita (código existente) ---
-    const nombre    = (data.nombre || data.name || "").trim();
-    const email     = (data.email || "").trim();
-    const telefono  = (data.telefono || data.phone || "").trim();
-    const fecha     = (data.fecha || data.date || "").trim(); // YYYY-MM-DD
-    const hora      = (data.hora  || data.start || "").trim(); // HH:mm
-    const serviceId = String(data.serviceId || "");
-    const extraCupo = !!(data.extraCupo || data.extraCup);
-    const durationMin = Number(data.durationMin || (SERVICE_MAP[serviceId]?.duration || 60));
-    const serviceName = data.servicio || SERVICE_MAP[serviceId]?.name || "Servicio";
+/**
+ * Revisa si ya registramos un envío de recordatorio para ese email + fecha base.
+ * Cabecera esperada: [Timestamp, Email, Type, BaseDate, Notes]
+ */
+function hasReminderLogged(email, baseDateStr, type) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sh = ss.getSheetByName("EmailLog");
+  if (!sh) return false;
 
-    if (!nombre || !email || !fecha || !hora) {
-      return jsonResponse({ success: false, error: "Faltan campos: nombre, email, fecha, hora" });
+  const values = sh.getDataRange().getValues();
+  if (values.length <= 1) return false;
+
+  for (let i = 1; i < values.length; i++) {
+    const r = values[i];
+    if ((r[1] || "").toString().trim().toLowerCase() === (email || "").trim().toLowerCase() &&
+        (r[2] || "") === type &&
+        (r[3] || "").toString() === baseDateStr) {
+      return true;
     }
+  }
+  return false;
+}
 
-    const probe = new Date(`${fecha}T${hora}:00`);
-    if (isNaN(probe.getTime())) return jsonResponse({ success: false, error: "Fecha/Hora inválidas" });
-    if (isDisabledDay(probe))   return jsonResponse({ success: false, error: "Este día no está disponible para reservas." });
+/**
+ * Registra el envío en la hoja EmailLog (se crea si no existe).
+ */
+function logReminderSent(email, baseDateStr, type) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sh = ss.getSheetByName("EmailLog");
+  if (!sh) {
+    sh = ss.insertSheet("EmailLog");
+    sh.appendRow(["Timestamp", "Email", "Type", "BaseDate", "Notes"]);
+  }
+  sh.appendRow([new Date(), email, type, baseDateStr, "Sent OK"]);
+}
 
-    const { start, end, startStr, endStr } = buildRfc3339(fecha, hora, durationMin);
-    if (hasConflictCalendarApp(CALENDAR_ID, start, end)) {
-      return jsonResponse({ success: false, error: "Horario no disponible (conflicto)" });
-    }
-
-    // ... (resto de tu lógica de doPost para crear el evento, etc.)
-    // ... (el código no cambia, solo se ha movido dentro de la estructura if/else)
-
-    // ... (código para crear evento, enviar email, etc.)
-
-    return jsonResponse({ success: true, eventId: event.getId(), htmlLink: event.getHtmlLink(), start: startStr, end: endStr });
-
-  } catch (err) {
-    return jsonResponse({ success: false, error: String(err) });
+/**
+ * Crea (si no existe) un disparador diario a las 09:00 America/Santiago
+ * para ejecutar sendMaintenanceReminders(). Ejecuta esta función una sola vez.
+ */
+function ensureReminderTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  const exists = triggers.some(tr => {
+    try { return tr.getHandlerFunction && tr.getHandlerFunction() === "sendMaintenanceReminders"; }
+    catch (e) { return false; }
+  });
+  if (!exists) {
+    ScriptApp.newTrigger("sendMaintenanceReminders")
+      .timeBased()
+      .atHour(9) // 09:00
+      .everyDays(1)
+      .inTimezone(TZ)
+      .create();
   }
 }
 
-// NOTA: La función para *enviar* las notificaciones push desde Google Apps Script
-// es muy compleja debido a la necesidad de firmar tokens (JWT).
-// Se recomienda usar un servicio de terceros (como OneSignal) o un backend
-// en Node.js para manejar el envío de notificaciones de forma programada.
-// Esta implementación se enfoca en la suscripción del usuario.
+/**
+ * Test manual para un caso puntual (opcional).
+ * Ajusta el email que quieres probar; fuerza el envío para validar el HTML.
+ */
+function test_sendMaintenanceReminder_forEmail() {
+  const email = "cliente@example.com"; // <-- cambia
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sh = ss.getSheetByName(SHEET_NAME);
+  const data = sh.getDataRange().getValues();
+  const IDX = { NAME: 1, EMAIL: 2, SERVICE: 4, START_LOCAL: 5 };
+
+  for (let i = data.length - 1; i >= 1; i--) {
+    const row = data[i];
+    if ((row[IDX.EMAIL] || "").toString().trim().toLowerCase() === email.toLowerCase()) {
+      const name = row[IDX.NAME] || "Bella";
+      const service = row[IDX.SERVICE] || "";
+      const startStr = (row[IDX.START_LOCAL] || "").toString();
+      const lastDateStr = startStr ? startStr.split(" ")[0] : "";
+
+      const html = buildMaintenanceReminderHtml({ clientName: name, lastDateStr, serviceName: service });
+      MailApp.sendEmail({ to: email, subject: "Prueba — Recordatorio de Mantenimiento", htmlBody: html });
+      Logger.log("Prueba enviada a " + email);
+      return;
+    }
+  }
+  Logger.log("No se encontró el email en Reservas.");
+}
+
+/* NOTA: Para notificaciones push programadas con JWT, considerar backend Node.js/OneSignal */
