@@ -75,3 +75,17 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+// Evento 'push': Se dispara cuando llega una notificación del servidor.
+self.addEventListener('push', (event) => {
+  const data = event.data.json(); // Asumimos que el servidor envía JSON
+  console.log('[Service Worker] Notificación push recibida:', data);
+
+  const options = {
+    body: data.body,
+    icon: '/icons/icon-192x192.png', // Ícono para la notificación
+    badge: '/icons/icon-192x192.png', // Ícono pequeño (Android)
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
