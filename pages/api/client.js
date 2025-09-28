@@ -11,42 +11,28 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'El parámetro email es requerido' });
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
-  const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
+  const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
 
-  if (!apiKey || !calendarId) {
-    return res.status(500).json({ error: 'Faltan credenciales de Calendar en el servidor' });
+  if (!GAS_URL) {
+    return res.status(500).json({ error: 'La URL del script de Google no está configurada.' });
   }
 
   try {
-    // Search for events where the user was an attendee
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(email)}&singleEvents=true&orderBy=startTime&maxResults=50`;
+    // Construimos la URL para llamar a la acción 'getClient' en nuestro Google Apps Script
+    const url = new URL(GAS_URL);
+    url.searchParams.append('action', 'getClient');
+    url.searchParams.append('email', email);
 
-    const calResponse = await fetch(url);
-    const data = await calResponse.json();
+    const gasResponse = await fetch(url.toString());
+    const data = await gasResponse.json();
 
-    if (!calResponse.ok) {
-      throw new Error(data?.error?.message || 'Error al buscar eventos en Google Calendar');
+    if (!gasResponse.ok) {
+      throw new Error(data?.error || 'Error al contactar el servicio de Google.');
     }
 
-    // Find the most recent event for this client to get their latest data
-    const events = (data.items || []).reverse(); // Reverse to get the latest first
-    for (const event of events) {
-      const description = event.description || '';
-      const nameMatch = description.match(/Cliente: (.+)/);
-      const phoneMatch = description.match(/Teléfono: (.+)/);
-
-      if (nameMatch && nameMatch[1]) {
-        const clientData = {
-          name: nameMatch[1].trim(),
-          phone: phoneMatch ? phoneMatch[1].trim() : '',
-        };
-        return res.status(200).json({ client: clientData });
-      }
-    }
-
-    // If no client data is found in any event description
-    return res.status(200).json({ client: null });
+    // La respuesta de GAS ya viene en el formato { client: { name, phone } } o { client: null }
+    res.status(200).json({ client: data.client || null });
+    
   } catch (error) {
     console.error('Error en /api/client:', error);
     return res.status(500).json({ error: error.message || 'Error interno del servidor' });
