@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:cf": "opennext build",
+    "build:cf": "npx opennext build",
     "preview": "npm run build:cf && npx wrangler pages dev .open-next/output/public",
     "deploy": "npm run build:cf && npx wrangler pages deploy .open-next/output",
     "gs:login": "npx @google/clasp login",
