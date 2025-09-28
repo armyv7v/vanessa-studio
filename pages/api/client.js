@@ -1,10 +1,6 @@
 // pages/api/client.js
 export const config = { runtime: 'edge' };
 
-/**
- * API Route para actuar como proxy y buscar datos de un cliente por su email.
- * Esto evita errores de CORS, ya que la llamada a Google se hace desde el servidor.
- */
 export default async function handler(req) {
   if (req.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
@@ -23,33 +19,51 @@ export default async function handler(req) {
     });
   }
 
-  const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
+  const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
+  const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
 
-  if (!GAS_URL) {
-    return new Response(JSON.stringify({ error: 'La URL del webhook no está configurada en el servidor.' }), {
+  if (!apiKey || !calendarId) {
+    return new Response(JSON.stringify({ error: 'Faltan credenciales de Calendar en el servidor' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
   try {
-    const url = new URL(GAS_URL);
-    url.searchParams.append('action', 'getClient');
-    url.searchParams.append('email', email);
+    // Search for events where the user was an attendee
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(email)}&singleEvents=true&orderBy=startTime&maxResults=50`;
 
-    const gasResponse = await fetch(url.toString());
-    const data = await gasResponse.json();
+    const calResponse = await fetch(url);
+    const data = await calResponse.json();
 
-    if (!gasResponse.ok) {
-      throw new Error(data?.error || 'Error al buscar datos del cliente en Google Script');
+    if (!calResponse.ok) {
+      throw new Error(data?.error?.message || 'Error al buscar eventos en Google Calendar');
     }
 
-    // Devuelve los datos del cliente (o null si no se encontró) al frontend
-    return new Response(JSON.stringify(data), {
+    // Find the most recent event for this client to get their latest data
+    const events = (data.items || []).reverse(); // Reverse to get the latest first
+    for (const event of events) {
+      const description = event.description || '';
+      const nameMatch = description.match(/Cliente: (.+)/);
+      const phoneMatch = description.match(/Teléfono: (.+)/);
+
+      if (nameMatch && nameMatch[1]) {
+        const clientData = {
+          name: nameMatch[1].trim(),
+          phone: phoneMatch ? phoneMatch[1].trim() : '',
+        };
+        return new Response(JSON.stringify({ client: clientData }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // If no client data is found in any event description
+    return new Response(JSON.stringify({ client: null }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-
   } catch (error) {
     console.error('Error en /api/client:', error);
     return new Response(JSON.stringify({ error: error.message || 'Error interno del servidor' }), {

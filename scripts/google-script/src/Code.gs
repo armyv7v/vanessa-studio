@@ -56,10 +56,12 @@ function doGet(e) {
     // Acción para autocompletar datos del cliente
     if (action === 'getClient') {
       const email = e.parameter.email;
+      Logger.log(`doGet: Recibida acción 'getClient' para email: ${email}`);
       if (!email) throw new Error("Parámetro 'email' es requerido");
       
       const clientData = getClientByEmail(email);
       response.setContent(JSON.stringify({ client: clientData }));
+      Logger.log(`doGet: Datos de cliente encontrados: ${JSON.stringify(clientData)}`);
       return response;
     }
 
@@ -69,12 +71,14 @@ function doGet(e) {
     const mode = e.parameter.mode || 'normal'; // 'normal' o 'extra'
 
     if (!date || !serviceId) {
-      return jsonResponse({ error: "Faltan parámetros 'date' o 'serviceId'" }, 400);
+      response.setContent(JSON.stringify({ error: "Faltan parámetros 'date' o 'serviceId'" }));
+      return response;
     }
 
     const service = SERVICE_MAP[serviceId];
     if (!service) {
-      return jsonResponse({ error: "Servicio no válido" }, 400);
+      response.setContent(JSON.stringify({ error: "Servicio no válido" }));
+      return response;
     }
 
     const availableSlots = getAvailableSlotsForDay(date, service.duration, mode);
@@ -95,19 +99,27 @@ function doGet(e) {
  */
 function getClientByEmail(email) {
   if (!email) return null;
+  Logger.log(`getClientByEmail: Buscando cliente con email: ${email}`);
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sh = ss.getSheetByName(SHEET_NAME);
-  if (!sh) return null;
+  if (!sh) {
+    Logger.log(`getClientByEmail: Hoja '${SHEET_NAME}' no encontrada en el Spreadsheet ID: ${SHEET_ID}`);
+    return null;
+  }
 
   const data = sh.getDataRange().getValues();
+  Logger.log(`getClientByEmail: Total de filas en la hoja: ${data.length}`);
   // Busca desde la última fila hacia arriba para obtener los datos más recientes.
   for (let i = data.length - 1; i >= 1; i--) { // i >= 1 para saltar la cabecera
     const row = data[i];
+    Logger.log(`getClientByEmail: Procesando fila ${i}, Email en hoja: '${row[2]}', Nombre: '${row[1]}', Teléfono: '${row[3]}'`);
     // Asume que las columnas son: A:Timestamp, B:Nombre, C:Email, D:Teléfono
     if (row[2] && row[2].toString().trim().toLowerCase() === email.trim().toLowerCase()) {
+      Logger.log(`getClientByEmail: ¡Coincidencia encontrada en fila ${i}!`);
       return { name: row[1] || "", phone: row[3] || "" };
     }
   }
+  Logger.log(`getClientByEmail: No se encontró ninguna coincidencia para el email: ${email}`);
   return null; // No se encontró el cliente
 }
 
