@@ -8,9 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:cf": "npx opennext build",
+    "build:cf": "npx open-next build",
     "preview": "npm run build:cf && npx wrangler pages dev .open-next/output/public",
-    "deploy": "npm run build:cf && npx wrangler pages deploy .open-next/output",
+    "deploy": "npm run build:cf && npx wrangler pages deploy .open-next/output/public",
     "gs:login": "npx @google/clasp login",
     "gs:whoami": "npx @google/clasp login --status",
     "gs:push": "cd scripts/google-script && npx @google/clasp push",
@@ -28,7 +28,7 @@
     "react-dom": "18.3.0"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "1.11.0",
+    "open-next": "^3.0.5",
     "@types/react": "18.3.3",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.0",
