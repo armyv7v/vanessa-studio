@@ -8,14 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "pages:build": "npx @cloudflare/next-on-pages@1 --compatibility-flag=nodejs_compat",
-    "preview": "npm run pages:build && npx wrangler pages dev .vercel/output/static",
-    "deploy": "npm run pages:build && npx wrangler pages deploy .vercel/output/static --commit-dirty=true",
+    "build:cf": "npx open-next build",
+    "preview": "npm run build:cf && npx wrangler pages dev .open-next/output/public",
+    "deploy": "npm run build:cf && npx wrangler pages deploy .open-next/output",
     "gs:login": "npx @google/clasp login",
     "gs:whoami": "npx @google/clasp login --status",
-    "gs:push": "cd scripts/google-script && npx @google/clasp push",
-    "gs:pull": "cd scripts/google-script && npx @google/clasp pull",
-    "gs:deploy": "cd scripts/google-script && npx @google/clasp deploy"
+    "gs:push": "cd scripts/google-script && npx @google/clasp push"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.0.0",
@@ -28,7 +26,8 @@
     "react-dom": "18.3.0"
   },
   "devDependencies": {
-    "open-next": "^3.0.5",
+    "open-next": "^3.1.3",
+    "@types/node": "^18.11.18",
     "@types/react": "18.3.3",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.0",
