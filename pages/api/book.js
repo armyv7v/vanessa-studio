@@ -1,5 +1,4 @@
 // pages/api/book.js
-export const config = { runtime: 'edge' };
 
 function isEmailValid(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

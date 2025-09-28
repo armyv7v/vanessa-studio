@@ -1,5 +1,4 @@
-﻿// pages/api/booking.js
-export const config = { runtime: "edge" };
+﻿﻿// pages/api/booking.js
 export default async function handler(req) {
   try {
     if (req.method !== "POST") {

@@ -1,5 +1,4 @@
-﻿// pages/api/availability.js
-export const config = { runtime: 'edge' };
+﻿﻿// pages/api/availability.js
 
 const TZ = 'America/Santiago';
 const CALENDAR_ID = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;

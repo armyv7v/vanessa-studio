@@ -1,5 +1,4 @@
 ﻿// pages/api/slots.js
-export const config = { runtime: 'edge' };
 
 import { DateTime, Interval } from 'luxon';
 

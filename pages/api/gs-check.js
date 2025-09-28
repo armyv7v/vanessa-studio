@@ -1,5 +1,4 @@
 // pages/api/gs-check.js
-export const config = { runtime: 'edge' };
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
