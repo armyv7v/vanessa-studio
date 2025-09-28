@@ -25,8 +25,7 @@ export default function Home() {
   const [isFetchingClient, setIsFetchingClient] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
 
-
-  // Debe calzar con tu mapeo del back/GAS
+  // Volvemos a la lista de servicios codificada directamente aquí
   const services = [
     { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
     { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
@@ -59,10 +58,25 @@ export default function Home() {
       const formattedDate = format(date, 'yyyy-MM-dd');
       // Llamamos a nuestra nueva API Route
       const res = await fetch(`/api/slots?date=${formattedDate}&serviceId=${serviceId}&mode=normal`);
-      const data = await res.json();
+      const text = await res.text();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Error obteniendo los horarios');
+        let errMsg = 'Error obteniendo los horarios';
+        try {
+          // Intenta parsear el texto por si el error viene en formato JSON
+          const errJson = JSON.parse(text);
+          errMsg = errJson.error || errJson.message || errMsg;
+        } catch (_) {
+          // Si falla el parseo, usa el mensaje por defecto. El texto puede ser un error HTML.
+        }
+        throw new Error(errMsg);
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Respuesta inválida del servidor");
       }
 
       const list = data.availableSlots || data.times || [];

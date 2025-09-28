@@ -9,6 +9,7 @@ import BookingConfirmation from '../components/BookingConfirmation';
 
 const TZ = 'America/Santiago';
 
+// Volvemos a la lista de servicios codificada directamente aquí
 const SERVICES = [
   { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
   { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
