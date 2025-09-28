@@ -69,12 +69,26 @@ export default function ExtraCup() {
       setErrorSlots(null);
       const yyyyMMdd = format(dateObj, 'yyyy-MM-dd');
       // Usamos nuestra API Route, que es la forma correcta para evitar CORS.
-      const url = `/api/slots?date=${yyyyMMdd}&serviceId=${serviceId}&mode=extra`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const res = await fetch(`/api/slots?date=${yyyyMMdd}&serviceId=${serviceId}&mode=extra`);
+      const text = await res.text();
 
       if (!res.ok) {
-        throw new Error(data?.error || 'Error cargando horarios');
+        let errMsg = 'Error cargando horarios';
+        try {
+          // Intenta parsear el texto por si el error viene en formato JSON
+          const errJson = JSON.parse(text);
+          errMsg = errJson.error || errJson.message || errMsg;
+        } catch (_) {
+          // Si falla el parseo, usa el mensaje por defecto. El texto puede ser un error HTML.
+        }
+        throw new Error(errMsg);
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Respuesta inválida del servidor");
       }
 
       const arr = Array.isArray(data.availableSlots) ? data.availableSlots : (data.times || []);
