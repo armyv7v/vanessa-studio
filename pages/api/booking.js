@@ -1,26 +1,27 @@
-﻿﻿// pages/api/booking.js
-export default async function handler(req) {
+﻿﻿﻿﻿// pages/api/booking.js
+export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
-      return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+      return res.status(405).json({ error: "Method not allowed" });
     }
     const url = process.env.APPS_SCRIPT_URL;
-    if (!url) return new Response(JSON.stringify({ error: "Falta APPS_SCRIPT_URL" }), { status: 500 });
-    const body = await req.json(); // { date, start, end, serviceId, name, email, phone, notes }
+    if (!url) return res.status(500).json({ error: "Falta APPS_SCRIPT_URL" });
+    
+    const body = req.body; // { date, start, end, serviceId, name, email, phone, notes }
     const payload = { action: "createBooking", payload: body };
-    const res = await fetch(url, {
+    const gasResponse = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const text = await res.text();
+    const text = await gasResponse.text();
     let json;
     try { json = JSON.parse(text); } catch { json = { ok: res.ok, raw: text }; }
-    if (!res.ok || json?.ok === false) {
-      return new Response(JSON.stringify({ error: "AppsScript error", detail: json || text }), { status: 502 });
+    if (!gasResponse.ok || json?.ok === false) {
+      return res.status(502).json({ error: "AppsScript error", detail: json || text });
     }
-    return new Response(JSON.stringify(json), { headers: { "content-type": "application/json" }, status: 200 });
+    return res.status(200).json(json);
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err?.message || err) }), { status: 500 });
+    return res.status(500).json({ error: String(err?.message || err) });
   }
 }

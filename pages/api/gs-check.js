@@ -1,16 +1,9 @@
 // pages/api/gs-check.js
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
-  });
-}
-
-export default async function handler() {
+export default async function handler(req, res) {
   const url = process.env.GAS_WEBAPP_URL || process.env.NEXT_PUBLIC_GAS_WEBAPP_URL;
   if (!url) {
-    return json({ ok: false, error: 'GAS_WEBAPP_URL no configurada.' }, 500);
+    return res.status(500).json({ ok: false, error: 'GAS_WEBAPP_URL no configurada.' });
   }
 
   // Enviamos un POST mínimo (GAS lo validará y debe responder JSON)
@@ -35,7 +28,7 @@ export default async function handler() {
     let parsed = null;
     try { parsed = JSON.parse(text); } catch (_) {}
 
-    return json({
+    return res.status(200).json({
       ok: true,
       status: r.status,
       contentType: r.headers.get('content-type'),
@@ -43,6 +36,6 @@ export default async function handler() {
       rawSample: text.slice(0, 500),
     });
   } catch (err) {
-    return json({ ok: false, error: String(err?.message || err) }, 502);
+    return res.status(502).json({ ok: false, error: String(err?.message || err) });
   }
 }

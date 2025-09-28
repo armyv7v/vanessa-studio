@@ -1,4 +1,4 @@
-﻿﻿// pages/api/availability.js
+﻿﻿﻿﻿// pages/api/availability.js
 
 const TZ = 'America/Santiago';
 const CALENDAR_ID = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
@@ -140,15 +140,10 @@ function generateDaySlots({
   return slots;
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   try {
-    const { searchParams } = new URL(req.url);
-    // Compat: ?date=YYYY-MM-DD & serviceId=8 ; Nuevos: ?from & ?to ; ?extra=1
-    const date = searchParams.get('date'); // si viene, usamos ventana de 1 día
-    const from = searchParams.get('from');
-    const to = searchParams.get('to');
-    const serviceId = searchParams.get('serviceId') || '8';
-    const isExtra = searchParams.get('extra') === '1';
+    const { date, from, to, serviceId = '8', extra } = req.query;
+    const isExtra = extra === '1';
 
     const serviceMinutes = Number(SERVICE_DURATIONS[serviceId] || 60);
 
@@ -191,21 +186,16 @@ export default async function handler(req) {
     // - slots: [{start,end,available}] (opcional)
     // - times: ["ISO", ...] para el front actual
     const times = allSlots; // lista de inicios ISO (el front muestra HH:mm)
-    return new Response(
-      JSON.stringify({
-        from: fromYMD, to: toYMD,
-        serviceId, isExtra,
-        slotStepMin: 30,
-        times,
-        // pista para debug
-        debug: { daysCount: days.length, receivedBusy: busy.length }
-      }),
-      { headers: { 'content-type': 'application/json' }, status: 200 }
-    );
-  } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      headers: { 'content-type': 'application/json' },
-      status: 500
+    res.status(200).json({
+      from: fromYMD, to: toYMD,
+      serviceId, isExtra,
+      slotStepMin: 30,
+      times,
+      // pista para debug
+      debug: { daysCount: days.length, receivedBusy: busy.length }
     });
+  } catch (err) {
+    console.error("Error en /api/availability:", err);
+    res.status(500).json({ error: String(err) });
   }
 }
