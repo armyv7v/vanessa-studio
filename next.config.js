@@ -1,9 +1,11 @@
 ﻿﻿/** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
+  // disable: process.env.NODE_ENV === 'development', // We will handle this manually
+  // register: true,
+  // skipWaiting: true,
+  // runtimeCaching: [], // Add this if you have specific caching needs
+  buildExcludes: [/middleware-manifest.json$/], // Exclude middleware manifest from service worker
 });
 
 const nextConfig = {
@@ -15,5 +17,10 @@ const nextConfig = {
     };
     return config;
   },
+  pwa: {
+    dest: 'public',
+    disable: process.env.NODE_ENV === 'development',
+  },
 };
-module.exports = withPWA(nextConfig);
+
+module.exports = process.env.NODE_ENV === 'development' ? nextConfig : withPWA(nextConfig);
