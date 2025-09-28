@@ -6,6 +6,7 @@ export default function Document() {
     <Html lang="es">
       <Head>
         <link rel="icon" href="/favicon.ico" />
+        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ec4899" />
       </Head>
       <body className="bg-gray-50">
