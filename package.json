@@ -8,9 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:cf": "npx open-next build",
-    "preview": "npm run build:cf && npx wrangler pages dev .open-next/output/public",
-    "deploy": "npm run build:cf && npx wrangler pages deploy .open-next/output/public",
+    "pages:build": "npx @cloudflare/next-on-pages@1 --compatibility-flag=nodejs_compat",
+    "preview": "npm run pages:build && npx wrangler pages dev .vercel/output/static",
+    "deploy": "npm run pages:build && npx wrangler pages deploy .vercel/output/static --commit-dirty=true",
     "gs:login": "npx @google/clasp login",
     "gs:whoami": "npx @google/clasp login --status",
     "gs:push": "cd scripts/google-script && npx @google/clasp push",
@@ -28,9 +28,8 @@
     "react-dom": "18.3.0"
   },
   "devDependencies": {
-    "open-next": "^3.0.5",
+    "opennext": "^3.0.5",
     "@types/react": "18.3.3",
-    "@types/node": "^18.11.18",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
