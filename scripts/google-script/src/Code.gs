@@ -33,14 +33,14 @@ const SERVICE_MAP = {
 };
 
 /**
- * Maneja las solicitudes OPTIONS (preflight) para CORS.
- * Esto es crucial para que las solicitudes GET y POST desde el navegador funcionen.
+ * Maneja las solicitudes OPTIONS (pre-vuelo) para CORS.
+ * Esto es crucial para que las solicitudes GET y POST desde el navegador funcionen correctamente.
  */
 function doOptions(e) {
   return ContentService.createTextOutput()
-    .setHeader('Access-Control-Allow-Origin', '*') // O tu dominio específico
+    .setHeader('Access-Control-Allow-Origin', '*') // O puedes restringirlo a tu dominio de producción
     .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
 /**
@@ -52,6 +52,13 @@ function doGet(e) {
   response.setHeader('Access-Control-Allow-Origin', '*');
   try {
     const action = e.parameter.action;
+
+    // Acción para obtener la lista de servicios
+    if (action === 'getServices') {
+      Logger.log(`doGet: Recibida acción 'getServices'`);
+      response.setContent(JSON.stringify({ services: SERVICE_MAP }));
+      return response;
+    }
 
     // Acción para autocompletar datos del cliente
     if (action === 'getClient') {
@@ -312,7 +319,7 @@ function doPost(e) {
 
     const cal = CalendarApp.getCalendarById(CALENDAR_ID);
     const eventTitle = `Cita: ${serviceName} con ${nombre}` + (extraCupo ? " (EXTRA)" : "");
-    // Nota: La firma correcta de createEvent es (title, startTime, endTime, options)
+    // Firma correcta de createEvent: (title, startTime, endTime, options)
     const event = cal.createEvent(eventTitle, start, end, {
       description: [
         `Cliente: ${nombre}`,
@@ -564,23 +571,11 @@ function logReminderSent(email, baseDateStr, type) {
 }
 
 /**
- * Crea (si no existe) un disparador diario a las 09:00 America/Santiago
- * para ejecutar sendMaintenanceReminders(). Ejecuta esta función una sola vez.
+ * Opción A (no-op): el trigger ya fue creado desde la UI.
+ * Esta función no hace nada y evita solicitar scopes adicionales.
  */
 function ensureReminderTrigger() {
-  const triggers = ScriptApp.getProjectTriggers();
-  const exists = triggers.some(tr => {
-    try { return tr.getHandlerFunction && tr.getHandlerFunction() === "sendMaintenanceReminders"; }
-    catch (e) { return false; }
-  });
-  if (!exists) {
-    ScriptApp.newTrigger("sendMaintenanceReminders")
-      .timeBased()
-      .atHour(9) // 09:00
-      .everyDays(1)
-      .inTimezone(TZ)
-      .create();
-  }
+  Logger.log("ensureReminderTrigger(): no-op (el trigger fue creado manualmente en la UI).");
 }
 
 /**
@@ -588,7 +583,7 @@ function ensureReminderTrigger() {
  * Ajusta el email que quieres probar; fuerza el envío para validar el HTML.
  */
 function test_sendMaintenanceReminder_forEmail() {
-  const email = "cliente@example.com"; // <-- cambia
+  const email = "armyv7@gmail.com"; // <-- cambia
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sh = ss.getSheetByName(SHEET_NAME);
   const data = sh.getDataRange().getValues();
