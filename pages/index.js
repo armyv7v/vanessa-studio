@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getAvailableSlots, bookAppointment } from '../lib/api'; // Asumiendo que creas este archivo
+import Confetti from 'react-confetti';
+import BookingConfirmation from '../components/BookingConfirmation';
 
 export default function Home() {
   const [selectedService, setSelectedService] = useState('');
@@ -21,6 +23,8 @@ export default function Home() {
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
   const [isFetchingClient, setIsFetchingClient] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
+
 
   // Debe calzar con tu mapeo del back/GAS
   const services = [
@@ -78,6 +82,17 @@ export default function Home() {
       fetchAvailableSlots(selectedDate, selectedService);
     }
   }, [selectedDate, selectedService]);
+
+  // Efecto para el tamaño de la ventana (para el confeti)
+  useEffect(() => {
+    function handleResize() {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    }
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Llama al inicio para obtener el tamaño inicial
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
 
   const handleServiceSelect = (serviceId) => {
     setSelectedService(serviceId);
@@ -162,6 +177,7 @@ export default function Home() {
           setSelectedTime('');
           setClientInfo({ name: '', email: '', phone: '' });
           setStep(1);
+          setBookingStatus(null); // Limpia el estado de la reserva
         }, 3000);
       } else {
         throw new Error(data.error || "Error al confirmar la cita");
@@ -403,6 +419,19 @@ export default function Home() {
 
         {/* Paso 4: Datos del cliente */}
         {step === 4 && (
+          bookingStatus?.success ? (
+            <>
+              <Confetti
+                width={windowSize.width}
+                height={windowSize.height}
+                recycle={false}
+                numberOfPieces={500}
+                tweenDuration={10000}
+              />
+              <BookingConfirmation service={services.find(s => s.id === selectedService)} date={selectedDate} time={selectedTime} client={clientInfo} isExtra={false} />
+            </>
+          ) : (
+
           <div className="max-w-md mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-center">Tus datos</h2>
 
@@ -521,6 +550,7 @@ export default function Home() {
               </div>
             </form>
           </div>
+          )
         )}
       </main>
 

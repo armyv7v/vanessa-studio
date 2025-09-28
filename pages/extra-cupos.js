@@ -4,6 +4,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { format, addDays, isToday, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import Confetti from 'react-confetti';
+import BookingConfirmation from '../components/BookingConfirmation';
 
 const TZ = 'America/Santiago';
 
@@ -39,6 +41,7 @@ export default function ExtraCup() {
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
   const [isFetchingClient, setIsFetchingClient] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
 
   const nextDays = getNextDays(35);
 
@@ -47,6 +50,17 @@ export default function ExtraCup() {
       fetchSlots(selectedDate, selectedService);
     }
   }, [selectedDate, selectedService]);
+
+  // Efecto para el tamaño de la ventana (para el confeti)
+  useEffect(() => {
+    function handleResize() {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    }
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Llama al inicio para obtener el tamaño inicial
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
 
   async function fetchSlots(dateObj, serviceId) {
     try {
@@ -151,6 +165,7 @@ export default function ExtraCup() {
         setSelectedTime('');
         setClientInfo({ name: '', email: '', phone: '' });
         setStep(1);
+        setBookingStatus(null);
       }, 2500);
     } catch (err) {
       setBookingStatus({ error: true, message: String(err.message || err) });
@@ -360,6 +375,18 @@ export default function ExtraCup() {
 
         {/* Paso 4: Datos */}
         {step === 4 && (
+          bookingStatus?.success ? (
+            <>
+              <Confetti
+                width={windowSize.width}
+                height={windowSize.height}
+                recycle={false}
+                numberOfPieces={500}
+                tweenDuration={10000}
+              />
+              <BookingConfirmation service={SERVICES.find(s => s.id === selectedService)} date={selectedDate} time={selectedTime} client={clientInfo} isExtra={true} />
+            </>
+          ) : (
           <div className="max-w-md mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-center">Tus datos</h2>
 
@@ -472,6 +499,7 @@ export default function ExtraCup() {
               </div>
             </form>
           </div>
+          )
         )}
       </main>
 
