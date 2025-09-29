@@ -15,10 +15,20 @@ export default async function handler(req, res) {
     Object.keys(req.query).forEach(key => url.searchParams.append(key, req.query[key]));
 
     const gasResponse = await fetch(url.toString());
-    const data = await gasResponse.json();
+    
+    // Google Apps Script a veces no devuelve JSON en errores, así que leemos como texto primero.
+    const text = await gasResponse.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      // Si el texto no es JSON, es un error del servidor de Google.
+      console.error("Respuesta no-JSON de Google Apps Script:", text);
+      throw new Error("El servidor de Google devolvió una respuesta inesperada.");
+    }
 
-    if (!gasResponse.ok) {
-      throw new Error(data?.error || 'Error al contactar el servicio de Google para obtener horarios.');
+    if (!gasResponse.ok || data.error) {
+      throw new Error(data.error || 'Error al contactar el servicio de Google para obtener horarios.');
     }
 
     // Devolvemos la misma respuesta que nos da Google Apps Script
