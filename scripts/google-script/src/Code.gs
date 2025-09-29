@@ -69,7 +69,7 @@ function doGet(e) {
       dayEnd.setHours(23, 59, 59, 999);
 
       const cal = CalendarApp.getCalendarById(CALENDAR_ID);
-      // Filtramos eventos que no sean de todo el día para evitar errores
+      // Filtramos eventos que no sean de todo el día para evitar errores con getStartTime()
       const busySlots = cal.getEvents(dayStart, dayEnd).filter(function(ev) {
         return !ev.isAllDayEvent();
       }).map(function(ev) {
@@ -100,7 +100,7 @@ function doGet(e) {
     }
 
     // Si no es ninguna acción conocida, devuelve un error.
-    // Esto previene que una llamada sin 'action' falle silenciosamente.
+    // Esto previene que una llamada sin 'action' falle silenciosamente y nos da más información.
     response.setStatusCode(400);
     response.setContent(JSON.stringify({ error: "Acción no reconocida o faltan parámetros. Se recibió: " + JSON.stringify(e.parameter) }));
     return response;

@@ -422,8 +422,8 @@ export default function Home() {
 
             {/* Errores de slots */}
             {errorSlots && (
-              <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-                <p><strong>Error:</strong> {JSON.stringify({ error: errorSlots })}</p>
+              <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert">
+                <p><strong>Error:</strong> {errorSlots}</p>
                 <p className="text-sm mt-2">Por favor, verifica tu conexión e inténtalo nuevamente.</p>
               </div>
             )}
