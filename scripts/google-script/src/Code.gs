@@ -53,6 +53,7 @@ function doGet(e) {
   try {
     const action = e.parameter.action;
     const date = e.parameter.date; // 'YYYY-MM-DD'
+    const mode = e.parameter.mode || 'normal'; // 'normal' o 'extra'
 
     // Acción para obtener bloques OCUPADOS (más rápido que calcular disponibles)
     if (action === 'getBusySlots' && date) {
@@ -68,7 +69,10 @@ function doGet(e) {
       dayEnd.setHours(23, 59, 59, 999);
 
       const cal = CalendarApp.getCalendarById(CALENDAR_ID);
-      const busySlots = cal.getEvents(dayStart, dayEnd).map(function(ev) {
+      // Filtramos eventos que no sean de todo el día para evitar errores
+      const busySlots = cal.getEvents(dayStart, dayEnd).filter(function(ev) {
+        return !ev.isAllDayEvent();
+      }).map(function(ev) {
         return { start: ev.getStartTime().toISOString(), end: ev.getEndTime().toISOString() };
       });
 
@@ -96,7 +100,10 @@ function doGet(e) {
     }
 
     // Si no es ninguna acción conocida, devuelve un error.
-    throw new Error("Acción no reconocida o faltan parámetros.");
+    // Esto previene que una llamada sin 'action' falle silenciosamente.
+    response.setStatusCode(400);
+    response.setContent(JSON.stringify({ error: "Acción no reconocida o faltan parámetros. Se recibió: " + JSON.stringify(e.parameter) }));
+    return response;
 
   } catch (err) {
     response.setContent(JSON.stringify({ error: "Error interno del servidor: " + String(err) }));

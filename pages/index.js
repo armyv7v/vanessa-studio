@@ -58,7 +58,7 @@ export default function Home() {
       const formattedDate = format(date, 'yyyy-MM-dd');
       
       // 1. Pedimos al backend los bloques OCUPADOS para el día.
-      const res = await fetch(`/api/slots?action=getBusySlots&date=${formattedDate}`);
+      const res = await fetch(`/api/slots?action=getBusySlots&date=${formattedDate}&mode=normal`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Error de red o respuesta no válida' }));
         throw new Error(errorData.error || 'No se pudo obtener la disponibilidad.');
