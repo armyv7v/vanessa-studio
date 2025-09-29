@@ -61,36 +61,63 @@ export default function ExtraCup() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  async function fetchSlots(dateObj, serviceId) {
+  const fetchSlots = async (dateObj, serviceId) => {
     try {
       setLoadingSlots(true);
       setErrorSlots(null);
       const yyyyMMdd = format(dateObj, 'yyyy-MM-dd');
-      // Usamos nuestra API Route, que es la forma correcta para evitar CORS.
-      const res = await fetch(`/api/slots?date=${yyyyMMdd}&serviceId=${serviceId}&mode=extra`);
-      const text = await res.text();
 
+      // 1. Pedimos al backend los bloques OCUPADOS para el día.
+      const res = await fetch(`/api/slots?action=getBusySlots&date=${yyyyMMdd}`);
       if (!res.ok) {
-        let errMsg = 'Error cargando horarios';
-        try {
-          // Intenta parsear el texto por si el error viene en formato JSON
-          const errJson = JSON.parse(text);
-          errMsg = errJson.error || errJson.message || errMsg;
-        } catch (_) {
-          // Si falla el parseo, usa el mensaje por defecto. El texto puede ser un error HTML.
+        const errorData = await res.json().catch(() => ({ error: 'Error de red o respuesta no válida' }));
+        throw new Error(errorData.error || 'No se pudo obtener la disponibilidad.');
+      }
+
+      const { busy } = await res.json();
+      const busyIntervals = busy.map(slot => ({
+        start: new Date(slot.start),
+        end: new Date(slot.end)
+      }));
+
+      // 2. Generamos los slots posibles en el frontend (para EXTRA CUPOS).
+      const service = SERVICES.find(s => s.id === serviceId);
+      if (!service) {
+        throw new Error("Servicio no encontrado");
+      }
+      const durationMin = service.duration;
+      const potentialSlots = [];
+      const dayStart = new Date(`${yyyyMMdd}T18:00:00`); // Horario extra
+      const dayEnd = new Date(`${yyyyMMdd}T21:00:00`);   // Límite superior
+
+      let cursor = dayStart;
+      while (cursor < dayEnd) {
+        potentialSlots.push(new Date(cursor));
+        cursor.setMinutes(cursor.getMinutes() + 30);
+      }
+
+      // 3. Filtramos los slots que se solapan con los ocupados.
+      const available = potentialSlots.filter(slotStart => {
+        const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
+
+        // El slot debe terminar antes de la hora de cierre
+        if (slotEnd > dayEnd) {
+          return false;
         }
-        throw new Error(errMsg);
-      }
 
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        throw new Error("Respuesta inválida del servidor");
-      }
+        const hasConflict = busyIntervals.some(busySlot =>
+          (slotStart < busySlot.end) && (slotEnd > busySlot.start)
+        );
 
-      const arr = Array.isArray(data.availableSlots) ? data.availableSlots : (data.times || []);
-      setAvailableSlots(arr || []);
+        const isPast = new Date() > slotStart;
+
+        return !hasConflict && !isPast;
+      });
+
+      // 4. Formateamos los slots disponibles a "HH:mm" y los guardamos.
+      const finalSlots = available.map(date => format(date, 'HH:mm'));
+      setAvailableSlots(finalSlots);
+
     } catch (err) {
       setErrorSlots(String(err));
       setAvailableSlots([]);
@@ -98,7 +125,7 @@ export default function ExtraCup() {
       setLoadingSlots(false);
     }
   }
-
+  
   function handleServiceSelect(serviceId) {
     setSelectedService(serviceId);
     setSelectedDate(null);
