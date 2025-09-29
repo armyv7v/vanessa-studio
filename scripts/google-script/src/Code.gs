@@ -52,6 +52,29 @@ function doGet(e) {
   response.setHeader('Access-Control-Allow-Origin', '*');
   try {
     const action = e.parameter.action;
+    const date = e.parameter.date; // 'YYYY-MM-DD'
+
+    // Acción para obtener bloques OCUPADOS (más rápido que calcular disponibles)
+    if (action === 'getBusySlots' && date) {
+      Logger.log(`doGet: Recibida acción 'getBusySlots' para fecha: ${date}`);
+      const targetDate = new Date(date + "T00:00:00");
+      if (isNaN(targetDate.getTime())) {
+        throw new Error("Fecha inválida: " + date);
+      }
+      
+      const dayStart = new Date(targetDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(targetDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const cal = CalendarApp.getCalendarById(CALENDAR_ID);
+      const busySlots = cal.getEvents(dayStart, dayEnd).map(function(ev) {
+        return { start: ev.getStartTime().toISOString(), end: ev.getEndTime().toISOString() };
+      });
+
+      response.setContent(JSON.stringify({ busy: busySlots }));
+      return response;
+    }
 
     // Acción para obtener la lista de servicios
     if (action === 'getServices') {
@@ -72,26 +95,8 @@ function doGet(e) {
       return response;
     }
 
-    // Acción por defecto: obtener horarios
-    const date = e.parameter.date; // 'YYYY-MM-DD'
-    const serviceId = e.parameter.serviceId;
-    const mode = e.parameter.mode || 'normal'; // 'normal' o 'extra'
-
-    if (!date || !serviceId) {
-      response.setContent(JSON.stringify({ error: "Faltan parámetros 'date' o 'serviceId'" }));
-      return response;
-    }
-
-    const service = SERVICE_MAP[serviceId];
-    if (!service) {
-      response.setContent(JSON.stringify({ error: "Servicio no válido" }));
-      return response;
-    }
-
-    const availableSlots = getAvailableSlotsForDay(date, service.duration, mode);
-    
-    response.setContent(JSON.stringify({ availableSlots: availableSlots }));
-    return response;
+    // Si no es ninguna acción conocida, devuelve un error.
+    throw new Error("Acción no reconocida o faltan parámetros.");
 
   } catch (err) {
     response.setContent(JSON.stringify({ error: "Error interno del servidor: " + String(err) }));

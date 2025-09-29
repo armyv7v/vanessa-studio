@@ -1,7 +1,7 @@
 // pages/index.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
+import Link from 'next/link'; 
 import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getAvailableSlots, bookAppointment } from '../lib/api'; // Asumiendo que creas este archivo
@@ -54,33 +54,62 @@ export default function Home() {
   const fetchAvailableSlots = async (date, serviceId) => {
     try {
       setLoadingSlots(true);
-      setErrorSlots(null);
+      setErrorSlots(null); 
       const formattedDate = format(date, 'yyyy-MM-dd');
-      // Llamamos a nuestra nueva API Route
-      const res = await fetch(`/api/slots?date=${formattedDate}&serviceId=${serviceId}&mode=normal`);
-      const text = await res.text(); // Leemos como texto para evitar errores de parseo
-
+      
+      // 1. Pedimos al backend los bloques OCUPADOS para el día.
+      const res = await fetch(`/api/slots?action=getBusySlots&date=${formattedDate}`);
       if (!res.ok) {
-        let errMsg = "Error obteniendo slots disponibles";
-        try {
-          const errJson = JSON.parse(text);
-          errMsg = errJson.error || errJson.message || errMsg;
-        } catch (_) {
-          // El texto de error no era JSON, usamos el mensaje por defecto
+        const errorData = await res.json().catch(() => ({ error: 'Error de red o respuesta no válida' }));
+        throw new Error(errorData.error || 'No se pudo obtener la disponibilidad.');
+      }
+      
+      const { busy } = await res.json(); // busy = [{ start: "ISO_string", end: "ISO_string" }]
+      const busyIntervals = busy.map(slot => ({
+        start: new Date(slot.start),
+        end: new Date(slot.end)
+      }));
+
+      // 2. Generamos los slots posibles en el frontend.
+      const service = services.find(s => s.id === serviceId);
+      if (!service) {
+        throw new Error("Servicio no encontrado");
+      }
+      const durationMin = service.duration;
+      const potentialSlots = [];
+      const dayStart = new Date(`${formattedDate}T10:00:00`);
+      const dayEnd = new Date(`${formattedDate}T18:00:00`);
+
+      let cursor = dayStart;
+      while (cursor < dayEnd) {
+        potentialSlots.push(new Date(cursor));
+        cursor.setMinutes(cursor.getMinutes() + 30); // Generamos slots cada 30 min
+      }
+
+      // 3. Filtramos los slots que se solapan con los ocupados.
+      const available = potentialSlots.filter(slotStart => {
+        const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
+        
+        // El slot debe terminar antes de la hora de cierre
+        if (slotEnd > dayEnd) {
+          return false;
         }
-        throw new Error(errMsg);
-      }
 
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        throw new Error("Respuesta inválida del servidor");
-      }
+        // El slot no debe solaparse con ningún bloque ocupado
+        const hasConflict = busyIntervals.some(busySlot => 
+          (slotStart < busySlot.end) && (slotEnd > busySlot.start)
+        );
 
-      // Tolerante: `availableSlots` (["HH:mm"]) o `times`
-      const list = data.availableSlots || data.times || [];
-      setAvailableSlots(Array.isArray(list) ? list : []);
+        // Si es hoy, el slot no debe haber pasado ya
+        const isPast = new Date() > slotStart;
+
+        return !hasConflict && !isPast;
+      });
+
+      // 4. Formateamos los slots disponibles a "HH:mm" y los guardamos.
+      const finalSlots = available.map(date => format(date, 'HH:mm'));
+      setAvailableSlots(finalSlots);
+
     } catch (error) {
       console.error('Error fetching slots:', error);
       setErrorSlots(error.message || String(error));
