@@ -9,6 +9,17 @@ import BookingConfirmation from '../components/BookingConfirmation';
 
 const TZ = 'America/Santiago';
 
+const SERVICES = [
+  { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
+  { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
+  { id: 3, name: "Uñas Acrílicas", duration: 180 },
+  { id: 4, name: "Uñas Polygel", duration: 180 },
+  { id: 5, name: "Uñas Softgel", duration: 180 },
+  { id: 6, name: "Kapping o Baño Polygel o Acrílico sobre uña natural", duration: 150 },
+  { id: 7, name: "Reforzamiento Nivelación Rubber", duration: 150 },
+  { id: 8, name: "Esmaltado Permanente", duration: 90 }
+];
+
 const getNextDays = (count = 28) => {
   const days = [];
   const today = new Date();
@@ -20,7 +31,6 @@ const getNextDays = (count = 28) => {
 };
 
 export default function ExtraCup() {
-  const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
@@ -50,24 +60,6 @@ export default function ExtraCup() {
     handleResize(); // Llama al inicio para obtener el tamaño inicial
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-
-  // Efecto para cargar los servicios desde la API al montar el componente
-  useEffect(() => {
-    async function loadServices() {
-      try {
-        const res = await fetch('/api/services');
-        const data = await res.json();
-        if (res.ok) {
-          setServices(data.services || []);
-        }
-      } catch (error) {
-        console.error("Error al cargar la lista de servicios:", error);
-      }
-    }
-    loadServices();
-  }, []);
-
 
   async function fetchSlots(dateObj, serviceId) {
     try {
@@ -248,7 +240,7 @@ export default function ExtraCup() {
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">Selecciona tu servicio</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...services].sort((a, b) => a.duration - b.duration).map((service) => (
+              {[...SERVICES].sort((a, b) => a.duration - b.duration).map((service) => (
                 <div
                   key={service.id}
                   onClick={() => handleServiceSelect(service.id)}
@@ -286,7 +278,7 @@ export default function ExtraCup() {
         {step === 2 && (
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-center">
-              Selecciona una fecha para {services.find(s => s.id === selectedService)?.name}
+              Selecciona una fecha para {SERVICES.find(s => s.id === selectedService)?.name}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
               {nextDays.map((day, idx) => {
@@ -405,7 +397,7 @@ export default function ExtraCup() {
                 numberOfPieces={500}
                 tweenDuration={10000}
               />
-              <BookingConfirmation service={services.find(s => s.id === selectedService)} date={selectedDate} time={selectedTime} client={clientInfo} isExtra={true} />
+              <BookingConfirmation service={SERVICES.find(s => s.id === selectedService)} date={selectedDate} time={selectedTime} client={clientInfo} isExtra={true} />
             </>
           ) : (
           <div className="max-w-md mx-auto">
@@ -416,7 +408,7 @@ export default function ExtraCup() {
               <div className="space-y-2">
                 <p className="flex justify-between">
                   <span className="font-medium">Servicio:</span>
-                  <span>{services.find(s => s.id === selectedService)?.name}</span>
+                  <span>{SERVICES.find(s => s.id === selectedService)?.name}</span>
                 </p>
                 <p className="flex justify-between">
                   <span className="font-medium">Fecha:</span>

@@ -9,7 +9,6 @@ import Confetti from 'react-confetti';
 import BookingConfirmation from '../components/BookingConfirmation';
 
 export default function Home() {
-  const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
@@ -25,6 +24,18 @@ export default function Home() {
   const [bookingStatus, setBookingStatus] = useState(null);
   const [isFetchingClient, setIsFetchingClient] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
+
+  // Debe calzar con tu mapeo del back/GAS
+  const services = [
+    { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
+    { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
+    { id: 3, name: "Uñas Acrílicas", duration: 180 },
+    { id: 4, name: "Uñas Polygel", duration: 180 },
+    { id: 5, name: "Uñas Softgel", duration: 180 },
+    { id: 6, name: "Kapping o Baño Polygel o Acrílico sobre uña natural", duration: 150 },
+    { id: 7, name: "Reforzamiento Nivelación Rubber", duration: 150 },
+    { id: 8, name: "Esmaltado Permanente", duration: 90 }
+  ];
 
   // Mostrar 3 semanas (21 días) desde HOY (incluyendo hoy)
   const getNextDays = () => {
@@ -47,16 +58,15 @@ export default function Home() {
       const formattedDate = format(date, 'yyyy-MM-dd');
       // Llamamos a nuestra nueva API Route
       const res = await fetch(`/api/slots?date=${formattedDate}&serviceId=${serviceId}&mode=normal`);
-      const text = await res.text();
+      const text = await res.text(); // Leemos como texto para evitar errores de parseo
 
       if (!res.ok) {
-        let errMsg = 'Error obteniendo los horarios';
+        let errMsg = "Error obteniendo slots disponibles";
         try {
-          // Intenta parsear el texto por si el error viene en formato JSON
           const errJson = JSON.parse(text);
           errMsg = errJson.error || errJson.message || errMsg;
         } catch (_) {
-          // Si falla el parseo, usa el mensaje por defecto. El texto puede ser un error HTML.
+          // El texto de error no era JSON, usamos el mensaje por defecto
         }
         throw new Error(errMsg);
       }
@@ -64,10 +74,11 @@ export default function Home() {
       let data;
       try {
         data = JSON.parse(text);
-      } catch {
+      } catch (e) {
         throw new Error("Respuesta inválida del servidor");
       }
 
+      // Tolerante: `availableSlots` (["HH:mm"]) o `times`
       const list = data.availableSlots || data.times || [];
       setAvailableSlots(Array.isArray(list) ? list : []);
     } catch (error) {
@@ -78,22 +89,6 @@ export default function Home() {
       setLoadingSlots(false);
     }
   };
-
-  // Efecto para cargar los servicios desde la API al montar el componente
-  useEffect(() => {
-    async function loadServices() {
-      try {
-        const res = await fetch('/api/services');
-        const data = await res.json();
-        if (res.ok) {
-          setServices(data.services || []);
-        }
-      } catch (error) {
-        console.error("Error al cargar la lista de servicios:", error);
-      }
-    }
-    loadServices();
-  }, []);
 
   // Efecto: carga slots al cambiar fecha/servicio
   useEffect(() => {
