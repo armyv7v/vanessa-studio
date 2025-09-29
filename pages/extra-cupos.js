@@ -61,57 +61,57 @@ export default function ExtraCup() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const fetchSlots = async (dateObj, serviceId) => {
+  async function fetchSlots(dateObj, serviceId) {
     try {
       setLoadingSlots(true);
       setErrorSlots(null);
       const yyyyMMdd = format(dateObj, 'yyyy-MM-dd');
-
-      // 1. Pedimos al backend los bloques OCUPADOS para el día.
-      const res = await fetch(`/api/slots?action=getBusySlots&date=${yyyyMMdd}&mode=extra`);
+      const url = `/api/slots?date=${yyyyMMdd}&serviceId=${serviceId}&mode=extra`;
+      const res = await fetch(url);
+      const data = await res.json();
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Error de red o respuesta no válida' }));
-        throw new Error(errorData.error || 'No se pudo obtener la disponibilidad.');
+        throw new Error(data?.error || "Error cargando horarios");
       }
+      const arr = Array.isArray(data.availableSlots) ? data.availableSlots : (data.times || []);
+      setAvailableSlots(arr || []);
+      // const { busy } = await res.json();
+      // const busyIntervals = busy.map(slot => ({
+      //   start: new Date(slot.start),
+      //   end: new Date(slot.end)
+      // }));
 
-      const { busy } = await res.json();
-      const busyIntervals = busy.map(slot => ({
-        start: new Date(slot.start),
-        end: new Date(slot.end)
-      }));
-
-      // 2. Generamos los slots posibles en el frontend (para EXTRA CUPOS).
-      const service = SERVICES.find(s => s.id === serviceId);
-      if (!service) throw new Error("Servicio no encontrado");
+      // // 2. Generamos los slots posibles en el frontend (para EXTRA CUPOS).
+      // const service = SERVICES.find(s => s.id === serviceId);
+      // if (!service) throw new Error("Servicio no encontrado");
       
-      const durationMin = service.duration;
-      const potentialSlots = [];
-      const dayStart = new Date(`${yyyyMMdd}T18:00:00`); // Horario extra
-      const dayEnd = new Date(`${yyyyMMdd}T21:00:00`);   // Límite superior
+      // const durationMin = service.duration;
+      // const potentialSlots = [];
+      // const dayStart = new Date(`${yyyyMMdd}T18:00:00`); // Horario extra
+      // const dayEnd = new Date(`${yyyyMMdd}T21:00:00`);   // Límite superior
 
-      let cursor = dayStart;
-      while (cursor < dayEnd) {
-        potentialSlots.push(new Date(cursor));
-        cursor.setMinutes(cursor.getMinutes() + 30);
-      }
+      // let cursor = dayStart;
+      // while (cursor < dayEnd) {
+      //   potentialSlots.push(new Date(cursor));
+      //   cursor.setMinutes(cursor.getMinutes() + 30);
+      // }
 
-      // 3. Filtramos los slots que se solapan con los ocupados.
-      const available = potentialSlots.filter(slotStart => {
-        const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
+      // // 3. Filtramos los slots que se solapan con los ocupados.
+      // const available = potentialSlots.filter(slotStart => {
+      //   const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
 
-        if (slotEnd > dayEnd) return false;
+      //   if (slotEnd > dayEnd) return false;
 
-        const hasConflict = busyIntervals.some(busySlot =>
-          (slotStart < busySlot.end) && (slotEnd > busySlot.start)
-        );
+      //   const hasConflict = busyIntervals.some(busySlot =>
+      //     (slotStart < busySlot.end) && (slotEnd > busySlot.start)
+      //   );
 
-        const isPast = new Date() > slotStart;
-        return !hasConflict && !isPast;
-      });
+      //   const isPast = new Date() > slotStart;
+      //   return !hasConflict && !isPast;
+      // });
 
-      // 4. Formateamos los slots disponibles a "HH:mm" y los guardamos.
-      const finalSlots = available.map(date => format(date, 'HH:mm'));
-      setAvailableSlots(finalSlots);
+      // // 4. Formateamos los slots disponibles a "HH:mm" y los guardamos.
+      // const finalSlots = available.map(date => format(date, 'HH:mm'));
+      // setAvailableSlots(finalSlots);
 
     } catch (err) {
       setErrorSlots(String(err));
