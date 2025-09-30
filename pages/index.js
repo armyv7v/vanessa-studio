@@ -28,7 +28,7 @@ export default function Home() {
   // Debe calzar con tu mapeo del back/GAS
   const services = [
     { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
-    { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
+    { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagia)", duration: 180 },
     { id: 3, name: "Uñas Acrílicas", duration: 180 },
     { id: 4, name: "Uñas Polygel", duration: 180 },
     { id: 5, name: "Uñas Softgel", duration: 180 },
@@ -205,7 +205,7 @@ export default function Home() {
           date: format(selectedDate, "yyyy-MM-dd"),
           start: selectedTime,
           client: clientInfo,
-          extraCupo: false, // Horario normal
+          extraCup: false, // Horario normal
         }),
       });
 

@@ -32,7 +32,6 @@ export default async function handler(req, res) {
 
     // La respuesta de GAS ya viene en el formato { client: { name, phone } } o { client: null }
     res.status(200).json({ client: data.client || null });
-    
   } catch (error) {
     console.error('Error en /api/client:', error);
     return res.status(500).json({ error: error.message || 'Error interno del servidor' });

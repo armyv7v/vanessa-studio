@@ -11,7 +11,7 @@ const TZ = 'America/Santiago';
 
 const SERVICES = [
   { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
-  { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
+  { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagia)", duration: 180 },
   { id: 3, name: "Uñas Acrílicas", duration: 180 },
   { id: 4, name: "Uñas Polygel", duration: 180 },
   { id: 5, name: "Uñas Softgel", duration: 180 },
@@ -65,56 +65,57 @@ export default function ExtraCup() {
     try {
       setLoadingSlots(true);
       setErrorSlots(null);
+
       const yyyyMMdd = format(dateObj, 'yyyy-MM-dd');
-      const url = `/api/slots?date=${yyyyMMdd}&serviceId=${serviceId}&mode=extra`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Error cargando horarios");
+      const service = SERVICES.find((s) => String(s.id) === String(serviceId));
+
+      if (!service) {
+        throw new Error('Servicio no encontrado');
       }
-      const arr = Array.isArray(data.availableSlots) ? data.availableSlots : (data.times || []);
-      setAvailableSlots(arr || []);
-      // const { busy } = await res.json();
-      // const busyIntervals = busy.map(slot => ({
-      //   start: new Date(slot.start),
-      //   end: new Date(slot.end)
-      // }));
 
-      // // 2. Generamos los slots posibles en el frontend (para EXTRA CUPOS).
-      // const service = SERVICES.find(s => s.id === serviceId);
-      // if (!service) throw new Error("Servicio no encontrado");
-      
-      // const durationMin = service.duration;
-      // const potentialSlots = [];
-      // const dayStart = new Date(`${yyyyMMdd}T18:00:00`); // Horario extra
-      // const dayEnd = new Date(`${yyyyMMdd}T21:00:00`);   // Límite superior
+      const url = `/api/slots?action=getBusySlots&date=${yyyyMMdd}&mode=extra`;
+      const res = await fetch(url);
+      const payload = await res.json().catch(() => null);
 
-      // let cursor = dayStart;
-      // while (cursor < dayEnd) {
-      //   potentialSlots.push(new Date(cursor));
-      //   cursor.setMinutes(cursor.getMinutes() + 30);
-      // }
+      if (!res.ok || !payload) {
+        const message = payload?.error || 'Error cargando horarios';
+        throw new Error(message);
+      }
 
-      // // 3. Filtramos los slots que se solapan con los ocupados.
-      // const available = potentialSlots.filter(slotStart => {
-      //   const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
+      const busy = Array.isArray(payload.busy) ? payload.busy : [];
+      const busyIntervals = busy.map((slot) => ({
+        start: new Date(slot.start),
+        end: new Date(slot.end),
+      }));
 
-      //   if (slotEnd > dayEnd) return false;
+      const durationMin = service.duration;
+      const dayStart = new Date(`${yyyyMMdd}T18:00:00`);
+      const dayEnd = new Date(`${yyyyMMdd}T20:00:00`);
 
-      //   const hasConflict = busyIntervals.some(busySlot =>
-      //     (slotStart < busySlot.end) && (slotEnd > busySlot.start)
-      //   );
+      const potentialSlots = [];
+      let cursor = new Date(dayStart);
 
-      //   const isPast = new Date() > slotStart;
-      //   return !hasConflict && !isPast;
-      // });
+      while (cursor < dayEnd) {
+        potentialSlots.push(new Date(cursor));
+        cursor.setMinutes(cursor.getMinutes() + 30);
+      }
 
-      // // 4. Formateamos los slots disponibles a "HH:mm" y los guardamos.
-      // const finalSlots = available.map(date => format(date, 'HH:mm'));
-      // setAvailableSlots(finalSlots);
+      const available = potentialSlots.filter((slotStart) => {
+        const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
 
+        const hasConflict = busyIntervals.some((busySlot) => (
+          slotStart < busySlot.end && slotEnd > busySlot.start
+        ));
+
+        const isPast = new Date() > slotStart;
+
+        return !hasConflict && !isPast;
+      });
+
+      const finalSlots = available.map((slot) => format(slot, 'HH:mm'));
+      setAvailableSlots(finalSlots);
     } catch (err) {
-      setErrorSlots(String(err));
+      setErrorSlots(String(err?.message || err));
       setAvailableSlots([]);
     } finally {
       setLoadingSlots(false);
@@ -176,7 +177,7 @@ export default function ExtraCup() {
         serviceId: selectedService,
         date: format(selectedDate, 'yyyy-MM-dd'),
         start: selectedTime, // HH:mm
-        extraCupo: true,     // clave: EXTRA CUPO (unificado)
+        extraCup: true,     // clave: EXTRA CUPO (unificado)
         client: clientInfo,
       };
 

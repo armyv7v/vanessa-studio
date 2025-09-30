@@ -1,52 +1,69 @@
-﻿﻿const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
+﻿import { DateTime } from "luxon";
+
+const CALENDAR_ID = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
+const API_KEY = process.env.NEXT_PUBLIC_GCAL_API_KEY;
+const DEFAULT_TZ = process.env.NEXT_PUBLIC_TZ || "America/Santiago";
+
+function buildGoogleCalendarUrl({ date, timezone }) {
+  const dateString = (date || "") + "T00:00";
+  const startOfDay = DateTime.fromISO(dateString, { zone: timezone });
+  if (!startOfDay.isValid) {
+    throw new Error("Fecha inválida");
+  }
+  const endOfDay = startOfDay.endOf("day");
+
+  const params = new URLSearchParams({
+    key: API_KEY,
+    timeMin: startOfDay.toUTC().toISO(),
+    timeMax: endOfDay.toUTC().toISO(),
+    singleEvents: "true",
+    orderBy: "startTime",
+    maxResults: "2500",
+  });
+
+  const encodedCalendar = encodeURIComponent(CALENDAR_ID || "");
+  return "https://www.googleapis.com/calendar/v3/calendars/" + encodedCalendar + "/events?" + params.toString();
+}
 
 export default async function handler(req, res) {
-  if (!GAS_URL) {
-    return res.status(500).json({ error: 'La URL del script de Google no está configurada.' });
+  const { action, date, mode = "normal" } = req.query;
+
+  if (action !== "getBusySlots") {
+    return res.status(400).json({ error: "Acción no soportada. Usa action=getBusySlots." });
+  }
+
+  if (!CALENDAR_ID || !API_KEY) {
+    return res.status(500).json({ error: "Faltan configuraciones de Google Calendar." });
+  }
+
+  if (!date) {
+    return res.status(400).json({ error: "El parámetro date es obligatorio (YYYY-MM-DD)." });
   }
 
   try {
-    const url = new URL(GAS_URL);
-    Object.keys(req.query).forEach(key => url.searchParams.append(key, req.query[key]));
+    const timezone = DEFAULT_TZ;
+    const url = buildGoogleCalendarUrl({ date, timezone });
 
-    // --- INICIO: Bloque de Diagnóstico ---
-    const diagnosticInfo = {
-      message: "Información de diagnóstico desde /api/slots",
-      receivedQuery: req.query,
-      finalUrlSentToGoogle: url.toString(),
-    };
-    console.log(diagnosticInfo);
-    // --- FIN: Bloque de Diagnóstico ---
+    const gcResponse = await fetch(url);
+    const payload = await gcResponse.json().catch(() => null);
 
-    const gasResponse = await fetch(url.toString());
-    
-    const text = await gasResponse.text();
-    let data;
-
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error("Respuesta no-JSON de Google Apps Script:", text);
-      // Devolvemos la información de diagnóstico junto con el error
-      return res.status(502).json({ 
-        error: "El servidor de Google devolvió una respuesta inesperada (no es JSON).",
-        responseText: text,
-        diagnosticInfo
-      });
+    if (!gcResponse.ok || !payload) {
+      const message = payload?.error?.message || "Error obteniendo eventos del calendario.";
+      return res.status(gcResponse.status).json({ error: message, diagnosticInfo: { url } });
     }
 
-    if (!gasResponse.ok || data.error) {
-      // Devolvemos la información de diagnóstico junto con el error
-      return res.status(gasResponse.status).json({
-        error: data.error || 'Error en la respuesta de Google Apps Script.',
-        diagnosticInfo
-      });
-    }
+    const busy = (payload.items || [])
+      .filter((event) => !event.start?.date && !event.end?.date)
+      .map((event) => ({
+        id: event.id,
+        start: event.start?.dateTime || event.start?.date,
+        end: event.end?.dateTime || event.end?.date,
+        summary: event.summary || "",
+      }));
 
-    res.status(200).json(data);
-    
+    return res.status(200).json({ busy, mode, source: "google-calendar-api" });
   } catch (error) {
-    console.error('Error en /api/slots:', error);
-    res.status(500).json({ error: error.message || 'Error interno al obtener los horarios.' });
+    console.error("Error en /api/slots (Google Calendar):", error);
+    return res.status(500).json({ error: error.message || "Error interno obteniendo los horarios." });
   }
 }

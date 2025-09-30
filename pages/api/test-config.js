@@ -1,10 +1,14 @@
 // pages/api/test-config.js
 export default function handler(req, res) {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Endpoint disponible solo en entornos de desarrollo.' });
+  }
+
+  const mask = (value) => (value ? 'configurada' : 'no configurada');
+
   res.status(200).json({
-    GOOGLE_SHEET_ID: process.env.GOOGLE_SHEET_ID ? '✓ Configurada' : '✗ No configurada',
-    GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL ? '✓ Configurada' : '✗ No configurada',
-    GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY ? '✓ Configurada' : '✗ No configurada',
-    private_key_preview: process.env.GOOGLE_PRIVATE_KEY ? 
-      process.env.GOOGLE_PRIVATE_KEY.substring(0, 50) + '...' : 'No disponible'
+    GOOGLE_SHEET_ID: mask(process.env.GOOGLE_SHEET_ID),
+    GOOGLE_CLIENT_EMAIL: mask(process.env.GOOGLE_CLIENT_EMAIL),
+    GOOGLE_PRIVATE_KEY: mask(process.env.GOOGLE_PRIVATE_KEY),
   });
 }

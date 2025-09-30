@@ -49,8 +49,8 @@ function doOptions(e) {
 function doGet(e) {
   const response = ContentService.createTextOutput();
   response.setMimeType(ContentService.MimeType.JSON);
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  try {
+  
+    try {
     const action = e.parameter.action;
     const date = e.parameter.date; // 'YYYY-MM-DD'
     const mode = e.parameter.mode || 'normal'; // 'normal' o 'extra'
@@ -279,10 +279,8 @@ function buildEmailHtml({ clientName, fecha, hora, duracion, telefono, serviceNa
 }
 
 function jsonResponse(obj, statusCode) {
-  const response = ContentService.createTextOutput(JSON.stringify(obj))
+  return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  return response;
 }
 
 /**
@@ -524,7 +522,7 @@ function sendMaintenanceReminders() {
 
       const html = buildMaintenanceReminderHtml({
         clientName: rec.name || "Bella",
-        lastDateStr: Utilities.formatDate(rec.startDate, TZ, "dd-MM-yyyy"),
+        lastDateStr: Utilities.formatDate(rec.startDate, TZ, "dd/MM/yyyy"),
         serviceName: rec.service || ""
       });
 
@@ -619,3 +617,7 @@ function test_sendMaintenanceReminder_forEmail() {
 }
 
 /* NOTA: Para notificaciones push programadas con JWT, considerar backend Node.js/OneSignal */
+function testSpreadsheetAccess() {
+  const ss = SpreadsheetApp.openById("1aE4dnWZQjEJWAMaDEfDRpACVUDU8_F9-fzd_2mSQQeM");
+  Logger.log(ss.getName());
+}
