@@ -21,17 +21,6 @@ const DISABLED_DAYS = [
   // Ejemplos: "SAT1", "SAT3", "SUN2"
 ];
 
-const SERVICE_MAP = {
-  "1": { name: "Retoque (Mantenimiento)", duration: 120 },
-  "2": { name: "Reconstrucción Uñas Mordidas (Onicofagía)", duration: 180 },
-  "3": { name: "Uñas Acrílicas", duration: 180 },
-  "4": { name: "Uñas Polygel", duration: 180 },
-  "5": { name: "Uñas Softgel", duration: 180 },
-  "6": { name: "Kapping o Baño Polygel o Acrílico sobre uña natural", duration: 150 },
-  "7": { name: "Reforzamiento Nivelación Rubber", duration: 150 },
-  "8": { name: "Esmaltado Permanente", duration: 90 }
-};
-
 /**
  * Maneja las solicitudes OPTIONS (pre-vuelo) para CORS.
  * Esto es crucial para que las solicitudes GET y POST desde el navegador funcionen correctamente.
@@ -80,10 +69,10 @@ function doGet(e) {
       return response;
     }
 
-    // Acción para obtener la lista de servicios
-    if (action === 'getServices') {
-      Logger.log(`doGet: Recibida acción 'getServices'`);
-      response.setContent(JSON.stringify({ services: SERVICE_MAP }));
+    // Acción para obtener la configuración de días hábiles
+    if (action === 'getConfig') {
+      Logger.log(`doGet: Recibida acción 'getConfig'`);
+      response.setContent(JSON.stringify({ disabledDays: DISABLED_DAYS }));
       return response;
     }
 
@@ -310,12 +299,12 @@ function doPost(e) {
     const fecha     = (data.fecha || data.date || "").trim(); // YYYY-MM-DD
     const hora      = (data.hora  || data.start || "").trim(); // HH:mm
     const serviceId = String(data.serviceId || "");
-    const extraCupo = !!(data.extraCupo || data.extraCup); // retrocompatibilidad
-    const durationMin = Number(data.durationMin || (SERVICE_MAP[serviceId]?.duration || 60));
-    const serviceName = data.servicio || SERVICE_MAP[serviceId]?.name || "Servicio";
+    const extraCupo = !!(data.extraCupo || data.extraCup);
+    const durationMin = Number(data.durationMin);
+    const serviceName = data.serviceName || "Servicio no especificado";
 
-    if (!nombre || !email || !fecha || !hora) {
-      return jsonResponse({ success: false, error: "Faltan campos: nombre, email, fecha, hora" });
+    if (!nombre || !email || !fecha || !hora || !durationMin || !serviceName) {
+      return jsonResponse({ success: false, error: "Faltan campos obligatorios: nombre, email, fecha, hora, serviceName, durationMin" });
     }
 
     const probe = new Date(`${fecha}T${hora}:00`);
@@ -376,9 +365,9 @@ function test_doPost() {
     telefono: "56911112222",
     fecha: "2025-08-25",
     hora: "10:00",
-    serviceId: 8,
+    serviceId: "8",
     durationMin: 90,
-    servicio: "Esmaltado Permanente"
+    serviceName: "Esmaltado Permanente"
   })}};
   const res = doPost(e);
   Logger.log(res.getContent());

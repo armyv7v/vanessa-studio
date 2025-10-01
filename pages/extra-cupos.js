@@ -1,24 +1,14 @@
 // pages/extra-cupos.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { format, addDays, isToday, parseISO } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { services } from '../lib/services'; // REUTILIZAR
+import { generateTimeSlots } from '../lib/slots'; // REUTILIZAR
 import Confetti from 'react-confetti';
 import BookingConfirmation from '../components/BookingConfirmation';
-
-const TZ = 'America/Santiago';
-
-const SERVICES = [
-  { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
-  { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagia)", duration: 180 },
-  { id: 3, name: "Uñas Acrílicas", duration: 180 },
-  { id: 4, name: "Uñas Polygel", duration: 180 },
-  { id: 5, name: "Uñas Softgel", duration: 180 },
-  { id: 6, name: "Kapping o Baño Polygel o Acrílico sobre uña natural", duration: 150 },
-  { id: 7, name: "Reforzamiento Nivelación Rubber", duration: 150 },
-  { id: 8, name: "Esmaltado Permanente", duration: 90 }
-];
+import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 
 const getNextDays = (count = 28) => {
   const days = [];
@@ -40,19 +30,13 @@ export default function ExtraCup() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
-  const [isFetchingClient, setIsFetchingClient] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
 
   const nextDays = getNextDays(35);
 
-  useEffect(() => {
-    if (selectedDate && selectedService) {
-      fetchSlots(selectedDate, selectedService);
-    }
-  }, [selectedDate, selectedService]);
+  const { isFetchingClient, handleEmailBlur } = useClientAutocomplete(setClientInfo);
 
-  // Efecto para el tamaño de la ventana (para el confeti)
-  useEffect(() => {
+  useEffect(() => { // Efecto para el tamaño de la ventana (para el confeti)
     function handleResize() {
       setWindowSize({ width: window.innerWidth, height: window.innerHeight });
     }
@@ -61,58 +45,40 @@ export default function ExtraCup() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  async function fetchSlots(dateObj, serviceId) {
+  const fetchSlots = useCallback(async (dateObj, serviceId) => {
     try {
       setLoadingSlots(true);
       setErrorSlots(null);
 
       const yyyyMMdd = format(dateObj, 'yyyy-MM-dd');
-      const service = SERVICES.find((s) => String(s.id) === String(serviceId));
+      const service = services.find((s) => String(s.id) === String(serviceId));
 
       if (!service) {
         throw new Error('Servicio no encontrado');
       }
 
-      const url = `/api/slots?action=getBusySlots&date=${yyyyMMdd}&mode=extra`;
+      const url = `/api/slots?action=getBusySlots&date=${yyyyMMdd}`;
       const res = await fetch(url);
       const payload = await res.json().catch(() => null);
 
       if (!res.ok || !payload) {
-        const message = payload?.error || 'Error cargando horarios';
-        throw new Error(message);
+        throw new Error(payload?.error || 'Error cargando horarios');
       }
 
-      const busy = Array.isArray(payload.busy) ? payload.busy : [];
-      const busyIntervals = busy.map((slot) => ({
-        start: new Date(slot.start),
-        end: new Date(slot.end),
-      }));
-
-      const durationMin = service.duration;
-      const dayStart = new Date(`${yyyyMMdd}T18:00:00`);
-      const dayEnd = new Date(`${yyyyMMdd}T20:00:00`);
-
-      const potentialSlots = [];
-      let cursor = new Date(dayStart);
-
-      while (cursor < dayEnd) {
-        potentialSlots.push(new Date(cursor));
-        cursor.setMinutes(cursor.getMinutes() + 30);
-      }
-
-      const available = potentialSlots.filter((slotStart) => {
-        const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
-
-        const hasConflict = busyIntervals.some((busySlot) => (
-          slotStart < busySlot.end && slotEnd > busySlot.start
-        ));
-
-        const isPast = new Date() > slotStart;
-
-        return !hasConflict && !isPast;
+      const generatedSlots = generateTimeSlots({
+        date: yyyyMMdd,
+        openHour: 18,
+        closeHour: 20,
+        stepMinutes: 30,
+        durationMinutes: service.duration,
+        busy: payload.busy || [],
+        allowOverflowEnd: true, // Para extra cupos, el servicio puede terminar después de las 20:00
       });
 
-      const finalSlots = available.map((slot) => format(slot, 'HH:mm'));
+      const finalSlots = generatedSlots
+        .filter(slot => slot.available)
+        .map(slot => format(new Date(slot.start), 'HH:mm'));
+
       setAvailableSlots(finalSlots);
     } catch (err) {
       setErrorSlots(String(err?.message || err));
@@ -120,7 +86,13 @@ export default function ExtraCup() {
     } finally {
       setLoadingSlots(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (selectedDate && selectedService) {
+      fetchSlots(selectedDate, selectedService);
+    }
+  }, [selectedDate, selectedService, fetchSlots]);
 
   function handleServiceSelect(serviceId) {
     setSelectedService(serviceId);
@@ -141,43 +113,19 @@ export default function ExtraCup() {
     setClientInfo(prev => ({ ...prev, [field]: value }));
   }
 
-  const handleEmailBlur = async (e) => {
-    const email = e.target.value;
-    // Validación básica para no hacer llamadas vacías
-    if (!email || !email.includes('@')) {
-      return;
-    }
-
-    try {
-      setIsFetchingClient(true);
-      const res = await fetch(`/api/client?email=${encodeURIComponent(email)}`);
-      const data = await res.json();
-
-      if (res.ok && data.client) {
-        // Autocompletar el formulario si se encuentra el cliente
-        setClientInfo(prev => ({
-          ...prev,
-          name: data.client.name || prev.name,
-          phone: data.client.phone || prev.phone,
-        }));
-      }
-    } catch (error) {
-      console.error("Error al autocompletar datos del cliente:", error);
-    } finally {
-      setIsFetchingClient(false);
-    }
-  };
-
   async function handleSubmitBooking(e) {
     e.preventDefault();
     try {
       setBookingStatus({ loading: true });
 
+      const service = services.find(s => s.id === selectedService);
       const payload = {
         serviceId: selectedService,
+        serviceName: service?.name,
+        durationMin: service?.duration,
         date: format(selectedDate, 'yyyy-MM-dd'),
         start: selectedTime, // HH:mm
-        extraCup: true,     // clave: EXTRA CUPO (unificado)
+        extraCupo: true,
         client: clientInfo,
       };
 
@@ -263,7 +211,7 @@ export default function ExtraCup() {
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">Selecciona tu servicio</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...SERVICES].sort((a, b) => a.duration - b.duration).map((service) => (
+              {[...services].sort((a, b) => a.duration - b.duration).map((service) => (
                 <div
                   key={service.id}
                   onClick={() => handleServiceSelect(service.id)}
@@ -301,7 +249,7 @@ export default function ExtraCup() {
         {step === 2 && (
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-center">
-              Selecciona una fecha para {SERVICES.find(s => s.id === selectedService)?.name}
+              Selecciona una fecha para {services.find(s => String(s.id) === String(selectedService))?.name}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
               {nextDays.map((day, idx) => {
@@ -420,7 +368,7 @@ export default function ExtraCup() {
                 numberOfPieces={500}
                 tweenDuration={10000}
               />
-              <BookingConfirmation service={SERVICES.find(s => s.id === selectedService)} date={selectedDate} time={selectedTime} client={clientInfo} isExtra={true} />
+              <BookingConfirmation service={services.find(s => String(s.id) === String(selectedService))} date={selectedDate} time={selectedTime} client={clientInfo} isExtra={true} />
             </>
           ) : (
           <div className="max-w-md mx-auto">
@@ -431,7 +379,7 @@ export default function ExtraCup() {
               <div className="space-y-2">
                 <p className="flex justify-between">
                   <span className="font-medium">Servicio:</span>
-                  <span>{SERVICES.find(s => s.id === selectedService)?.name}</span>
+                  <span>{services.find(s => String(s.id) === String(selectedService))?.name}</span>
                 </p>
                 <p className="flex justify-between">
                   <span className="font-medium">Fecha:</span>

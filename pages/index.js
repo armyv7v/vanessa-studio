@@ -6,8 +6,10 @@ import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { services } from '../lib/services'; // Importar la lista de servicios
 import { bookAppointment } from '../lib/api'; // Asumiendo que creas este archivo
+import { generateTimeSlots } from '../lib/slots'; // Importar la utilidad de slots
 import Confetti from 'react-confetti';
 import BookingConfirmation from '../components/BookingConfirmation';
+import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 
 export default function Home() {
   const [selectedService, setSelectedService] = useState('');
@@ -23,8 +25,9 @@ export default function Home() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
-  const [isFetchingClient, setIsFetchingClient] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
+
+  const { isFetchingClient, handleEmailBlur } = useClientAutocomplete(setClientInfo);
 
   // Mostrar 3 semanas (21 días) desde HOY (incluyendo hoy)
   const getNextDays = () => {
@@ -54,49 +57,29 @@ export default function Home() {
       }
       
       const { busy } = await res.json(); // busy = [{ start: "ISO_string", end: "ISO_string" }]
-      const busyIntervals = busy.map(slot => ({
-        start: new Date(slot.start),
-        end: new Date(slot.end)
-      }));
 
       // 2. Generamos los slots posibles en el frontend.
       const service = services.find(s => s.id === serviceId);
       if (!service) {
         throw new Error("Servicio no encontrado");
       }
-      const durationMin = service.duration;
-      const potentialSlots = [];
-      const dayStart = new Date(`${formattedDate}T10:00:00`);
-      const dayEnd = new Date(`${formattedDate}T18:00:00`);
 
-      let cursor = dayStart;
-      while (cursor < dayEnd) {
-        potentialSlots.push(new Date(cursor));
-        cursor.setMinutes(cursor.getMinutes() + 30); // Generamos slots cada 30 min
-      }
-
-      // 3. Filtramos los slots que se solapan con los ocupados.
-      const available = potentialSlots.filter(slotStart => {
-        const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
-        
-        // El slot debe terminar antes de la hora de cierre
-        if (slotEnd > dayEnd) {
-          return false;
-        }
-
-        // El slot no debe solaparse con ningún bloque ocupado
-        const hasConflict = busyIntervals.some(busySlot => 
-          (slotStart < busySlot.end) && (slotEnd > busySlot.start)
-        );
-
-        // Si es hoy, el slot no debe haber pasado ya
-        const isPast = new Date() > slotStart;
-
-        return !hasConflict && !isPast;
+      // 2. Usamos la utilidad generateTimeSlots para calcular la disponibilidad
+      const generatedSlots = generateTimeSlots({
+        date: formattedDate,
+        openHour: 10,
+        closeHour: 18,
+        stepMinutes: 30,
+        durationMinutes: service.duration,
+        busy: busy,
+        allowOverflowEnd: false, // Para horario normal, el servicio debe terminar antes de las 18:00
       });
 
-      // 4. Formateamos los slots disponibles a "HH:mm" y los guardamos.
-      const finalSlots = available.map(date => format(date, 'HH:mm'));
+      // 3. Formateamos los slots disponibles a "HH:mm" y los guardamos.
+      const finalSlots = generatedSlots
+        .filter(slot => slot.available)
+        .map(slot => format(new Date(slot.start), 'HH:mm'));
+
       setAvailableSlots(finalSlots);
 
     } catch (error) {
@@ -106,7 +89,7 @@ export default function Home() {
     } finally {
       setLoadingSlots(false);
     }
-  }, []);
+  }, []); // No dependencies needed as 'services' is static
 
   // Efecto: carga slots al cambiar fecha/servicio
   useEffect(() => {
@@ -151,38 +134,12 @@ export default function Home() {
     }));
   };
 
-  const handleEmailBlur = async (e) => {
-    const email = e.target.value;
-    // Validación básica para no hacer llamadas vacías
-    if (!email || !email.includes('@')) {
-      return;
-    }
-
-    try {
-      setIsFetchingClient(true);
-      const res = await fetch(`/api/client?email=${encodeURIComponent(email)}`);
-      const data = await res.json();
-
-      if (res.ok && data.client) {
-        // Autocompletar el formulario si se encuentra el cliente
-        setClientInfo(prev => ({
-          ...prev,
-          name: data.client.name || prev.name,
-          phone: data.client.phone || prev.phone,
-        }));
-      }
-    } catch (error) {
-      console.error("Error al autocompletar datos del cliente:", error);
-      // No mostramos error al usuario, simplemente no se autocompleta.
-    } finally {
-      setIsFetchingClient(false);
-    }
-  };
-
   const handleSubmitBooking = async (e) => {
     e.preventDefault();
     try {
       setBookingStatus({ loading: true });
+
+      const service = services.find(s => s.id === selectedService);
 
       const response = await fetch("/api/book", {
         method: "POST",
@@ -190,6 +147,8 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          serviceName: service?.name,
+          durationMin: service?.duration,
           serviceId: selectedService,
           date: format(selectedDate, "yyyy-MM-dd"),
           start: selectedTime,
