@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale';
 import { services } from '../lib/services'; // REUTILIZAR
 import { generateTimeSlots } from '../lib/slots'; // REUTILIZAR
 import Confetti from 'react-confetti';
+import { isAllowedBusinessDay } from '../lib/calendarConfig';
 import BookingConfirmation from '../components/BookingConfirmation';
 import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 
@@ -31,6 +32,7 @@ export default function ExtraCup() {
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
   const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
+  const [disabledDaysConfig, setDisabledDaysConfig] = useState([]);
 
   const nextDays = getNextDays(35);
 
@@ -43,6 +45,22 @@ export default function ExtraCup() {
     window.addEventListener('resize', handleResize);
     handleResize(); // Llama al inicio para obtener el tamaño inicial
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Efecto para cargar la configuración de días deshabilitados desde el backend
+  useEffect(() => {
+    async function fetchDisabledDays() {
+      try {
+        const res = await fetch('/api/gs-check?action=getConfig');
+        const data = await res.json();
+        if (data.disabledDays) {
+          setDisabledDaysConfig(data.disabledDays);
+        }
+      } catch (error) {
+        console.error("Error fetching disabled days config:", error);
+      }
+    }
+    fetchDisabledDays();
   }, []);
 
   const fetchSlots = useCallback(async (dateObj, serviceId) => {
@@ -257,10 +275,13 @@ export default function ExtraCup() {
                 const today = new Date(); today.setHours(0,0,0,0);
                 const isTodayFlag = dayFormatted === format(today, 'yyyy-MM-dd');
                 const selectedStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+                const isEnabled = isAllowedBusinessDay(day, disabledDaysConfig);
+                const isDisabled = !isEnabled;
                 return (
                   <button
                     key={idx}
-                    onClick={() => handleDateSelect(day)}
+                    onClick={() => !isDisabled && handleDateSelect(day)}
+                    disabled={isDisabled}
                     className={`p-3 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 ${
                       selectedStr === dayFormatted
                         ? 'bg-pink-600 text-white border-pink-600 transform scale-105'

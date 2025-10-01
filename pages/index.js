@@ -26,6 +26,7 @@ export default function Home() {
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
   const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
+  const [disabledDaysConfig, setDisabledDaysConfig] = useState([]); // Nuevo estado para la config
 
   const { isFetchingClient, handleEmailBlur } = useClientAutocomplete(setClientInfo);
 
@@ -106,6 +107,23 @@ export default function Home() {
     window.addEventListener('resize', handleResize);
     handleResize(); // Llama al inicio para obtener el tamaño inicial
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Efecto para cargar la configuración de días deshabilitados desde el backend
+  useEffect(() => {
+    async function fetchDisabledDays() {
+      try {
+        // Asumimos que tienes una API route que actúa como proxy
+        const res = await fetch('/api/gs-check?action=getConfig');
+        const data = await res.json();
+        if (data.disabledDays) {
+          setDisabledDaysConfig(data.disabledDays);
+        }
+      } catch (error) {
+        console.error("Error fetching disabled days config:", error);
+      }
+    }
+    fetchDisabledDays();
   }, []);
 
 
@@ -322,16 +340,19 @@ export default function Home() {
                 today.setHours(0, 0, 0, 0);
                 const isToday = dayFormatted === format(today, 'yyyy-MM-dd');
                 const isPast = day < today;
+                // Usamos la configuración del backend para saber si el día está habilitado
+                const isEnabled = isAllowedBusinessDay(day, disabledDaysConfig);
+                const isDisabled = isPast || !isEnabled;
 
                 return (
                   <button
                     key={index}
-                    onClick={() => !isPast && handleDateSelect(day)}
-                    disabled={isPast}
+                    onClick={() => !isDisabled && handleDateSelect(day)}
+                    disabled={isDisabled}
                     className={`p-3 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 ${
                       selectedDate && format(selectedDate, 'yyyy-MM-dd') === dayFormatted
                         ? 'bg-pink-600 text-white border-pink-600 transform scale-105'
-                        : isPast
+                        : isDisabled
                         ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                         : 'bg-white text-gray-800 border-gray-200 hover:border-pink-300 hover:shadow-sm'
                     }`}
