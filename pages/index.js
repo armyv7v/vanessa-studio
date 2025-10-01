@@ -1,10 +1,11 @@
 // pages/index.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link'; 
 import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getAvailableSlots, bookAppointment } from '../lib/api'; // Asumiendo que creas este archivo
+import { services } from '../lib/services'; // Importar la lista de servicios
+import { bookAppointment } from '../lib/api'; // Asumiendo que creas este archivo
 import Confetti from 'react-confetti';
 import BookingConfirmation from '../components/BookingConfirmation';
 
@@ -25,18 +26,6 @@ export default function Home() {
   const [isFetchingClient, setIsFetchingClient] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
 
-  // Debe calzar con tu mapeo del back/GAS
-  const services = [
-    { id: 1, name: "Retoque (Mantenimiento)", duration: 120 },
-    { id: 2, name: "Reconstrucción Uñas Mordidas (Onicofagia)", duration: 180 },
-    { id: 3, name: "Uñas Acrílicas", duration: 180 },
-    { id: 4, name: "Uñas Polygel", duration: 180 },
-    { id: 5, name: "Uñas Softgel", duration: 180 },
-    { id: 6, name: "Kapping o Baño Polygel o Acrílico sobre uña natural", duration: 150 },
-    { id: 7, name: "Reforzamiento Nivelación Rubber", duration: 150 },
-    { id: 8, name: "Esmaltado Permanente", duration: 90 }
-  ];
-
   // Mostrar 3 semanas (21 días) desde HOY (incluyendo hoy)
   const getNextDays = () => {
     const days = [];
@@ -51,7 +40,7 @@ export default function Home() {
   const nextDays = getNextDays();
 
   // Cargar slots (HORARIO NORMAL)
-  const fetchAvailableSlots = async (date, serviceId) => {
+  const fetchAvailableSlots = useCallback(async (date, serviceId) => {
     try {
       setLoadingSlots(true);
       setErrorSlots(null); 
@@ -117,14 +106,14 @@ export default function Home() {
     } finally {
       setLoadingSlots(false);
     }
-  };
+  }, []);
 
   // Efecto: carga slots al cambiar fecha/servicio
   useEffect(() => {
     if (selectedDate && selectedService) {
       fetchAvailableSlots(selectedDate, selectedService);
     }
-  }, [selectedDate, selectedService]);
+  }, [selectedDate, selectedService, fetchAvailableSlots]);
 
   // Efecto para el tamaño de la ventana (para el confeti)
   useEffect(() => {

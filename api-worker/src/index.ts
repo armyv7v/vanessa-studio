@@ -6,14 +6,33 @@ interface Env {
   NEXT_PUBLIC_TZ?: string;
 }
 
-export default {
+interface CalendarEvent {
+  id: string;
+  summary?: string;
+  start?: {
+    date?: string;
+    dateTime?: string;
+  };
+  end?: {
+    date?: string;
+    dateTime?: string;
+  };
+}
+
+interface GoogleCalendarListResponse {
+  items: CalendarEvent[];
+}
+
+interface GoogleApiError {
+  error: { message: string };
+}
+
+const worker = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-
     if (url.pathname === "/api/slots") {
       return handleSlots(url, env);
     }
-
     return new Response("Not Found", { status: 404 });
   },
 };
@@ -44,19 +63,19 @@ async function handleSlots(url: URL, env: Env): Promise<Response> {
     const requestUrl = buildGoogleCalendarUrl(calendarId, apiKey, range);
 
     const gcResponse = await fetch(requestUrl.toString());
-    const payload = await gcResponse.json().catch(() => null);
+    const payload = (await gcResponse.json().catch(() => null)) as GoogleCalendarListResponse | GoogleApiError | null;
 
     if (!gcResponse.ok || !payload) {
-      const message = payload?.error?.message || "Error obteniendo eventos del calendario.";
+      const message = (payload as GoogleApiError)?.error?.message || "Error obteniendo eventos del calendario.";
       return json({ error: message, diagnosticInfo: { requestUrl: requestUrl.toString() } }, gcResponse.status);
     }
 
-    const busy = (payload.items ?? [])
-      .filter((event: any) => !event.start?.date && !event.end?.date)
-      .map((event: any) => ({
+    const busy = ('items' in payload ? payload.items : [])
+      .filter((event) => !event.start?.date && !event.end?.date) // Filtra eventos de todo el día
+      .map((event) => ({
         id: event.id,
-        start: event.start?.dateTime ?? event.start?.date ?? null,
-        end: event.end?.dateTime ?? event.end?.date ?? null,
+        start: event.start?.dateTime ?? null,
+        end: event.end?.dateTime ?? null,
         summary: event.summary ?? "",
       }));
 
@@ -107,3 +126,5 @@ function json(body: unknown, status = 200): Response {
     },
   });
 }
+
+export default worker;
