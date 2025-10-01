@@ -1,0 +1,8 @@
+﻿name = "vanessa-nails-api"
+main = "src/index.ts"
+compatibility_date = "2025-09-30"
+
+[vars]
+NEXT_PUBLIC_GCAL_CALENDAR_ID = "64693698ebab23975e6f5d11f9f3b170a6d11b9a19ebb459e1486314ee930ebf@group.calendar.google.com"
+NEXT_PUBLIC_GCAL_API_KEY = "AIzaSyDqIFZZGAK6xL9ST0gTkPUZL-jmd5lElbk"
+NEXT_PUBLIC_TZ = "America/Santiago"
