@@ -76,13 +76,6 @@ function doGet(e) {
       return response;
     }
 
-    // Acción para obtener la configuración de días hábiles
-    if (action === 'getConfig') {
-      Logger.log(`doGet: Recibida acción 'getConfig'`);
-      response.setContent(JSON.stringify({ disabledDays: DISABLED_DAYS }));
-      return response;
-    }
-
     // Acción para autocompletar datos del cliente
     if (action === 'getClient') {
       const email = e.parameter.email;
