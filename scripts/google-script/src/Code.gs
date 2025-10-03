@@ -1,5 +1,6 @@
 /** 
  * WebApp de reservas — Vanessa Nails Studio
+ * v1.1.0
  * Edita y despliega con clasp sin cambiar la URL del WebApp.
  */
 
@@ -7,6 +8,7 @@ const TZ = "America/Santiago";
 const CALENDAR_ID = "64693698ebab23975e6f5d11f9f3b170a6d11b9a19ebb459e1486314ee930ebf@group.calendar.google.com";
 const OWNER_EMAIL = "nailsvanessacl@gmail.com";
 const SHEET_ID   = "1aE4dnWZQjEJWAMaDEfDRpACVUDU8_F9-fzd_2mSQQeM";
+const PROD_ORIGIN = "https://vanessa-nails-studio.vercel.app";
 const SHEET_NAME = "Reservas";
 const WHATSAPP_PHONE = "56991744464";
 const BANK_LINES = [
@@ -27,7 +29,7 @@ const DISABLED_DAYS = [
  */
 function doOptions(e) {
   return ContentService.createTextOutput()
-    .setHeader('Access-Control-Allow-Origin', '*') // O puedes restringirlo a tu dominio de producción
+    .setHeader('Access-Control-Allow-Origin', PROD_ORIGIN)
     .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
@@ -36,7 +38,8 @@ function doOptions(e) {
  * Maneja las solicitudes GET para obtener horarios disponibles.
  */
 function doGet(e) {
-  const response = ContentService.createTextOutput();
+  const response = ContentService.createTextOutput()
+    .setHeader('Access-Control-Allow-Origin', PROD_ORIGIN);
   response.setMimeType(ContentService.MimeType.JSON);
   
     try {
@@ -95,6 +98,7 @@ function doGet(e) {
     return response;
 
   } catch (err) {
+    response.setStatusCode(500);
     response.setContent(JSON.stringify({ error: "Error interno del servidor: " + String(err) }));
     return response;
   }
@@ -108,23 +112,34 @@ function doGet(e) {
 function getClientByEmail(email) {
   if (!email) return null;
   Logger.log(`getClientByEmail: Buscando cliente con email: ${email}`);
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sh = ss.getSheetByName(SHEET_NAME);
-  if (!sh) {
-    Logger.log(`getClientByEmail: Hoja '${SHEET_NAME}' no encontrada en el Spreadsheet ID: ${SHEET_ID}`);
-    return null;
+
+  // Optimización: Usar CacheService para no leer la hoja en cada petición.
+  const cache = CacheService.getScriptCache();
+  const cacheKey = `CLIENT_DATA_FOR_${SHEET_ID}`;
+  let data = JSON.parse(cache.get(cacheKey));
+
+  if (!data) {
+    Logger.log("Cache de clientes no encontrada. Leyendo desde la hoja de cálculo.");
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sh = ss.getSheetByName(SHEET_NAME);
+    if (!sh) {
+      Logger.log(`getClientByEmail: Hoja '${SHEET_NAME}' no encontrada.`);
+      return null;
+    }
+    data = sh.getDataRange().getValues();
+    // Guardar en caché por 6 minutos (360 segundos).
+    cache.put(cacheKey, JSON.stringify(data), 360);
   }
 
-  const data = sh.getDataRange().getValues();
   Logger.log(`getClientByEmail: Total de filas en la hoja: ${data.length}`);
   // Busca desde la última fila hacia arriba para obtener los datos más recientes.
   for (let i = data.length - 1; i >= 1; i--) { // i >= 1 para saltar la cabecera
     const row = data[i];
-    Logger.log(`getClientByEmail: Procesando fila ${i}, Email en hoja: '${row[2]}', Nombre: '${row[1]}', Teléfono: '${row[3]}'`);
     // Asume que las columnas son: A:Timestamp, B:Nombre, C:Email, D:Teléfono
     if (row[2] && row[2].toString().trim().toLowerCase() === email.trim().toLowerCase()) {
       Logger.log(`getClientByEmail: ¡Coincidencia encontrada en fila ${i}!`);
-      return { name: row[1] || "", phone: row[3] || "" };
+      // Devuelve los datos limpios
+      return { name: (row[1] || "").toString().trim(), phone: (row[3] || "").toString().trim() };
     }
   }
   Logger.log(`getClientByEmail: No se encontró ninguna coincidencia para el email: ${email}`);
@@ -132,72 +147,9 @@ function getClientByEmail(email) {
 }
 
 /**
- * Calcula los horarios disponibles para un día, servicio y modo específicos.
+ * Construye objetos Date y strings en formato RFC3339 a partir de fecha y hora.
  */
-function getAvailableSlotsForDay(dateStr, durationMin, mode) {
-  const targetDate = new Date(dateStr + "T00:00:00");
-  if (isNaN(targetDate.getTime())) {
-    throw new Error("Fecha inválida: " + dateStr);
-  }
-
-  // 1. Verificar si el día está deshabilitado
-  if (isDisabledDay(targetDate)) {
-    return [];
-  }
-
-  // 2. Definir la ventana de tiempo según el modo
-  const hours = (mode === 'extra') ? EXTRA_HOURS : BUSINESS_HOURS;
-  const [startHour, startMin] = hours.start.split(':').map(Number);
-  const [endHour, endMin] = hours.end.split(':').map(Number);
-
-  const dayStart = new Date(targetDate);
-  dayStart.setHours(startHour, startMin, 0, 0);
-
-  const dayEnd = new Date(targetDate);
-  dayEnd.setHours(endHour, endMin, 0, 0);
-
-  // 3. Obtener eventos existentes en el calendario para ese día
-  const cal = CalendarApp.getCalendarById(CALENDAR_ID);
-  const busySlots = cal.getEvents(dayStart, dayEnd).map(function(ev) {
-    return { start: ev.getStartTime(), end: ev.getEndTime() };
-  });
-
-  // 4. Generar todos los posibles slots y filtrar los no disponibles
-  const availableSlots = [];
-  let cursor = new Date(dayStart);
-
-  while (cursor < dayEnd) {
-    const slotStart = new Date(cursor);
-    const slotEnd = new Date(slotStart.getTime() + durationMin * 60000);
-
-    // El slot es válido si comienza antes de la hora de cierre de la ventana.
-    // Para el horario normal, también debe terminar antes de la hora de cierre.
-    // Para el horario extra, puede terminar después.
-    const isValidWindow = (mode === 'extra') ? (slotStart < dayEnd) : (slotEnd <= dayEnd);
-
-    if (isValidWindow) {
-      // Verificar si hay conflicto con algún evento existente
-      const hasConflict = busySlots.some(function(busy) {
-        return (slotStart < busy.end) && (slotEnd > busy.start);
-      });
-
-      // Verificar si el slot ya pasó (si es para hoy)
-      const now = new Date();
-      const isPast = (slotStart < now);
-
-      if (!hasConflict && !isPast) {
-        availableSlots.push(Utilities.formatDate(slotStart, TZ, "HH:mm"));
-      }
-    }
-
-    // Mover el cursor al siguiente slot
-    cursor.setMinutes(cursor.getMinutes() + SLOT_STEP_MIN);
-  }
-
-  return availableSlots;
-}
-
-function buildRfc3339(dateStr, timeStr, minutesToAdd) {
+function buildDateTimeObjects(dateStr, timeStr, minutesToAdd) {
   if (!dateStr || !timeStr) throw new Error("dateStr/timeStr requeridos");
   const [Y, M, D] = dateStr.split("-").map(Number);
   const [h, m]   = timeStr.split(":").map(Number);
@@ -267,53 +219,61 @@ function buildEmailHtml({ clientName, fecha, hora, duracion, telefono, serviceNa
   </div>`;
 }
 
-function jsonResponse(obj, statusCode) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+function jsonResponse(obj, statusCode = 200) {
+  const output = ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader('Access-Control-Allow-Origin', PROD_ORIGIN);
+  if (statusCode !== 200) {
+    output.setStatusCode(statusCode);
+  }
+  return output;
+}
+
+/**
+ * Sanitiza un string para remover etiquetas HTML.
+ */
+function sanitize(str) {
+  return (str || "").toString().replace(/<[^>]*>/g, "").trim();
 }
 
 /**
  * doPost unificado:
- * - Maneja action: 'saveSubscription'
  * - Crea evento de reserva, guarda en hoja y envía emails de confirmación
  */
 function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) {
-      return jsonResponse({ success: false, error: "Solicitud vacía" });
+      return jsonResponse({ success: false, error: "Solicitud vacía" }, 400);
     }
     let data;
     try { data = JSON.parse(e.postData.contents); }
-    catch { return jsonResponse({ success: false, error: "JSON inválido" }); }
-
-    // --- Acción: guardar suscripción push ---
-    if (data.action === 'saveSubscription') {
-      saveSubscription(data);
-      return jsonResponse({ success: true });
-    }
+    catch { return jsonResponse({ success: false, error: "JSON inválido" }, 400); }
 
     // --- Lógica de reserva de cita (existente) ---
-    const nombre    = (data.nombre || data.name || "").trim();
-    const email     = (data.email || "").trim();
-    const telefono  = (data.telefono || data.phone || "").trim();
-    const fecha     = (data.fecha || data.date || "").trim(); // YYYY-MM-DD
-    const hora      = (data.hora  || data.start || "").trim(); // HH:mm
+    // Usamos los datos anidados en 'client' que envía el nuevo BookingFlow
+    const clientData = data.client || {};
+    const nombre    = sanitize(clientData.name);
+    const email     = sanitize(clientData.email).toLowerCase();
+    const telefono  = sanitize(clientData.phone).replace(/[^\d+]/g, ''); // Limpia el teléfono
+
+    const fecha     = (data.date || "").trim(); // YYYY-MM-DD
+    const hora      = (data.start || "").trim(); // HH:mm
     const serviceId = String(data.serviceId || "");
-    const extraCupo = !!(data.extraCupo || data.extraCup);
+    const extraCupo = !!data.extraCupo;
     const durationMin = Number(data.durationMin);
     const serviceName = data.serviceName || "Servicio no especificado";
 
-    if (!nombre || !email || !fecha || !hora || !durationMin || !serviceName) {
-      return jsonResponse({ success: false, error: "Faltan campos obligatorios: nombre, email, fecha, hora, serviceName, durationMin" });
+    if (!nombre || !email || !telefono || !fecha || !hora || !durationMin || !serviceName) {
+      return jsonResponse({ success: false, error: "Faltan campos obligatorios." }, 400);
     }
 
     const probe = new Date(`${fecha}T${hora}:00`);
-    if (isNaN(probe.getTime())) return jsonResponse({ success: false, error: "Fecha/Hora inválidas" });
-    if (isDisabledDay(probe))   return jsonResponse({ success: false, error: "Este día no está disponible para reservas." });
+    if (isNaN(probe.getTime())) return jsonResponse({ success: false, error: "Fecha/Hora inválidas" }, 400);
+    if (isDisabledDay(probe))   return jsonResponse({ success: false, error: "Este día no está disponible para reservas." }, 400);
 
-    const { start, end, startStr, endStr } = buildRfc3339(fecha, hora, durationMin);
+    const { start, end, startStr, endStr } = buildDateTimeObjects(fecha, hora, durationMin);
     if (hasConflictCalendarApp(CALENDAR_ID, start, end)) {
-      return jsonResponse({ success: false, error: "Horario no disponible (conflicto)" });
+      return jsonResponse({ success: false, error: "El horario seleccionado ya no está disponible. Por favor, elige otro." }, 409);
     }
 
     const cal = CalendarApp.getCalendarById(CALENDAR_ID);
@@ -354,7 +314,7 @@ function doPost(e) {
 
     return jsonResponse({ success: true, eventId: event.getId(), htmlLink: event.getHtmlLink(), start: startStr, end: endStr });
   } catch (err) {
-    return jsonResponse({ success: false, error: String(err) });
+    return jsonResponse({ success: false, error: "Error interno del servidor: " + String(err) }, 500);
   }
 }
 
@@ -371,25 +331,6 @@ function test_doPost() {
   })}};
   const res = doPost(e);
   Logger.log(res.getContent());
-}
-
-/**
- * Guarda una suscripción de notificación push en la hoja 'Subscriptions'.
- */
-function saveSubscription(data) {
-  const { subscription, email } = data;
-  if (!subscription || !email) {
-    throw new Error("Faltan datos de suscripción o email.");
-  }
-
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sh = ss.getSheetByName("Subscriptions");
-  if (!sh) {
-    throw new Error("La hoja 'Subscriptions' no existe.");
-  }
-
-  // Guarda el email y la suscripción como un string JSON
-  sh.appendRow([email, JSON.stringify(subscription)]);
 }
 
 /* ============================================================

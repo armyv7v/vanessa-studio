@@ -5,7 +5,8 @@ import { es } from 'date-fns/locale';
 import { services } from '../lib/services';
 import { generateTimeSlots } from '../lib/slots';
 import { getNextDays } from '../lib/dateUtils';
-import { isAllowedBusinessDay } from '../lib/calendarConfig';
+import { isAllowedBusinessDay, NORMAL_WINDOW, EXTRA_WINDOW } from '../lib/calendarConfig';
+import { listPublicEvents } from '../lib/google-calendar';
 import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 import Confetti from 'react-confetti';
 import BookingConfirmation from './BookingConfirmation';
@@ -65,10 +66,12 @@ export default function BookingFlow({ config }) {
       const service = services.find((s) => String(s.id) === String(serviceId));
       if (!service) throw new Error('Servicio no encontrado');
 
-      const url = `/api/slots?action=getBusySlots&date=${yyyyMMdd}`;
-      const res = await fetch(url);
-      const payload = await res.json().catch(() => null);
-      if (!res.ok || !payload) throw new Error(payload?.error || 'Error cargando horarios');
+      const dayStart = new Date(`${yyyyMMdd}T00:00:00`);
+      const dayEnd = new Date(`${yyyyMMdd}T23:59:59`);
+      const { busy } = await listPublicEvents({
+        timeMin: dayStart.toISOString(),
+        timeMax: dayEnd.toISOString(),
+      });
 
       const generatedSlots = generateTimeSlots({
         date: yyyyMMdd,
@@ -76,7 +79,7 @@ export default function BookingFlow({ config }) {
         closeHour,
         stepMinutes: 30,
         durationMinutes: service.duration,
-        busy: payload.busy || [],
+        busy: busy || [],
         allowOverflowEnd,
       });
 
