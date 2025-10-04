@@ -2,15 +2,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { services } from '../lib/services';
+import { services as servicesData } from '../lib/services';
 import { generateTimeSlots } from '../lib/slots';
-import { getNextDays } from '../lib/dateUtils';
-import { isAllowedBusinessDay, NORMAL_WINDOW, EXTRA_WINDOW } from '../lib/calendarConfig';
+import { isAllowedBusinessDay } from '../lib/calendarConfig';
 import { listPublicEvents } from '../lib/google-calendar';
 import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 import Confetti from 'react-confetti';
 import BookingConfirmation from './BookingConfirmation';
 
+const services = [...servicesData].sort((a, b) => a.duration - b.duration);
 export default function BookingFlow({ config }) {
   const {
     isExtra,
@@ -33,7 +33,12 @@ export default function BookingFlow({ config }) {
   const [disabledDaysConfig, setDisabledDaysConfig] = useState([]);
 
   const { isFetchingClient, handleEmailBlur } = useClientAutocomplete(setClientInfo);
-  const nextDays = getNextDays(daysToShow);
+  
+  const nextDays = Array.from({ length: daysToShow }).map((_, i) => {
+    const day = new Date();
+    day.setDate(day.getDate() + i);
+    return day;
+  });
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -63,12 +68,12 @@ export default function BookingFlow({ config }) {
       setLoadingSlots(true);
       setErrorSlots(null);
       const yyyyMMdd = format(dateObj, 'yyyy-MM-dd');
-      const service = services.find((s) => String(s.id) === String(serviceId));
-      if (!service) throw new Error('Servicio no encontrado');
-
+      const service = services.find(s => String(s.id) === String(serviceId));
+      if (!service) throw new Error('Servicio no encontrado.');
+      // Usar la función centralizada para obtener los eventos ocupados
       const dayStart = new Date(`${yyyyMMdd}T00:00:00`);
       const dayEnd = new Date(`${yyyyMMdd}T23:59:59`);
-      const { busy } = await listPublicEvents({
+      const busyResult = await listPublicEvents({
         timeMin: dayStart.toISOString(),
         timeMax: dayEnd.toISOString(),
       });
@@ -79,7 +84,7 @@ export default function BookingFlow({ config }) {
         closeHour,
         stepMinutes: 30,
         durationMinutes: service.duration,
-        busy: busy || [],
+        busy: busyResult.busy || [],
         allowOverflowEnd,
       });
 
@@ -88,7 +93,7 @@ export default function BookingFlow({ config }) {
         .map(slot => format(new Date(slot.start), 'HH:mm'));
 
       setAvailableSlots(finalSlots);
-    } catch (err) {
+    } catch (err) {      
       setErrorSlots(String(err?.message || err));
       setAvailableSlots([]);
     } finally {
@@ -198,7 +203,7 @@ export default function BookingFlow({ config }) {
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">Selecciona tu servicio</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...services].sort((a, b) => a.duration - b.duration).map((service) => (
+            {services.map((service) => (
               <div
                 key={service.id}
                 onClick={() => handleServiceSelect(service.id)}
