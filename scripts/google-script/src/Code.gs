@@ -178,6 +178,8 @@ function appendToSheet(row) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
   sh.appendRow(row);
+  SpreadsheetApp.flush();
+  return sh.getLastRow();
 }
 
 function buildEmailHtml({ clientName, fecha, hora, duracion, telefono, serviceName, htmlLink }) {
@@ -220,13 +222,9 @@ function buildEmailHtml({ clientName, fecha, hora, duracion, telefono, serviceNa
 }
 
 function jsonResponse(obj, statusCode = 200) {
-  const output = ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeader('Access-Control-Allow-Origin', PROD_ORIGIN);
-  if (statusCode !== 200) {
-    output.setStatusCode(statusCode);
-  }
-  return output;
+  const payload = Object.assign({ statusCode }, obj || {});
+  return ContentService.createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
@@ -291,20 +289,23 @@ function doPost(e) {
       guests: email + (OWNER_EMAIL ? "," + OWNER_EMAIL : ""),
       sendInvites: true
     });
+    const eventLink = typeof event.getUrl === "function"
+      ? event.getUrl()
+      : (typeof event.getHtmlLink === "function" ? event.getHtmlLink() : "");
 
     const startLocal = Utilities.formatDate(start, TZ, "yyyy-MM-dd HH:mm");
     const endLocal   = Utilities.formatDate(end,   TZ, "yyyy-MM-dd HH:mm");
-    appendToSheet([
+    const appendedRow = appendToSheet([
       new Date(), nombre, email, telefono,
       serviceName, startLocal, endLocal, durationMin, extraCupo ? "SI" : "NO",
-      event.getId(), event.getHtmlLink()
+      event.getId(), eventLink
     ]);
 
     const html = buildEmailHtml({
       clientName: nombre,
       fecha, hora, duracion: durationMin,
       telefono, serviceName,
-      htmlLink: event.getHtmlLink()
+      htmlLink: eventLink
     });
 
     MailApp.sendEmail({ to: email, subject: `✅ Confirmación de Reserva — ${serviceName}`, htmlBody: html });
@@ -312,7 +313,7 @@ function doPost(e) {
       MailApp.sendEmail({ to: OWNER_EMAIL, subject: `Nueva Cita — ${serviceName} (${nombre})`, htmlBody: html });
     }
 
-    return jsonResponse({ success: true, eventId: event.getId(), htmlLink: event.getHtmlLink(), start: startStr, end: endStr });
+    return jsonResponse({ success: true, eventId: event.getId(), htmlLink: eventLink, start: startStr, end: endStr, sheetRow: appendedRow });
   } catch (err) {
     return jsonResponse({ success: false, error: "Error interno del servidor: " + String(err) }, 500);
   }
@@ -551,3 +552,4 @@ function testSpreadsheetAccess() {
   const ss = SpreadsheetApp.openById("1aE4dnWZQjEJWAMaDEfDRpACVUDU8_F9-fzd_2mSQQeM");
   Logger.log(ss.getName());
 }
+
