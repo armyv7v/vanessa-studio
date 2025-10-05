@@ -1,35 +1,42 @@
 // pages/api/subscribe-push.js
 
-export default async function handler(req, res) {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return jsonResponse({ error: 'Method Not Allowed' }, 405);
   }
 
   const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
   if (!GAS_URL) {
-    return res.status(500).json({ error: 'La URL del webhook no est√° configurada.' });
+    return jsonResponse({ error: 'La URL del webhook no est· configurada.' }, 500);
   }
 
   try {
-    const { subscription, email } = req.body;
+    const { subscription, email } = await req.json();
 
-    // Prepara el payload para enviar a Google Apps Script
     const payload = {
       action: 'saveSubscription',
       subscription,
       email,
     };
 
-    // Llama a tu script de Google para guardar la suscripci√≥n
     await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    res.status(201).json({ success: true });
+    return jsonResponse({ success: true }, 201);
   } catch (error) {
     console.error('Error en /api/subscribe-push:', error);
-    res.status(500).json({ error: 'Error al guardar la suscripci√≥n.' });
+    return jsonResponse({ error: 'Error al guardar la suscripciÛn.' }, 500);
   }
+}
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }

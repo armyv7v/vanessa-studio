@@ -1,27 +1,28 @@
 // pages/api/client.js
 
-export default async function handler(req, res) {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return jsonResponse({ error: 'Method Not Allowed' }, 405);
   }
 
-  const { email } = req.query;
+  const email = new URL(req.url).searchParams.get('email');
 
   if (!email) {
-    return res.status(400).json({ error: 'El par√°metro email es requerido' });
+    return jsonResponse({ error: 'El par·metro email es requerido' }, 400);
   }
 
   const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
 
   if (!GAS_URL) {
-    return res.status(500).json({ error: 'La URL del script de Google no est√° configurada.' });
+    return jsonResponse({ error: 'La URL del script de Google no est· configurada.' }, 500);
   }
 
   try {
-    // Construimos la URL para llamar a la acci√≥n 'getClient' en nuestro Google Apps Script
     const url = new URL(GAS_URL);
-    url.searchParams.append('action', 'getClient');
-    url.searchParams.append('email', email);
+    url.searchParams.set('action', 'getClient');
+    url.searchParams.set('email', email);
 
     const gasResponse = await fetch(url.toString());
     const data = await gasResponse.json();
@@ -30,10 +31,16 @@ export default async function handler(req, res) {
       throw new Error(data?.error || 'Error al contactar el servicio de Google.');
     }
 
-    // La respuesta de GAS ya viene en el formato { client: { name, phone } } o { client: null }
-    res.status(200).json({ client: data.client || null });
+    return jsonResponse({ client: data.client || null });
   } catch (error) {
     console.error('Error en /api/client:', error);
-    return res.status(500).json({ error: error.message || 'Error interno del servidor' });
+    return jsonResponse({ error: error.message || 'Error interno del servidor' }, 500);
   }
+}
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }

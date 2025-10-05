@@ -4,10 +4,12 @@ function isEmailValid(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export default async function handler(req, res) {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req) {
   try {
     if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method Not Allowed' });
+      return jsonResponse({ error: 'Method Not Allowed' }, 405);
     }
 
     const GAS_URL  = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
@@ -15,10 +17,10 @@ export default async function handler(req, res) {
     const TZ       = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
 
     if (!GAS_URL) {
-      return res.status(500).json({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL' });
+      return jsonResponse({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL' }, 500);
     }
 
-    const body = req.body || {};
+    const body = await req.json().catch(() => ({}));
     const {
       serviceId,
       serviceName,
@@ -38,10 +40,10 @@ export default async function handler(req, res) {
     };
 
     if (!serviceId || !date || !start || !normalizedClient.name || !normalizedClient.email) {
-      return res.status(400).json({ error: 'Datos incompletos' });
+      return jsonResponse({ error: 'Datos incompletos' }, 400);
     }
     if (!isEmailValid(normalizedClient.email)) {
-      return res.status(400).json({ error: 'Email invalido' });
+      return jsonResponse({ error: 'Email invalido' }, 400);
     }
 
     const resolvedDurationMin = durationOverrideMin != null
@@ -51,7 +53,7 @@ export default async function handler(req, res) {
         : undefined;
 
     if (!Number.isFinite(resolvedDurationMin)) {
-      return res.status(400).json({ error: 'Duracion invalida' });
+      return jsonResponse({ error: 'Duracion invalida' }, 400);
     }
 
     const payload = {
@@ -84,12 +86,19 @@ export default async function handler(req, res) {
     if (!r.ok || data?.success === false) {
       const statusFromData = Number(data?.statusCode);
       const status = Number.isFinite(statusFromData) && statusFromData >= 400 ? statusFromData : (r.ok ? 500 : r.status);
-      return res.status(status).json({ error: data?.error || 'GAS error', data });
+      return jsonResponse({ error: data?.error || 'GAS error', data }, status);
     }
-    res.status(200).json({ success: true, data });
+    return jsonResponse({ success: true, data });
 
   } catch (err) {
     console.error('Error en /api/book:', err);
-    res.status(500).json({ error: String(err) });
+    return jsonResponse({ error: String(err) }, 500);
   }
+}
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }

@@ -1,4 +1,4 @@
-ï»¿import { DateTime } from "luxon";
+import { DateTime } from "luxon";
 
 const CALENDAR_ID = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
 const API_KEY = process.env.NEXT_PUBLIC_GCAL_API_KEY;
@@ -8,7 +8,7 @@ function buildGoogleCalendarUrl({ date, timezone }) {
   const dateString = (date || "") + "T00:00";
   const startOfDay = DateTime.fromISO(dateString, { zone: timezone });
   if (!startOfDay.isValid) {
-    throw new Error("Fecha invÃ¡lida");
+    throw new Error("Fecha inválida");
   }
   const endOfDay = startOfDay.endOf("day");
 
@@ -25,45 +25,52 @@ function buildGoogleCalendarUrl({ date, timezone }) {
   return "https://www.googleapis.com/calendar/v3/calendars/" + encodedCalendar + "/events?" + params.toString();
 }
 
-export default async function handler(req, res) {
-  const { action, date, mode = "normal" } = req.query;
+export const config = { runtime: 'edge' };
 
-  if (action !== "getBusySlots") {
-    return res.status(400).json({ error: "AcciÃ³n no soportada. Usa action=getBusySlots." });
+export default async function handler(req) {
+  const url = new URL(req.url);
+  const action = url.searchParams.get('action');
+  const date = url.searchParams.get('date');
+  const mode = url.searchParams.get('mode') || 'normal';
+
+  if (action !== 'getBusySlots') {
+    return jsonResponse({ error: 'Acción no soportada. Usa action=getBusySlots.' }, 400);
   }
 
   if (!CALENDAR_ID || !API_KEY) {
-    return res.status(500).json({ error: "Faltan configuraciones de Google Calendar." });
+    return jsonResponse({ error: 'Faltan configuraciones de Google Calendar.' }, 500);
   }
 
   if (!date) {
-    return res.status(400).json({ error: "El parÃ¡metro date es obligatorio (YYYY-MM-DD)." });
+    return jsonResponse({ error: 'El parámetro date es obligatorio (YYYY-MM-DD).' }, 400);
   }
 
   try {
     const timezone = DEFAULT_TZ;
-    const url = buildGoogleCalendarUrl({ date, timezone });
-
-    const gcResponse = await fetch(url);
-    const payload = await gcResponse.json().catch(() => null);
-
-    if (!gcResponse.ok || !payload) {
-      const message = payload?.error?.message || "Error obteniendo eventos del calendario.";
-      return res.status(gcResponse.status).json({ error: message, diagnosticInfo: { url } });
+    const apiUrl = buildGoogleCalendarUrl({ date, timezone });
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Google Calendar ${response.status}: ${text}`);
     }
-
-    const busy = (payload.items || [])
-      .filter((event) => !event.start?.date && !event.end?.date)
-      .map((event) => ({
-        id: event.id,
-        start: event.start?.dateTime || event.start?.date,
-        end: event.end?.dateTime || event.end?.date,
-        summary: event.summary || "",
+    const data = await response.json();
+    const busy = (data.items || [])
+      .filter(evt => !evt.start?.date && !evt.end?.date)
+      .map(evt => ({
+        start: evt.start?.dateTime,
+        end: evt.end?.dateTime,
       }));
 
-    return res.status(200).json({ busy, mode, source: "google-calendar-api" });
+    return jsonResponse({ busy, mode });
   } catch (error) {
-    console.error("Error en /api/slots (Google Calendar):", error);
-    return res.status(500).json({ error: error.message || "Error interno obteniendo los horarios." });
+    console.error('Error en /api/slots:', error);
+    return jsonResponse({ error: error.message || 'Error interno del servidor' }, 500);
   }
+}
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }

@@ -1,12 +1,13 @@
 // pages/api/gs-check.js
 
-export default async function handler(req, res) {
+export const config = { runtime: 'edge' };
+
+export default async function handler() {
   const url = process.env.GAS_WEBAPP_URL || process.env.NEXT_PUBLIC_GAS_WEBAPP_URL;
   if (!url) {
-    return res.status(500).json({ ok: false, error: 'GAS_WEBAPP_URL no configurada.' });
+    return jsonResponse({ ok: false, error: 'GAS_WEBAPP_URL no configurada.' }, 500);
   }
 
-  // Enviamos un POST mínimo (GAS lo validará y debe responder JSON)
   const probeBody = {
     nombre: 'Ping',
     email: 'ping@example.com',
@@ -28,7 +29,7 @@ export default async function handler(req, res) {
     let parsed = null;
     try { parsed = JSON.parse(text); } catch (_) {}
 
-    return res.status(200).json({
+    return jsonResponse({
       ok: true,
       status: r.status,
       contentType: r.headers.get('content-type'),
@@ -36,6 +37,13 @@ export default async function handler(req, res) {
       rawSample: text.slice(0, 500),
     });
   } catch (err) {
-    return res.status(502).json({ ok: false, error: String(err?.message || err) });
+    return jsonResponse({ ok: false, error: String(err?.message || err) }, 502);
   }
+}
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
