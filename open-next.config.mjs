@@ -1,15 +1,10 @@
-﻿import { withCloudflare } from 'open-next/helpers';
-
-export default withCloudflare({
+export default {
   default: {
     placement: 'regional',
-    runtime: 'node',
-  },
-  functions: {
-    api: {
-      placement: 'regional',
-      runtime: 'node',
-      patterns: ['/api/*'],
+    runtime: 'edge',
+    override: {
+      wrapper: 'cloudflare',
+      converter: 'edge',
     },
   },
-});
+};
