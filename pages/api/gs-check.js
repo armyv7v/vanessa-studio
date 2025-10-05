@@ -1,4 +1,4 @@
-// pages/api/gs-check.js
+﻿// pages/api/gs-check.js
 
 export const config = { runtime: 'edge' };
 

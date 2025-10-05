@@ -1,4 +1,4 @@
-// pages/api/subscribe-push.js
+ï»¿// pages/api/subscribe-push.js
 
 export const config = { runtime: 'edge' };
 
@@ -9,7 +9,7 @@ export default async function handler(req) {
 
   const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
   if (!GAS_URL) {
-    return jsonResponse({ error: 'La URL del webhook no está configurada.' }, 500);
+    return jsonResponse({ error: 'La URL del webhook no esta configurada.' }, 500);
   }
 
   try {
@@ -30,7 +30,7 @@ export default async function handler(req) {
     return jsonResponse({ success: true }, 201);
   } catch (error) {
     console.error('Error en /api/subscribe-push:', error);
-    return jsonResponse({ error: 'Error al guardar la suscripción.' }, 500);
+    return jsonResponse({ error: 'Error al guardar la suscripcion.' }, 500);
   }
 }
 

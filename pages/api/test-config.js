@@ -1,4 +1,4 @@
-// pages/api/test-config.js
+﻿// pages/api/test-config.js
 export const config = { runtime: 'edge' };
 
 export default function handler(req) {

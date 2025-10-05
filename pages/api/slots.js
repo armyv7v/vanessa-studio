@@ -1,4 +1,4 @@
-import { DateTime } from "luxon";
+ï»¿import { DateTime } from "luxon";
 
 const CALENDAR_ID = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
 const API_KEY = process.env.NEXT_PUBLIC_GCAL_API_KEY;
@@ -8,21 +8,21 @@ function buildGoogleCalendarUrl({ date, timezone }) {
   const dateString = (date || "") + "T00:00";
   const startOfDay = DateTime.fromISO(dateString, { zone: timezone });
   if (!startOfDay.isValid) {
-    throw new Error("Fecha inválida");
+    throw new Error('Fecha invalida');
   }
-  const endOfDay = startOfDay.endOf("day");
+  const endOfDay = startOfDay.endOf('day');
 
   const params = new URLSearchParams({
     key: API_KEY,
     timeMin: startOfDay.toUTC().toISO(),
     timeMax: endOfDay.toUTC().toISO(),
-    singleEvents: "true",
-    orderBy: "startTime",
-    maxResults: "2500",
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '2500',
   });
 
-  const encodedCalendar = encodeURIComponent(CALENDAR_ID || "");
-  return "https://www.googleapis.com/calendar/v3/calendars/" + encodedCalendar + "/events?" + params.toString();
+  const encodedCalendar = encodeURIComponent(CALENDAR_ID || '');
+  return 'https://www.googleapis.com/calendar/v3/calendars/' + encodedCalendar + '/events?' + params.toString();
 }
 
 export const config = { runtime: 'edge' };
@@ -34,7 +34,7 @@ export default async function handler(req) {
   const mode = url.searchParams.get('mode') || 'normal';
 
   if (action !== 'getBusySlots') {
-    return jsonResponse({ error: 'Acción no soportada. Usa action=getBusySlots.' }, 400);
+    return jsonResponse({ error: 'Accion no soportada. Usa action=getBusySlots.' }, 400);
   }
 
   if (!CALENDAR_ID || !API_KEY) {
@@ -42,7 +42,7 @@ export default async function handler(req) {
   }
 
   if (!date) {
-    return jsonResponse({ error: 'El parámetro date es obligatorio (YYYY-MM-DD).' }, 400);
+    return jsonResponse({ error: 'El parametro date es obligatorio (YYYY-MM-DD).' }, 400);
   }
 
   try {

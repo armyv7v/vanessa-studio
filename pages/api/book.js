@@ -1,4 +1,4 @@
-// pages/api/book.js
+﻿// pages/api/book.js
 
 function isEmailValid(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -79,7 +79,7 @@ export default async function handler(req) {
       body: JSON.stringify(payload),
     });
 
-    const text = await r.text(); // Google Apps Script a veces no devuelve JSON valido
+    const text = await r.text();
     let data;
     try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
