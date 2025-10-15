@@ -1,4 +1,4 @@
-﻿﻿import { DateTime } from "luxon";
+﻿﻿﻿﻿import { DateTime } from "luxon";
 
 const CALENDAR_ID = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
 const API_KEY = process.env.NEXT_PUBLIC_GCAL_API_KEY;
@@ -27,22 +27,19 @@ function buildGoogleCalendarUrl({ date, timezone }) {
 
 export const runtime = 'nodejs';
 
-export default async function handler(req) {
-  const url = new URL(req.url);
-  const action = url.searchParams.get('action');
-  const date = url.searchParams.get('date');
-  const mode = url.searchParams.get('mode') || 'normal';
+export default async function handler(req, res) {
+  const { action, date, mode = 'normal' } = req.query;
 
   if (action !== 'getBusySlots') {
-    return jsonResponse({ error: 'Accion no soportada. Usa action=getBusySlots.' }, 400);
+    return res.status(400).json({ error: 'Accion no soportada. Usa action=getBusySlots.' });
   }
 
   if (!CALENDAR_ID || !API_KEY) {
-    return jsonResponse({ error: 'Faltan configuraciones de Google Calendar.' }, 500);
+    return res.status(500).json({ error: 'Faltan configuraciones de Google Calendar.' });
   }
 
   if (!date) {
-    return jsonResponse({ error: 'El parametro date es obligatorio (YYYY-MM-DD).' }, 400);
+    return res.status(400).json({ error: 'El parametro date es obligatorio (YYYY-MM-DD).' });
   }
 
   try {
@@ -61,16 +58,9 @@ export default async function handler(req) {
         end: evt.end?.dateTime,
       }));
 
-    return jsonResponse({ busy, mode });
+    return res.status(200).json({ busy, mode });
   } catch (error) {
     console.error('Error en /api/slots:', error);
-    return jsonResponse({ error: error.message || 'Error interno del servidor' }, 500);
+    return res.status(500).json({ error: error.message || 'Error interno del servidor' });
   }
-}
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
 }
