@@ -1,8 +1,7 @@
 ﻿// pages/api/slots.js
 import { DateTime } from "luxon";
 
-// NO especificamos un runtime, dejamos que Next.js use el entorno Node.js por defecto.
-
+// --- Manejador Principal de la Ruta (formato estándar de Node.js) ---
 export default async function handler(req, res) {
   const { date } = req.query;
 
@@ -10,6 +9,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "El parámetro date es obligatorio (YYYY-MM-DD)." });
   }
 
+  // Obtenemos las variables de entorno del proyecto de Cloudflare
   const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
   const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
   const timezone = process.env.NEXT_PUBLIC_TZ ?? "UTC";
@@ -37,7 +37,6 @@ export default async function handler(req, res) {
         end: event.end?.dateTime ?? null,
       }));
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({ busy });
 
   } catch (error) {
