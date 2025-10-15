@@ -29,7 +29,7 @@ export default function BookingFlow({ config }) {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
-  const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
+    const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
   const [disabledDaysConfig, setDisabledDaysConfig] = useState([]);
 
   const { isFetchingClient, handleEmailBlur } = useClientAutocomplete(setClientInfo);
@@ -39,6 +39,11 @@ export default function BookingFlow({ config }) {
     day.setDate(day.getDate() + i);
     return day;
   });
+
+  const disabledDates = nextDays.filter(day => !isAllowedBusinessDay(day, disabledDaysConfig)).map(day => format(day, 'yyyy-MM-dd'));
+
+  // Verificar si el día seleccionado está deshabilitado
+  const isSelectedDateDisabled = selectedDate && disabledDates.includes(format(selectedDate, 'yyyy-MM-dd'));
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -50,21 +55,6 @@ export default function BookingFlow({ config }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    async function fetchDisabledDays() {
-      try {
-        const res = await fetch('/api/gs-check?action=getConfig');
-        if (!res.ok) {
-          throw new Error(`La API devolvió un error ${res.status}`);
-        }
-        const data = await res.json();
-        if (data && data.disabledDays) setDisabledDaysConfig(data.disabledDays);
-      } catch (error) {
-        console.error("Error fetching disabled days config:", error);
-      }
-    }
-    fetchDisabledDays();
-  }, []);
 
   const fetchSlots = useCallback(async (dateObj, serviceId) => {
     try {
@@ -321,7 +311,6 @@ export default function BookingFlow({ config }) {
           </div>
         </div>
       )}
-
       {/* Paso 3: Hora */}
       {step === 3 && (
         <div className="max-w-2xl mx-auto">
