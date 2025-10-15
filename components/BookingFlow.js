@@ -52,17 +52,31 @@ export default function BookingFlow({ config }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // OBTENER CONFIGURACIÓN DIRECTAMENTE DESDE GOOGLE APPS SCRIPT
   useEffect(() => {
     async function fetchDisabledDays() {
+      const gasUrl = process.env.NEXT_PUBLIC_GAS_WEBAPP_URL;
+      if (!gasUrl) {
+        console.error("Error: La variable de entorno NEXT_PUBLIC_GAS_WEBAPP_URL no está configurada.");
+        return;
+      }
+
       try {
-        const res = await fetch('/api/gs-check?action=getConfig');
+        const configUrl = new URL(gasUrl);
+        configUrl.searchParams.set('action', 'getConfig');
+        
+        const res = await fetch(configUrl.toString());
+        
         if (!res.ok) {
-          throw new Error(`La API devolvió un error ${res.status}`);
+          throw new Error(`La API de Google Script devolvió un error ${res.status}`);
         }
+        
         const data = await res.json();
-        if (data && data.disabledDays) setDisabledDaysConfig(data.disabledDays);
+        if (data && data.disabledDays) {
+          setDisabledDaysConfig(data.disabledDays);
+        }
       } catch (error) {
-        console.error("Error fetching disabled days config:", error);
+        console.error("Error fetching disabled days config from Google Script:", error);
       }
     }
     fetchDisabledDays();
@@ -76,7 +90,6 @@ export default function BookingFlow({ config }) {
       const service = services.find(s => String(s.id) === String(serviceId));
       if (!service) throw new Error('Servicio no encontrado.');
 
-      // Obtenemos los eventos ocupados de Google Calendar para todo el día.
       const dayStart = new Date(`${yyyyMMdd}T00:00:00`);
       const dayEnd = new Date(`${yyyyMMdd}T23:59:59`);
       const { busy } = await listPublicEvents({
@@ -84,7 +97,6 @@ export default function BookingFlow({ config }) {
         timeMax: dayEnd.toISOString(),
       });
 
-      // Generar los slots disponibles usando la configuración base (ahora hasta las 21:00)
       const generatedSlots = generateTimeSlots({
         date: yyyyMMdd,
         openHour,
@@ -106,7 +118,7 @@ export default function BookingFlow({ config }) {
     } finally {
       setLoadingSlots(false);
     }
-  }, [isExtra, openHour, closeHour, allowOverflowEnd]);
+  }, [openHour, closeHour, allowOverflowEnd]);
 
   useEffect(() => {
     if (selectedDate && selectedService) {
