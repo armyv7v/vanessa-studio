@@ -1,4 +1,4 @@
-﻿﻿﻿﻿// pages/api/subscribe-push.js
+﻿﻿﻿// pages/api/subscribe-push.js
 
 export const runtime = 'nodejs';
 

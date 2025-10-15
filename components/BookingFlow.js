@@ -54,8 +54,11 @@ export default function BookingFlow({ config }) {
     async function fetchDisabledDays() {
       try {
         const res = await fetch('/api/gs-check?action=getConfig');
+        if (!res.ok) {
+          throw new Error(`La API devolvió un error ${res.status}`);
+        }
         const data = await res.json();
-        if (data.disabledDays) setDisabledDaysConfig(data.disabledDays);
+        if (data && data.disabledDays) setDisabledDaysConfig(data.disabledDays);
       } catch (error) {
         console.error("Error fetching disabled days config:", error);
       }

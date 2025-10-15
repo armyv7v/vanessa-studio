@@ -1,4 +1,4 @@
-﻿﻿﻿﻿// pages/api/client.js
+﻿﻿﻿// pages/api/client.js
 export const runtime = 'nodejs';
 
 export default async function handler(req, res) {

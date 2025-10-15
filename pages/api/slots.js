@@ -1,4 +1,4 @@
-﻿﻿﻿﻿import { DateTime } from "luxon";
+﻿﻿﻿import { DateTime } from "luxon";
 
 const CALENDAR_ID = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
 const API_KEY = process.env.NEXT_PUBLIC_GCAL_API_KEY;
