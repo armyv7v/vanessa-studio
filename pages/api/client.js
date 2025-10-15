@@ -1,5 +1,5 @@
-﻿// pages/api/client.js
-export const config = { runtime: 'edge' };
+﻿﻿// pages/api/client.js
+export const runtime = 'nodejs';
 
 export default async function handler(req) {
   if (req.method !== 'GET') {

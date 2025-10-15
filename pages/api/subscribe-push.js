@@ -1,6 +1,6 @@
-﻿// pages/api/subscribe-push.js
+﻿﻿// pages/api/subscribe-push.js
 
-export const config = { runtime: 'edge' };
+export const runtime = 'nodejs';
 
 export default async function handler(req) {
   if (req.method !== 'POST') {

@@ -1,10 +1,10 @@
-﻿// pages/api/book.js
+﻿﻿// pages/api/book.js
 
 function isEmailValid(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export const config = { runtime: 'edge' };
+export const runtime = 'nodejs';
 
 export default async function handler(req) {
   try {

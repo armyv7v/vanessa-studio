@@ -1,4 +1,4 @@
-﻿import { DateTime } from "luxon";
+﻿﻿import { DateTime } from "luxon";
 
 const CALENDAR_ID = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
 const API_KEY = process.env.NEXT_PUBLIC_GCAL_API_KEY;
@@ -25,7 +25,7 @@ function buildGoogleCalendarUrl({ date, timezone }) {
   return 'https://www.googleapis.com/calendar/v3/calendars/' + encodedCalendar + '/events?' + params.toString();
 }
 
-export const config = { runtime: 'edge' };
+export const runtime = 'nodejs';
 
 export default async function handler(req) {
   const url = new URL(req.url);

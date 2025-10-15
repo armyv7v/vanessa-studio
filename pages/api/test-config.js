@@ -1,5 +1,5 @@
-﻿// pages/api/test-config.js
-export const config = { runtime: 'edge' };
+﻿﻿// pages/api/test-config.js
+export const runtime = 'nodejs';
 
 export default function handler(req) {
   if (process.env.NODE_ENV === 'production') {

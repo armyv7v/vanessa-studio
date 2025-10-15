@@ -1,11 +1,30 @@
-﻿// pages/api/gs-check.js
+﻿﻿﻿﻿// pages/api/gs-check.js
 
-export const config = { runtime: 'edge' };
+export const runtime = 'nodejs';
 
-export default async function handler() {
+export default async function handler(req) {
   const url = process.env.GAS_WEBAPP_URL || process.env.NEXT_PUBLIC_GAS_WEBAPP_URL;
   if (!url) {
     return jsonResponse({ ok: false, error: 'GAS_WEBAPP_URL no configurada.' }, 500);
+  }
+
+  // Forma correcta y estándar de obtener los query params en Next.js API Routes
+  const { action } = req.query;
+
+  // Nueva lógica para obtener la configuración de días deshabilitados
+  if (action === 'getConfig') {
+    try {
+      const configUrl = new URL(url);
+      configUrl.searchParams.set('action', 'getConfig');
+      const res = await fetch(configUrl.toString());
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Error al obtener la configuración desde Google Script.');
+      }
+      return jsonResponse(data);
+    } catch (err) {
+      return jsonResponse({ ok: false, error: String(err?.message || err) }, 502);
+    }
   }
 
   const probeBody = {

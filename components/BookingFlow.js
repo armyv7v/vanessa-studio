@@ -70,22 +70,60 @@ export default function BookingFlow({ config }) {
       const yyyyMMdd = format(dateObj, 'yyyy-MM-dd');
       const service = services.find(s => String(s.id) === String(serviceId));
       if (!service) throw new Error('Servicio no encontrado.');
-      // Usar la función centralizada para obtener los eventos ocupados
+
+      // Obtenemos los eventos ocupados UNA SOLA VEZ para todo el día.
       const dayStart = new Date(`${yyyyMMdd}T00:00:00`);
       const dayEnd = new Date(`${yyyyMMdd}T23:59:59`);
-      const busyResult = await listPublicEvents({
+      const { busy } = await listPublicEvents({
         timeMin: dayStart.toISOString(),
         timeMax: dayEnd.toISOString(),
       });
 
+      // 1. Determinar si el horario normal debe extenderse
+      let effectiveCloseHour = closeHour;
+      let effectiveAllowOverflow = allowOverflowEnd;
+
+      // Solo aplicamos la lógica de extensión en la página de horarios normales
+      if (!isExtra) {
+        // Consultar si hay extra-cupos ya reservados (de 18:00 a 23:59)
+        const extraCuposStartTime = new Date(`${yyyyMMdd}T18:00:00`).getTime();
+        const hasExtraCupos = busy.some(b => new Date(b.start).getTime() >= extraCuposStartTime);
+
+        // Si no hay extra-cupos, verificamos si el último turno normal está ocupado
+        if (!hasExtraCupos) {
+          // Generar slots tentativos del horario normal para ver si el último está ocupado.
+          const tentativeSlots = generateTimeSlots({
+            date: yyyyMMdd,
+            openHour,
+            closeHour,
+            stepMinutes: 30,
+            durationMinutes: service.duration,
+            busy: busy || [],
+            allowOverflowEnd: false, // Usar el modo estricto para el horario normal
+          });
+
+          // Encontrar el último slot posible del día
+          const lastPotentialSlot = tentativeSlots[tentativeSlots.length - 1];
+
+          if (lastPotentialSlot) {
+            // Si el último slot posible NO está disponible, extendemos el horario.
+            if (!lastPotentialSlot.available) {
+              effectiveCloseHour = 21; // Extender hasta las 21:00
+              effectiveAllowOverflow = true; // Permitir que el turno termine después
+            }
+          }
+        }
+      }
+
+      // 2. Generar los slots con la hora de cierre efectiva
       const generatedSlots = generateTimeSlots({
         date: yyyyMMdd,
-        openHour,
-        closeHour,
+        openHour, // La hora de apertura no cambia
+        closeHour: effectiveCloseHour,
         stepMinutes: 30,
         durationMinutes: service.duration,
-        busy: busyResult.busy || [],
-        allowOverflowEnd,
+        busy: busy || [],
+        allowOverflowEnd: effectiveAllowOverflow,
       });
 
       const finalSlots = generatedSlots
@@ -93,13 +131,13 @@ export default function BookingFlow({ config }) {
         .map(slot => format(new Date(slot.start), 'HH:mm'));
 
       setAvailableSlots(finalSlots);
-    } catch (err) {      
+    } catch (err) {
       setErrorSlots(String(err?.message || err));
       setAvailableSlots([]);
     } finally {
       setLoadingSlots(false);
     }
-  }, [openHour, closeHour, allowOverflowEnd]);
+  }, [isExtra, openHour, closeHour, allowOverflowEnd]);
 
   useEffect(() => {
     if (selectedDate && selectedService) {
