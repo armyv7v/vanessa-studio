@@ -2,10 +2,10 @@
 
 export const runtime = 'nodejs';
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   const url = process.env.GAS_WEBAPP_URL || process.env.NEXT_PUBLIC_GAS_WEBAPP_URL;
   if (!url) {
-    return jsonResponse({ ok: false, error: 'GAS_WEBAPP_URL no configurada.' }, 500);
+    return res.status(500).json({ ok: false, error: 'GAS_WEBAPP_URL no configurada.' });
   }
 
   // Forma correcta y estándar de obtener los query params en Next.js API Routes
@@ -16,14 +16,14 @@ export default async function handler(req) {
     try {
       const configUrl = new URL(url);
       configUrl.searchParams.set('action', 'getConfig');
-      const res = await fetch(configUrl.toString());
-      const data = await res.json();
-      if (!res.ok) {
+      const apiRes = await fetch(configUrl.toString());
+      const data = await apiRes.json();
+      if (!apiRes.ok) {
         throw new Error(data?.error || 'Error al obtener la configuración desde Google Script.');
       }
-      return jsonResponse(data);
+      return res.status(200).json(data);
     } catch (err) {
-      return jsonResponse({ ok: false, error: String(err?.message || err) }, 502);
+      return res.status(502).json({ ok: false, error: String(err?.message || err) });
     }
   }
 
@@ -46,9 +46,9 @@ export default async function handler(req) {
     });
     const text = await r.text();
     let parsed = null;
-    try { parsed = JSON.parse(text); } catch (_) {}
+    try { parsed = JSON.parse(text); } catch (e) { /* Ignorar si no es JSON */ }
 
-    return jsonResponse({
+    return res.status(200).json({
       ok: true,
       status: r.status,
       contentType: r.headers.get('content-type'),
@@ -56,13 +56,6 @@ export default async function handler(req) {
       rawSample: text.slice(0, 500),
     });
   } catch (err) {
-    return jsonResponse({ ok: false, error: String(err?.message || err) }, 502);
+    return res.status(502).json({ ok: false, error: String(err?.message || err) });
   }
-}
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
 }
