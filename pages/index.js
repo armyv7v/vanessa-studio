@@ -3,11 +3,13 @@ import Head from 'next/head';
 import Link from 'next/link';
 import BookingFlow from '../components/BookingFlow';
 
+// El horario normal de atención es hasta las 21:00.
+// Las citas ya agendadas (normales o extra) bloquearán los turnos correspondientes.
 const normalConfig = {
   isExtra: false,
   openHour: 10,
-  closeHour: 18,
-  allowOverflowEnd: false,
+  closeHour: 21, // Horario extendido por defecto
+  allowOverflowEnd: true, // Permitir que el último turno termine después de las 21:00
   daysToShow: 21,
 };
 
@@ -21,7 +23,7 @@ export default function Home() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-pink-600 mb-2">Vanessa Nails Studio</h1>
+          <h1 className="text-4xl font-bold text-pink-600 mb-2">Vanessa Nails Studio - Horarios Actualizados</h1>
           <p className="text-gray-600">Reserva tu cita online</p>
           <div className="mt-4">
             <Link href="/extra-cupos" className="text-pink-600 hover:text-pink-800 underline">

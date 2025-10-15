@@ -42,9 +42,6 @@ export default function BookingFlow({ config }) {
 
   const disabledDates = nextDays.filter(day => !isAllowedBusinessDay(day, disabledDaysConfig)).map(day => format(day, 'yyyy-MM-dd'));
 
-  // Verificar si el día seleccionado está deshabilitado
-  const isSelectedDateDisabled = selectedDate && disabledDates.includes(format(selectedDate, 'yyyy-MM-dd'));
-
   // --- EFFECTS ---
   useEffect(() => {
     function handleResize() {
@@ -79,7 +76,7 @@ export default function BookingFlow({ config }) {
       const service = services.find(s => String(s.id) === String(serviceId));
       if (!service) throw new Error('Servicio no encontrado.');
 
-      // Obtenemos los eventos ocupados UNA SOLA VEZ para todo el día.
+      // Obtenemos los eventos ocupados de Google Calendar para todo el día.
       const dayStart = new Date(`${yyyyMMdd}T00:00:00`);
       const dayEnd = new Date(`${yyyyMMdd}T23:59:59`);
       const { busy } = await listPublicEvents({
@@ -87,32 +84,15 @@ export default function BookingFlow({ config }) {
         timeMax: dayEnd.toISOString(),
       });
 
-      // 1. Determinar si el horario normal debe extenderse hasta las 21:00
-      let effectiveCloseHour = closeHour;
-      let effectiveAllowOverflow = allowOverflowEnd;
-
-      // Solo aplicamos la lógica de extensión en la página de horarios normales (!isExtra)
-      if (!isExtra) {
-        // Consultar si hay "extra-cupos" ya reservados (citas a partir de las 18:00)
-        const extraCuposStartTime = new Date(`${yyyyMMdd}T18:00:00`).getTime();
-        const hasExtraCupos = busy.some(b => new Date(b.start).getTime() >= extraCuposStartTime);
-
-        // Si NO hay extra-cupos reservados, extendemos el horario de atención normal hasta las 21:00
-        if (!hasExtraCupos) {
-          effectiveCloseHour = 21; // Extender la hora de cierre hasta las 21:00
-          effectiveAllowOverflow = true; // Permitir que el último turno termine después de las 21:00
-        }
-      }
-
-      // 2. Generar los slots disponibles con la hora de cierre actualizada
+      // Generar los slots disponibles usando la configuración base (ahora hasta las 21:00)
       const generatedSlots = generateTimeSlots({
         date: yyyyMMdd,
-        openHour, // La hora de apertura no cambia
-        closeHour: effectiveCloseHour,
+        openHour,
+        closeHour,
         stepMinutes: 30,
         durationMinutes: service.duration,
         busy: busy || [],
-        allowOverflowEnd: effectiveAllowOverflow,
+        allowOverflowEnd,
       });
 
       const finalSlots = generatedSlots
