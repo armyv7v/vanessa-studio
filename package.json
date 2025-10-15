@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "build:cf": "npx open-next build",
     "gs:login": "npx @google/clasp login",
     "gs:whoami": "npx @google/clasp login --status",
     "gs:push": "cd scripts/google-script && npx @google/clasp push"
@@ -28,8 +29,10 @@
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.5",
+    "open-next": "latest",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "wrangler": "latest"
   },
   "engines": {
     "node": ">=18"

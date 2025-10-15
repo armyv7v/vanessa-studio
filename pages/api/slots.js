@@ -1,25 +1,21 @@
 ﻿// pages/api/slots.js
 import { DateTime } from "luxon";
 
-// Indicamos a Cloudflare que ejecute esto como una función de borde (edge function).
-export const runtime = 'edge';
+// NO especificamos un runtime, dejamos que Next.js use el entorno Node.js por defecto.
 
-// --- Manejador Principal de la Ruta ---
-export default async function handler(req) {
-  const url = new URL(req.url);
-  const date = url.searchParams.get("date");
+export default async function handler(req, res) {
+  const { date } = req.query;
 
   if (!date) {
-    return jsonResponse({ error: "El parámetro date es obligatorio (YYYY-MM-DD)." }, 400);
+    return res.status(400).json({ error: "El parámetro date es obligatorio (YYYY-MM-DD)." });
   }
 
-  // Obtenemos las variables de entorno del proyecto de Cloudflare
   const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
   const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
   const timezone = process.env.NEXT_PUBLIC_TZ ?? "UTC";
 
   if (!calendarId || !apiKey) {
-    return jsonResponse({ error: "Faltan configuraciones de Google Calendar en las variables de entorno." }, 500);
+    return res.status(500).json({ error: "Faltan configuraciones de Google Calendar en las variables de entorno." });
   }
 
   try {
@@ -31,7 +27,7 @@ export default async function handler(req) {
 
     if (!gcResponse.ok) {
       const message = payload?.error?.message || "Error obteniendo eventos del calendario.";
-      return jsonResponse({ error: message }, gcResponse.status);
+      return res.status(gcResponse.status).json({ error: message });
     }
 
     const busy = (payload.items || [])
@@ -41,24 +37,15 @@ export default async function handler(req) {
         end: event.end?.dateTime ?? null,
       }));
 
-    return jsonResponse({ busy });
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.status(200).json({ busy });
 
   } catch (error) {
-    return jsonResponse({ error: error?.message ?? "Error interno obteniendo los horarios." }, 500);
+    return res.status(500).json({ error: error?.message ?? "Error interno obteniendo los horarios." });
   }
 }
 
 // --- Funciones de Utilidad ---
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
-}
 
 function buildCalendarRange(date, timezone) {
   const start = DateTime.fromISO(`${date}T00:00:00`, { zone: timezone });
