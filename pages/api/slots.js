@@ -4,22 +4,6 @@ import { DateTime } from "luxon";
 // Indicamos a Cloudflare que ejecute esto como una función de borde (edge function).
 export const runtime = 'edge';
 
-// --- Interfaces para la API de Google Calendar ---
-interface CalendarEvent {
-  id: string;
-  summary?: string;
-  start?: { date?: string; dateTime?: string };
-  end?: { date?: string; dateTime?: string };
-}
-
-interface GoogleCalendarListResponse {
-  items: CalendarEvent[];
-}
-
-interface GoogleApiError {
-  error: { message: string };
-}
-
 // --- Manejador Principal de la Ruta ---
 export default async function handler(req) {
   const url = new URL(req.url);
