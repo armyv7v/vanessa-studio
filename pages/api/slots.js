@@ -1,66 +1,98 @@
-﻿﻿﻿import { DateTime } from "luxon";
+﻿// pages/api/slots.js
+import { DateTime } from "luxon";
 
-const CALENDAR_ID = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
-const API_KEY = process.env.NEXT_PUBLIC_GCAL_API_KEY;
-const DEFAULT_TZ = process.env.NEXT_PUBLIC_TZ || "America/Santiago";
+// Indicamos a Cloudflare que ejecute esto como una función de borde (edge function).
+export const runtime = 'edge';
 
-function buildGoogleCalendarUrl({ date, timezone }) {
-  const dateString = (date || "") + "T00:00";
-  const startOfDay = DateTime.fromISO(dateString, { zone: timezone });
-  if (!startOfDay.isValid) {
-    throw new Error('Fecha invalida');
-  }
-  const endOfDay = startOfDay.endOf('day');
-
-  const params = new URLSearchParams({
-    key: API_KEY,
-    timeMin: startOfDay.toUTC().toISO(),
-    timeMax: endOfDay.toUTC().toISO(),
-    singleEvents: 'true',
-    orderBy: 'startTime',
-    maxResults: '2500',
-  });
-
-  const encodedCalendar = encodeURIComponent(CALENDAR_ID || '');
-  return 'https://www.googleapis.com/calendar/v3/calendars/' + encodedCalendar + '/events?' + params.toString();
+// --- Interfaces para la API de Google Calendar ---
+interface CalendarEvent {
+  id: string;
+  summary?: string;
+  start?: { date?: string; dateTime?: string };
+  end?: { date?: string; dateTime?: string };
 }
 
-export const runtime = 'nodejs';
+interface GoogleCalendarListResponse {
+  items: CalendarEvent[];
+}
 
-export default async function handler(req, res) {
-  const { action, date, mode = 'normal' } = req.query;
+interface GoogleApiError {
+  error: { message: string };
+}
 
-  if (action !== 'getBusySlots') {
-    return res.status(400).json({ error: 'Accion no soportada. Usa action=getBusySlots.' });
-  }
-
-  if (!CALENDAR_ID || !API_KEY) {
-    return res.status(500).json({ error: 'Faltan configuraciones de Google Calendar.' });
-  }
+// --- Manejador Principal de la Ruta ---
+export default async function handler(req) {
+  const url = new URL(req.url);
+  const date = url.searchParams.get("date");
 
   if (!date) {
-    return res.status(400).json({ error: 'El parametro date es obligatorio (YYYY-MM-DD).' });
+    return jsonResponse({ error: "El parámetro date es obligatorio (YYYY-MM-DD)." }, 400);
+  }
+
+  // Obtenemos las variables de entorno del proyecto de Cloudflare
+  const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
+  const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
+  const timezone = process.env.NEXT_PUBLIC_TZ ?? "UTC";
+
+  if (!calendarId || !apiKey) {
+    return jsonResponse({ error: "Faltan configuraciones de Google Calendar en las variables de entorno." }, 500);
   }
 
   try {
-    const timezone = DEFAULT_TZ;
-    const apiUrl = buildGoogleCalendarUrl({ date, timezone });
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Google Calendar ${response.status}: ${text}`);
+    const range = buildCalendarRange(date, timezone);
+    const requestUrl = buildGoogleCalendarUrl(calendarId, apiKey, range);
+
+    const gcResponse = await fetch(requestUrl.toString());
+    const payload = await gcResponse.json();
+
+    if (!gcResponse.ok) {
+      const message = payload?.error?.message || "Error obteniendo eventos del calendario.";
+      return jsonResponse({ error: message }, gcResponse.status);
     }
-    const data = await response.json();
-    const busy = (data.items || [])
-      .filter(evt => !evt.start?.date && !evt.end?.date)
-      .map(evt => ({
-        start: evt.start?.dateTime,
-        end: evt.end?.dateTime,
+
+    const busy = (payload.items || [])
+      .filter((event) => !event.start?.date) // Filtra eventos de todo el día
+      .map((event) => ({
+        start: event.start?.dateTime ?? null,
+        end: event.end?.dateTime ?? null,
       }));
 
-    return res.status(200).json({ busy, mode });
+    return jsonResponse({ busy });
+
   } catch (error) {
-    console.error('Error en /api/slots:', error);
-    return res.status(500).json({ error: error.message || 'Error interno del servidor' });
+    return jsonResponse({ error: error?.message ?? "Error interno obteniendo los horarios." }, 500);
   }
+}
+
+// --- Funciones de Utilidad ---
+
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+}
+
+function buildCalendarRange(date, timezone) {
+  const start = DateTime.fromISO(`${date}T00:00:00`, { zone: timezone });
+  if (!start.isValid) throw new Error("Fecha inválida");
+  const end = start.endOf("day");
+  return { timeMin: start.toUTC().toISO(), timeMax: end.toUTC().toISO() };
+}
+
+function buildGoogleCalendarUrl(calendarId, apiKey, range) {
+  if (!range.timeMin || !range.timeMax) throw new Error("Rango de tiempo inválido");
+  const params = new URLSearchParams({
+    key: apiKey,
+    timeMin: range.timeMin,
+    timeMax: range.timeMax,
+    singleEvents: "true",
+    orderBy: "startTime",
+    maxResults: "2500",
+  });
+  const encodedCalendar = encodeURIComponent(calendarId);
+  return new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodedCalendar}/events?${params.toString()}`);
 }
