@@ -11,7 +11,7 @@
     "build:cf": "npx open-next build",
     "preview": "npm run build:cf && npx wrangler pages dev .open-next/assets",
     "deploy:worker": "npx wrangler deploy --config ./api-worker/wrangler.toml",
-    "deploy": "npm run build:cf && npx wrangler pages deploy .open-next --project-name=vanessa-studio && npm run deploy:worker",
+    "deploy": "npm run build:cf && npx wrangler pages deploy .open-next --project-name=nailsvanessacl && npm run deploy:worker",
     "gs:login": "npx @google/clasp login",
     "gs:whoami": "npx @google/clasp login --status",
     "gs:push": "cd scripts/google-script && npx @google/clasp push"
