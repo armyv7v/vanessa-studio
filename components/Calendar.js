@@ -22,7 +22,6 @@ export default function Calendar({ selectedDate, onSelect, disabledDates = [] })
         mode="single"
         selected={selectedDate}
         onSelect={onSelect}
-        disabled={{ before: today }} // no permitir días pasados
         footer={selectedDate && <p className="mt-2">Día seleccionado: {selectedDate.toLocaleDateString()}</p>}
         className="react-day-picker"
         styles={{
