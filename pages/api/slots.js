@@ -1,7 +1,7 @@
 ﻿// pages/api/slots.js
 import { DateTime } from "luxon";
 
-// --- Manejador Principal de la Ruta (formato estándar de Node.js) ---
+// --- Manejador Principal de la Ruta (formato estándar de Node.js para Next.js) ---
 export default async function handler(req, res) {
   const { date } = req.query;
 
@@ -9,19 +9,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "El parámetro date es obligatorio (YYYY-MM-DD)." });
   }
 
-  // Obtenemos las variables de entorno del proyecto de Cloudflare
+  // Obtenemos las variables de entorno del proyecto de Cloudflare (disponibles en el servidor)
   const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
   const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
   const timezone = process.env.NEXT_PUBLIC_TZ ?? "UTC";
 
   if (!calendarId || !apiKey) {
-    return res.status(500).json({ error: "Faltan configuraciones de Google Calendar en las variables de entorno." });
+    return res.status(500).json({ error: "Faltan configuraciones de Google Calendar en las variables de entorno del servidor." });
   }
 
   try {
     const range = buildCalendarRange(date, timezone);
     const requestUrl = buildGoogleCalendarUrl(calendarId, apiKey, range);
 
+    // La API de Next.js en el servidor llama a la API de Google
     const gcResponse = await fetch(requestUrl.toString());
     const payload = await gcResponse.json();
 
@@ -37,10 +38,11 @@ export default async function handler(req, res) {
         end: event.end?.dateTime ?? null,
       }));
 
+    // Se devuelven los horarios ocupados al navegador del cliente
     return res.status(200).json({ busy });
 
   } catch (error) {
-    return res.status(500).json({ error: error?.message ?? "Error interno obteniendo los horarios." });
+    return res.status(500).json({ error: error?.message ?? "Error interno del servidor obteniendo los horarios." });
   }
 }
 

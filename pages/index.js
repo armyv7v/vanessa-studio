@@ -23,7 +23,7 @@ export default function Home() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-pink-600 mb-2">Vanessa Nails Studio - Horarios Actualizados</h1>
+          <h1 className="text-4xl font-bold text-pink-600 mb-2">Vanessa Nails Studio</h1>
           <p className="text-gray-600">Reserva tu cita online</p>
           <div className="mt-4">
             <Link href="/extra-cupos" className="text-pink-600 hover:text-pink-800 underline">

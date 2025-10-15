@@ -5,12 +5,23 @@ import { es } from 'date-fns/locale';
 import { services as servicesData } from '../lib/services';
 import { generateTimeSlots } from '../lib/slots';
 import { isAllowedBusinessDay } from '../lib/calendarConfig';
-import { listPublicEvents } from '../lib/google-calendar';
 import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 import Confetti from 'react-confetti';
 import BookingConfirmation from './BookingConfirmation';
 
 const services = [...servicesData].sort((a, b) => a.duration - b.duration);
+
+// Esta función ahora llama a la API interna de Next.js para obtener los slots
+async function listSlotsViaApi({ date, serviceId }) {
+  const params = new URLSearchParams({ date, serviceId });
+  const res = await fetch(`/api/slots?${params.toString()}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || `Error en la API interna (${res.status})`);
+  }
+  return res.json();
+}
+
 export default function BookingFlow({ config }) {
   const {
     isExtra,
@@ -29,7 +40,7 @@ export default function BookingFlow({ config }) {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
-    const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
+  const [windowSize, setWindowSize] = useState({ width: undefined, height: undefined });
   const [disabledDaysConfig, setDisabledDaysConfig] = useState([]);
 
   const { isFetchingClient, handleEmailBlur } = useClientAutocomplete(setClientInfo);
@@ -52,31 +63,17 @@ export default function BookingFlow({ config }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // OBTENER CONFIGURACIÓN DIRECTAMENTE DESDE GOOGLE APPS SCRIPT
   useEffect(() => {
     async function fetchDisabledDays() {
-      const gasUrl = process.env.NEXT_PUBLIC_GAS_WEBAPP_URL;
-      if (!gasUrl) {
-        console.error("Error: La variable de entorno NEXT_PUBLIC_GAS_WEBAPP_URL no está configurada.");
-        return;
-      }
-
       try {
-        const configUrl = new URL(gasUrl);
-        configUrl.searchParams.set('action', 'getConfig');
-        
-        const res = await fetch(configUrl.toString());
-        
+        const res = await fetch('/api/gs-check?action=getConfig');
         if (!res.ok) {
-          throw new Error(`La API de Google Script devolvió un error ${res.status}`);
+          throw new Error(`La API interna devolvió un error ${res.status}`);
         }
-        
         const data = await res.json();
-        if (data && data.disabledDays) {
-          setDisabledDaysConfig(data.disabledDays);
-        }
+        if (data && data.disabledDays) setDisabledDaysConfig(data.disabledDays);
       } catch (error) {
-        console.error("Error fetching disabled days config from Google Script:", error);
+        console.error("Error fetching disabled days config:", error);
       }
     }
     fetchDisabledDays();
@@ -90,12 +87,10 @@ export default function BookingFlow({ config }) {
       const service = services.find(s => String(s.id) === String(serviceId));
       if (!service) throw new Error('Servicio no encontrado.');
 
-      const dayStart = new Date(`${yyyyMMdd}T00:00:00`);
-      const dayEnd = new Date(`${yyyyMMdd}T23:59:59`);
-      const { busy } = await listPublicEvents({
-        timeMin: dayStart.toISOString(),
-        timeMax: dayEnd.toISOString(),
-      });
+      // La lógica de generación de slots ahora está en el backend (api/slots)
+      // pero la mantenemos aquí como fallback o para desarrollo si es necesario.
+      // La llamada principal es a la API.
+      const { busy } = await listSlotsViaApi({ date: yyyyMMdd, serviceId });
 
       const generatedSlots = generateTimeSlots({
         date: yyyyMMdd,
