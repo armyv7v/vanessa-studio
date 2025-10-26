@@ -99,18 +99,60 @@ function doPost(e) {
       return createJsonResponse({ success: false, error: "Faltan campos obligatorios." }, 400);
     }
 
-    const { start, end, startStr, endStr } = buildDateTimeObjects(fecha, hora, durationMin);
+    const tzFromPayload = typeof data.tz === "string" && data.tz ? data.tz : TZ;
+    const tzOffsetFromPayload = typeof data.tzOffset === "string" ? data.tzOffset : "";
+    const startIsoFromPayload = typeof data.startIso === "string" ? data.startIso : "";
+    const endIsoFromPayload = typeof data.endIso === "string" ? data.endIso : "";
+
+    const { start, end, startStr, endStr } = buildDateTimeObjects(
+      fecha,
+      hora,
+      durationMin,
+      {
+        tz: tzFromPayload,
+        tzOffset: tzOffsetFromPayload,
+        startIso: startIsoFromPayload,
+        endIso: endIsoFromPayload,
+      }
+    );
     if (hasConflictCalendarApp(CALENDAR_ID, start, end)) {
       return createJsonResponse({ success: false, error: "El horario seleccionado ya no está disponible. Por favor, elige otro." }, 409);
     }
 
     const cal = CalendarApp.getCalendarById(CALENDAR_ID);
     const eventTitle = `Cita: ${serviceName} con ${nombre}` + (extraCupo ? " (EXTRA)" : "");
-    const event = cal.createEvent(eventTitle, start, end, {
-      description: `Cliente: ${nombre}\nEmail: ${email}\nTeléfono: ${telefono}\nServicio: ${serviceName}\nDuración: ${durationMin} min\nModalidad: ${extraCupo ? 'Extra Cupo' : 'Normal'}`,
-      guests: email + (OWNER_EMAIL ? "," + OWNER_EMAIL : ""),
-      sendInvites: true
-    });
+    const eventDescription = `Cliente: ${nombre}\nEmail: ${email}\nTeléfono: ${telefono}\nServicio: ${serviceName}\nDuración: ${durationMin} min\nModalidad: ${extraCupo ? 'Extra Cupo' : 'Normal'}`;
+    const guestsList = [email];
+    if (OWNER_EMAIL) {
+      guestsList.push(OWNER_EMAIL);
+    }
+    const guestString = guestsList.filter((guestEmail) => !!guestEmail).join(",");
+    let event;
+    try {
+      event = cal.createEvent(eventTitle, start, end, {
+        description: eventDescription,
+        guests: guestString,
+        sendInvites: true,
+      });
+    } catch (err) {
+      const errMsg = String(err || "");
+      const guestPermissionIssue = /guest|invitad|permiso/i.test(errMsg);
+      if (!guestPermissionIssue) {
+        throw err;
+      }
+      Logger.log(`Fallo al crear evento con invitados (reintentando sin ellos): ${errMsg}`);
+      event = cal.createEvent(eventTitle, start, end, {
+        description: eventDescription,
+      });
+      guestsList.forEach((guestEmail) => {
+        if (!guestEmail) return;
+        try {
+          event.addGuest(guestEmail);
+        } catch (guestErr) {
+          Logger.log(`No se pudo agregar al invitado ${guestEmail}: ${guestErr}`);
+        }
+      });
+    }
     const eventLink = event.getHtmlLink() || "";
 
     const appendedRow = appendToSheet([ new Date(), nombre, email, telefono, serviceName, Utilities.formatDate(start, TZ, "yyyy-MM-dd HH:mm"), Utilities.formatDate(end, TZ, "yyyy-MM-dd HH:mm"), durationMin, extraCupo ? "SI" : "NO", event.getId(), eventLink ]);
@@ -177,15 +219,86 @@ function getClientByEmail(email) {
 /**
  * Construye objetos Date y strings en formato RFC3339 a partir de fecha y hora.
  */
-function buildDateTimeObjects(dateStr, timeStr, minutesToAdd) {
+function buildDateTimeObjects(dateStr, timeStr, minutesToAdd, options) {
   if (!dateStr || !timeStr) throw new Error("dateStr/timeStr requeridos");
-  const [Y, M, D] = dateStr.split("-").map(Number);
-  const [h, m]   = timeStr.split(":").map(Number);
-  const start = new Date(Y, M - 1, D, h, m, 0, 0);
-  const end   = new Date(start.getTime() + (Number(minutesToAdd) || 0) * 60000);
-  const startStr = Utilities.formatDate(start, TZ, "yyyy-MM-dd'T'HH:mm:ssXXX");
-  const endStr   = Utilities.formatDate(end,   TZ, "yyyy-MM-dd'T'HH:mm:ssXXX");
+  const opts = options || {};
+  const tz = opts.tz || TZ;
+
+  const start = resolveStartDateTime({
+    dateStr,
+    timeStr,
+    tz,
+    tzOffset: opts.tzOffset,
+    startIso: opts.startIso,
+  });
+
+  const durationMinutes = Number(minutesToAdd) || 0;
+  const end = resolveEndDateTime({
+    start,
+    durationMinutes,
+    endIso: opts.endIso,
+  });
+
+  const startStr = Utilities.formatDate(start, tz, "yyyy-MM-dd'T'HH:mm:ssXXX");
+  const endStr = Utilities.formatDate(end, tz, "yyyy-MM-dd'T'HH:mm:ssXXX");
   return { start, end, startStr, endStr };
+}
+
+function resolveStartDateTime({ dateStr, timeStr, tz, tzOffset, startIso }) {
+  const fromIso = parseIsoDate(startIso);
+  if (fromIso) return fromIso;
+
+  const normalizedOffset = normalizeTzOffset(tzOffset);
+  if (normalizedOffset) {
+    const isoCandidate = `${dateStr}T${ensureTimeHasSeconds(timeStr)}${normalizedOffset}`;
+    const candidate = parseIsoDate(isoCandidate);
+    if (candidate) return candidate;
+  }
+
+  const [Y, M, D] = dateStr.split("-").map(Number);
+  const [h, m, s] = ensureTimeHasSeconds(timeStr).split(":").map(Number);
+
+  const baseUtc = new Date(Date.UTC(Y, M - 1, D, h, m, s || 0, 0));
+  const isoWithTz = Utilities.formatDate(baseUtc, tz, "yyyy-MM-dd'T'HH:mm:ssXXX");
+  const viaUtilities = parseIsoDate(isoWithTz);
+  if (viaUtilities) return viaUtilities;
+
+  const local = new Date(Y, M - 1, D, h, m, s || 0, 0);
+  if (!isNaN(local.getTime())) return local;
+
+  throw new Error("No se pudo interpretar la fecha/hora solicitada.");
+}
+
+function resolveEndDateTime({ start, durationMinutes, endIso }) {
+  const fromIso = parseIsoDate(endIso);
+  if (fromIso) return fromIso;
+  const minutes = Number(durationMinutes) || 0;
+  return new Date(start.getTime() + minutes * 60000);
+}
+
+function ensureTimeHasSeconds(timeStr) {
+  const parts = (timeStr || "").split(":").map((p) => p.trim());
+  if (parts.length === 2) {
+    parts.push("00");
+  } else if (parts.length !== 3) {
+    throw new Error("timeStr inválido");
+  }
+  return parts.map((p) => p.padStart(2, "0")).join(":");
+}
+
+function normalizeTzOffset(offset) {
+  if (typeof offset !== "string") return null;
+  const trimmed = offset.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/^([+-])(\d{2}):?(\d{2})$/);
+  if (!match) return null;
+  return `${match[1]}${match[2]}:${match[3]}`;
+}
+
+function parseIsoDate(value) {
+  if (!value || typeof value !== "string") return null;
+  const parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function isDisabledDay(date) {

@@ -1,7 +1,18 @@
-﻿﻿﻿﻿// pages/api/book.js
+import { DateTime } from 'luxon';
+
+// pages/api/book.js
 
 function isEmailValid(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function normalizeTzOffset(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/^([+-])(\d{2}):?(\d{2})$/);
+  if (!match) return null;
+  return `${match[1]}${match[2]}:${match[3]}`;
 }
 
 export const runtime = 'nodejs';
@@ -12,9 +23,10 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const GAS_URL  = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
+    const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
     const CALENDAR = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID || '';
-    const TZ       = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
+    const TZ = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
+    const TZ_OFFSET_ENV = process.env.NEXT_PUBLIC_TZ_OFFSET;
 
     if (!GAS_URL) {
       return res.status(500).json({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL' });
@@ -56,6 +68,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Duracion invalida' });
     }
 
+    const timezone = typeof TZ === 'string' && TZ ? TZ : 'UTC';
+    const startDateTime = DateTime.fromISO(`${date}T${start}`, { zone: timezone });
+    if (!startDateTime.isValid) {
+      return res.status(400).json({ error: 'Fecha u hora invalida' });
+    }
+    const endDateTime = startDateTime.plus({ minutes: resolvedDurationMin });
+    const tzOffset = normalizeTzOffset(TZ_OFFSET_ENV) ?? startDateTime.toFormat('ZZ');
+
     const payload = {
       client: normalizedClient,
       nombre: normalizedClient.name,
@@ -65,12 +85,15 @@ export default async function handler(req, res) {
       fecha: date,
       start,
       hora: start,
+      startIso: startDateTime.toISO(),
+      endIso: endDateTime.toISO(),
+      tzOffset,
       serviceId: String(serviceId),
       serviceName: serviceName || '',
       extraCupo: extraCupo ?? extraCup ?? false,
       durationMin: resolvedDurationMin,
       calendarId: CALENDAR,
-      tz: TZ,
+      tz: timezone,
     };
 
     const r = await fetch(GAS_URL, {
@@ -81,7 +104,11 @@ export default async function handler(req, res) {
 
     const text = await r.text();
     let data;
-    try { data = JSON.parse(text); } catch { data = { raw: text }; }
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
 
     if (!r.ok || data?.success === false) {
       const statusFromData = Number(data?.statusCode);
