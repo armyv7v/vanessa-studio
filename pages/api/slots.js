@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   // Obtenemos las variables de entorno del proyecto de Cloudflare (disponibles en el servidor)
   const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
-  const apiKey = process.env.NEXT_PUBLIC_GCAL_API_KEY;
+  const apiKey = process.env.GCAL_API_KEY;
   const timezone = process.env.NEXT_PUBLIC_TZ ?? "UTC";
 
   if (!calendarId || !apiKey) {

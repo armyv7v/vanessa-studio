@@ -1,0 +1,4 @@
+NEXT_PUBLIC_GCAL_CALENDAR_ID=tu_calendar_id_publico@group.calendar.google.com
+GCAL_API_KEY=tu_google_api_key
+NEXT_PUBLIC_TZ=America/Santiago
+GAS_WEBAPP_URL=https://script.google.com/macros/s/tu_script_id/exec

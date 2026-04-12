@@ -3,7 +3,7 @@
 // Definición de la configuración de entorno del Worker
 interface Env {
   NEXT_PUBLIC_GCAL_CALENDAR_ID: string;
-  NEXT_PUBLIC_GCAL_API_KEY: string;
+  GCAL_API_KEY: string;
   GAS_WEBAPP_URL: string; // URL del Google Apps Script para la configuración
   NEXT_PUBLIC_TZ?: string;
 }
@@ -83,7 +83,7 @@ async function handleSlots(url: URL, env: Env): Promise<Response> {
   }
 
   const calendarId = env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
-  const apiKey = env.NEXT_PUBLIC_GCAL_API_KEY;
+  const apiKey = env.GCAL_API_KEY;
   const timezone = env.NEXT_PUBLIC_TZ ?? "UTC";
 
   if (!calendarId || !apiKey) {
