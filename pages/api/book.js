@@ -23,16 +23,18 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
+    const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL || process.env.GAS_WEBAPP_URL;
     const CALENDAR = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID || '';
     const TZ = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
     const TZ_OFFSET_ENV = process.env.NEXT_PUBLIC_TZ_OFFSET;
 
     if (!GAS_URL) {
-      return res.status(500).json({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL' });
+      return res.status(500).json({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL o GAS_WEBAPP_URL' });
     }
 
-    const body = await req.json().catch(() => ({}));
+    const body = typeof req.body === 'string'
+      ? JSON.parse(req.body || '{}')
+      : (req.body || {});
     const {
       serviceId,
       serviceName,

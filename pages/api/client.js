@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'El parametro email es requerido' });
   }
 
-  const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL;
+  const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL || process.env.GAS_WEBAPP_URL;
 
   if (!GAS_URL) {
     return res.status(500).json({ error: 'La URL del script de Google no esta configurada.' });

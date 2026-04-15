@@ -5,149 +5,214 @@ import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
 
 export default function AdminHorarios() {
-    const router = useRouter();
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [horarios, setHorarios] = useState({});
-    const [disabledDays, setDisabledDays] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [horarios, setHorarios] = useState({});
+  const [disabledDays, setDisabledDays] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    // Check if already authenticated
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                if (!hasAdminToken()) {
-                    router.push('/admin/login');
-                    setLoading(false);
-                    return;
-                }
-
-                const res = await fetch('/api/horarios');
-                if (res.ok) {
-                    setIsAuthenticated(true);
-                    const data = await res.json();
-                    setHorarios(data.horarioAtencion || {});
-                    setDisabledDays(data.disabledDays || []);
-                }
-            } catch (e) {
-                // Not authenticated
-            } finally {
-                setLoading(false);
-            }
-        };
-        checkAuth();
-    }, [router]);
-
-    const handleSave = async () => {
-        try {
-            const res = await fetch('/api/horarios', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ horarioAtencion: horarios, disabledDays }),
-            });
-            if (!res.ok) throw new Error('Error saving horarios');
-            alert('Horarios guardados correctamente');
-        } catch (e) {
-            alert(e.message);
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        if (!hasAdminToken()) {
+          router.push('/admin/login');
+          setLoading(false);
+          return;
         }
+
+        const res = await fetch('/api/horarios');
+        if (res.ok) {
+          setIsAuthenticated(true);
+          const data = await res.json();
+          setHorarios(data.horarioAtencion || {});
+          setDisabledDays(data.disabledDays || []);
+        }
+      } catch {
+        // Not authenticated
+      } finally {
+        setLoading(false);
+      }
     };
+    checkAuth();
+  }, [router]);
 
-    if (loading) return <p className="p-6">Cargando...</p>;
-
-    if (!isAuthenticated) {
-        return null;
+  const handleSave = async () => {
+    try {
+      const res = await fetch('/api/horarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ horarioAtencion: horarios, disabledDays }),
+      });
+      if (!res.ok) throw new Error('Error al guardar horarios');
+      alert('Horarios guardados correctamente');
+    } catch (e) {
+      alert(e.message);
     }
+  };
 
-    if (error) return <p className="p-6">Error: {error}</p>;
-
-    const ordinalOptions = [1, 2, 3, 4, 5];
-
-    const toggleDisabledDay = (code) => {
-        setDisabledDays((prev) =>
-            prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code].sort()
-        );
-    };
-
+  // ── Loading state ──────────────────────────────────────────
+  if (loading) {
     return (
-        <AdminShell
-            title="Administrar horarios"
-            description="Configura horarios de atención y bloquea sábados o domingos específicos del mes para controlar la disponibilidad visible en la reserva."
-        >
-            <div className="mx-auto max-w-4xl space-y-6">
-                <div className="rounded-3xl border border-pink-100 bg-white p-6 shadow-sm">
-                    {Object.entries(horarios).map(([dia, rango]) => (
-                        <HorarioEditor
-                            key={dia}
-                            dia={dia}
-                            rango={rango}
-                            horarios={horarios}
-                            setHorarios={setHorarios}
-                        />
-                    ))}
-                </div>
-
-                <div className="rounded-3xl border border-pink-200 bg-pink-50/60 p-6 shadow-sm">
-                    <h2 className="text-lg font-bold text-pink-800 mb-2">Días deshabilitados del calendario</h2>
-                    <p className="text-sm text-pink-700 mb-4">
-                        Marca qué sábados o domingos del mes no deben aparecer disponibles en el flujo de reserva.
-                    </p>
-
-                    <div className="space-y-4">
-                        <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-2">Sábados</p>
-                            <div className="flex flex-wrap gap-2">
-                                {ordinalOptions.map((ordinal) => {
-                                    const code = `SAT${ordinal}`;
-                                    const active = disabledDays.includes(code);
-                                    return (
-                                        <button
-                                            key={code}
-                                            type="button"
-                                            onClick={() => toggleDisabledDay(code)}
-                                            className={`px-3 py-2 rounded-full border text-sm font-medium transition ${active
-                                                ? 'bg-pink-600 border-pink-600 text-white'
-                                                : 'bg-white border-pink-200 text-pink-700 hover:bg-pink-100'
-                                            }`}
-                                        >
-                                            {ordinal}° sábado
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-2">Domingos</p>
-                            <div className="flex flex-wrap gap-2">
-                                {ordinalOptions.map((ordinal) => {
-                                    const code = `SUN${ordinal}`;
-                                    const active = disabledDays.includes(code);
-                                    return (
-                                        <button
-                                            key={code}
-                                            type="button"
-                                            onClick={() => toggleDisabledDay(code)}
-                                            className={`px-3 py-2 rounded-full border text-sm font-medium transition ${active
-                                                ? 'bg-pink-600 border-pink-600 text-white'
-                                                : 'bg-white border-pink-200 text-pink-700 hover:bg-pink-100'
-                                            }`}
-                                        >
-                                            {ordinal}° domingo
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <button
-                    onClick={handleSave}
-                    className="rounded-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_28px_rgba(219,39,119,0.24)] transition hover:translate-y-[-1px]"
-                >
-                    Guardar Cambios
-                </button>
-            </div>
-        </AdminShell>
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{
+          background: 'linear-gradient(180deg, #FFFBFD 0%, #FFF0F6 50%, #FDF6EF 100%)',
+        }}
+      >
+        <div
+          className="h-12 w-12 animate-spin rounded-full border-2 border-b-transparent"
+          style={{ borderColor: 'var(--brand) transparent var(--brand) var(--brand)' }}
+        />
+      </div>
     );
+  }
+
+  if (!isAuthenticated) return null;
+  if (error) {
+    return (
+      <p className="p-6" style={{ color: 'var(--brand-dark)' }}>
+        Error: {error}
+      </p>
+    );
+  }
+
+  const ordinalOptions = [1, 2, 3, 4, 5];
+
+  const toggleDisabledDay = (code) => {
+    setDisabledDays((prev) =>
+      prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code].sort()
+    );
+  };
+
+  return (
+    <AdminShell
+      title="Administrar horarios"
+      description="Configura horarios de atención y bloquea sábados o domingos específicos del mes para controlar la disponibilidad visible en la reserva."
+    >
+      <div className="mx-auto max-w-4xl space-y-6">
+        {/* Horario Editor Card */}
+        <div
+          className="rounded-3xl p-6 shadow-sm"
+          style={{
+            border: '1px solid rgba(242, 200, 212, 0.6)',
+            background: 'rgba(255,255,255,0.97)',
+          }}
+        >
+          {Object.entries(horarios).map(([dia, rango]) => (
+            <HorarioEditor
+              key={dia}
+              dia={dia}
+              rango={rango}
+              horarios={horarios}
+              setHorarios={setHorarios}
+            />
+          ))}
+        </div>
+
+        {/* Disabled Days Card */}
+        <div
+          className="rounded-3xl p-6 shadow-sm"
+          style={{
+            border: '1px solid var(--gold-lighter)',
+            background: 'linear-gradient(135deg, var(--gold-lightest), rgba(255,255,255,0.90))',
+          }}
+        >
+          <h2
+            className="mb-2 text-lg font-bold"
+            style={{ color: 'var(--ink-medium)' }}
+          >
+            Días deshabilitados del calendario
+          </h2>
+          <p className="mb-4 text-sm" style={{ color: 'var(--ink-muted)' }}>
+            Marca qué sábados o domingos del mes no deben aparecer disponibles en el flujo de reserva.
+          </p>
+
+          <div className="space-y-4">
+            {/* Sábados */}
+            <div>
+              <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--ink-muted)' }}>
+                Sábados
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {ordinalOptions.map((ordinal) => {
+                  const code = `SAT${ordinal}`;
+                  const active = disabledDays.includes(code);
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => toggleDisabledDay(code)}
+                      className="rounded-full border px-3 py-2 text-sm font-medium transition hover:-translate-y-px"
+                      style={
+                        active
+                          ? {
+                              background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
+                              borderColor: 'var(--brand)',
+                              color: '#fff',
+                              boxShadow: '0 8px 18px rgba(225,27,116,0.22)',
+                            }
+                          : {
+                              background: 'rgba(255,255,255,0.96)',
+                              borderColor: 'var(--gold-lighter)',
+                              color: 'var(--ink-muted)',
+                            }
+                      }
+                    >
+                      {ordinal}° sábado
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Domingos */}
+            <div>
+              <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--ink-muted)' }}>
+                Domingos
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {ordinalOptions.map((ordinal) => {
+                  const code = `SUN${ordinal}`;
+                  const active = disabledDays.includes(code);
+                  return (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => toggleDisabledDay(code)}
+                      className="rounded-full border px-3 py-2 text-sm font-medium transition hover:-translate-y-px"
+                      style={
+                        active
+                          ? {
+                              background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
+                              borderColor: 'var(--brand)',
+                              color: '#fff',
+                              boxShadow: '0 8px 18px rgba(225,27,116,0.22)',
+                            }
+                          : {
+                              background: 'rgba(255,255,255,0.96)',
+                              borderColor: 'var(--gold-lighter)',
+                              color: 'var(--ink-muted)',
+                            }
+                      }
+                    >
+                      {ordinal}° domingo
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <button
+          onClick={handleSave}
+          className="premium-button"
+        >
+          Guardar Cambios
+        </button>
+      </div>
+    </AdminShell>
+  );
 }

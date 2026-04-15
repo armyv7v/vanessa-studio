@@ -1,3 +1,379 @@
-﻿@tailwind base;
+/* ============================================================
+   Vanessa Nails Studio — Global Design System
+   Palette extracted from @nailsvanessa.cl Instagram (April 2025)
+   Architecture inspired by Apple's controlled cinematic minimalism
+   ============================================================ */
+
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── CSS Custom Properties (Design Tokens) ──────────────────── */
+@layer base {
+  :root {
+    color-scheme: light;
+
+    /* Brand primary: Vibrant Magenta / Fuchsia (#E11B74) */
+    --brand:          #E11B74;
+    --brand-light:    #F04A94;
+    --brand-lighter:  #F87CB3;
+    --brand-lightest: #FDE8F2;
+    --brand-dark:     #B8105D;
+    --brand-darker:   #8C0A47;
+
+    /* Accent: Metallic Gold (#C5A059) */
+    --gold:           #C5A059;
+    --gold-light:     #D4B878;
+    --gold-lighter:   #EDD9A3;
+    --gold-lightest:  #FBF4E3;
+    --gold-dark:      #A07D3A;
+
+    /* Typography: Apple-style near-black hierarchy */
+    --ink:            #1A1A1A;
+    --ink-medium:     #3D1929;
+    --ink-muted:      #7A3A55;
+    --ink-faint:      #B0708A;
+
+    /* Backgrounds: Marble White palette */
+    --bg-marble:      #F9F9F9;
+    --bg-warm:        #FDF6F0;
+    --bg-blush:       #FEF0F4;
+    --bg-tint:        #FBF4FB;
+    --bg-rose-pale:   #F8E1E7;
+
+    /* Interactive (Apple Blue replaced by Brand Magenta) */
+    --focus-color:    #E11B74;
+
+    /* Shadows (Apple-style: soft, diffused, single layer) */
+    --shadow-brand-sm: 0 8px 24px rgba(225, 27, 116, 0.14);
+    --shadow-brand-md: 0 20px 48px rgba(225, 27, 116, 0.18);
+    --shadow-brand-lg: 0 32px 80px rgba(225, 27, 116, 0.22);
+    --shadow-gold-sm:  0 6px 18px rgba(197, 160, 89, 0.20);
+    --shadow-glass:    0 8px 32px rgba(225, 27, 116, 0.10);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Cinematic marble/blush backdrop — the "light scene" (Apple §f5f5f7 equivalent) */
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    background:
+      radial-gradient(circle at top,        rgba(225, 27, 116, 0.10), transparent 30%),
+      radial-gradient(circle at 82% 12%,    rgba(197, 160,  89, 0.16), transparent 24%),
+      radial-gradient(circle at 18% 78%,    rgba(248, 161, 195, 0.14), transparent 26%),
+      linear-gradient(180deg, #FFFBFD 0%, #FFF0F6 40%, #FDF6EF 100%);
+    color: var(--ink-medium);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(225, 27, 116, 0.18);
+    color: var(--brand-darker);
+  }
+
+  /* Apple-style focus ring using brand magenta */
+  :focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+/* ── Component Library ───────────────────────────────────────── */
+@layer components {
+
+  /* ── Typography ── */
+  .font-display {
+    font-family: 'DM Serif Display', Georgia, serif;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  /* Apple-style hero headline: tight, cinematic, dominant */
+  .headline-hero {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 600;
+    line-height: 1.07;
+    letter-spacing: -0.02em;
+    color: var(--brand-darker);
+    text-wrap: balance;
+  }
+
+  .headline-section {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 600;
+    line-height: 1.10;
+    letter-spacing: -0.01em;
+    color: var(--ink-medium);
+    text-wrap: balance;
+  }
+
+  /* ── Shells & Containers ── */
+
+  /* Primary surface: warm blush glass — the "light section" */
+  .premium-shell {
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(254, 236, 244, 0.92)),
+      linear-gradient(180deg, rgba(225, 27, 116, 0.06), rgba(197, 160, 89, 0.08));
+    @apply relative overflow-hidden rounded-[32px] border border-[#F2C8D4] p-6 shadow-[0_30px_80px_rgba(225,27,116,0.16)] backdrop-blur-xl sm:p-8 lg:p-10;
+  }
+
+  /* Secondary surface: lighter marble panel */
+  .premium-panel {
+    background:
+      linear-gradient(180deg, rgba(255, 253, 255, 0.99), rgba(254, 240, 248, 0.97)),
+      linear-gradient(135deg, rgba(225, 27, 116, 0.08), rgba(197, 160, 89, 0.10));
+    @apply relative overflow-hidden rounded-[32px] border border-[#EDD9A3]/60 p-5 text-[var(--ink-medium)] shadow-[0_34px_90px_rgba(225,27,116,0.14)] sm:p-8;
+  }
+
+  /* Product card: marble white — clean, Apple-style */
+  .premium-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(254, 240, 248, 0.98));
+    @apply relative overflow-hidden rounded-[28px] border border-[#F2C8D4] shadow-[0_24px_56px_rgba(225,27,116,0.14)] transition duration-300;
+  }
+
+  .premium-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 32px 64px rgba(225, 27, 116, 0.18);
+  }
+
+  /* Gold-accent gloss overlay — adds shimmer to premium surfaces */
+  .gloss-panel::before,
+  .gloss-card::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.10) 38%, transparent 66%),
+      radial-gradient(circle at top right, rgba(212, 184, 120, 0.22), transparent 38%);
+    opacity: 0.9;
+  }
+
+  /* Radial brand-glow bleed on corners */
+  .premium-shell::after,
+  .premium-panel::after,
+  .premium-card::after {
+    content: '';
+    position: absolute;
+    inset: auto;
+    pointer-events: none;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(225, 27, 116, 0.18), rgba(225, 27, 116, 0));
+    opacity: 0.8;
+  }
+  .premium-shell::after { right: -5rem; top: -4rem; height: 14rem; width: 14rem; }
+  .premium-panel::after { left: -4rem; bottom: -5rem; height: 13rem; width: 13rem; }
+  .premium-card::after  { right: -3rem; bottom: -3rem; height: 9rem; width: 9rem; }
+
+  /* Stagger children above pseudo-elements */
+  .premium-shell > *,
+  .premium-panel > *,
+  .premium-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Gold Gradient Border (Apple gradient-outline adaptation) ── */
+  .gradient-outline {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .gradient-outline::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      rgba(225, 27, 116, 0.45),   /* fuchsia */
+      rgba(212, 184, 120, 0.60),   /* gold */
+      rgba(248, 161, 195, 0.55)    /* soft rose */
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* ── Brand Pattern (dot texture, gold + fuchsia pinpoints) ── */
+  .brand-pattern {
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.75) 0 2px, transparent 2px),
+      radial-gradient(circle at 80% 30%, rgba(225, 27, 116, 0.22) 0 2px, transparent 2px),
+      radial-gradient(circle at 35% 75%, rgba(197, 160, 89, 0.28) 0 2px, transparent 2px),
+      radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.60) 0 1.5px, transparent 1.5px);
+    background-size: 110px 110px;
+    background-position: 0 0, 25px 10px, 55px 45px, 80px 75px;
+  }
+
+  /* ── Chips & Badges ── */
+  .sparkle-chip {
+    background: rgba(255, 255, 255, 0.90);
+    @apply inline-flex items-center gap-2 rounded-full border border-white/95 px-3 py-1.5 text-xs font-semibold text-[var(--brand)] shadow-[0_8px_18px_rgba(225,27,116,0.12)];
+  }
+
+  /* Gold accent chip */
+  .gold-chip {
+    background: rgba(251, 244, 227, 0.95);
+    @apply inline-flex items-center gap-2 rounded-full border border-[#EDD9A3] px-3 py-1.5 text-xs font-semibold text-[var(--gold-dark)] shadow-[0_6px_14px_rgba(197,160,89,0.16)];
+  }
+
+  .motif-icon {
+    background: rgba(255, 255, 255, 0.90);
+    @apply inline-flex items-center justify-center rounded-full border border-white/85 text-[var(--brand)] shadow-[0_10px_20px_rgba(225,27,116,0.14)];
+  }
+
+  .motif-divider {
+    color: var(--gold);
+  }
+
+  /* Section eyebrow pill */
+  .section-kicker {
+    @apply inline-flex items-center gap-2 rounded-full bg-[#FDE8F2] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--brand)];
+  }
+
+  /* Gold kicker variant */
+  .section-kicker-gold {
+    @apply inline-flex items-center gap-2 rounded-full bg-[#FBF4E3] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--gold-dark)];
+  }
+
+  /* Badge pill — Apple-style label */
+  .badge-pill {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(254, 232, 242, 0.88));
+    @apply inline-flex w-fit items-center rounded-full border border-[#F2C8D4] px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-[var(--brand)];
+  }
+
+  /* ── Buttons ── */
+
+  /* Primary CTA — brand magenta (Apple Blue replacement) */
+  .premium-button {
+    background: linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%);
+    @apply inline-flex items-center justify-center rounded-full border border-[#D4619A]/30 px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(225,27,116,0.28)] transition duration-200
+           hover:-translate-y-px hover:brightness-105
+           focus:outline-none focus:ring-2 focus:ring-[#E11B74] focus:ring-offset-2 focus:ring-offset-transparent
+           active:scale-[0.98];
+  }
+
+  /* Secondary CTA — marble white with gold border */
+  .premium-button-secondary {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(254, 240, 248, 0.92));
+    @apply inline-flex items-center justify-center rounded-full border border-[#EDD9A3] px-6 py-3 text-sm font-semibold text-[var(--ink-medium)] shadow-[0_10px_24px_rgba(197,160,89,0.18)] transition duration-200
+           hover:-translate-y-px hover:border-[#C5A059] hover:shadow-[0_14px_28px_rgba(197,160,89,0.22)]
+           focus:outline-none focus:ring-2 focus:ring-[#C5A059] focus:ring-offset-2 focus:ring-offset-transparent
+           active:scale-[0.98];
+  }
+
+  /* ── Inputs ── */
+  .premium-input {
+    @apply w-full rounded-2xl border border-[#F2C8D4] bg-white px-4 py-3 text-sm text-[var(--ink-medium)] outline-none transition duration-200
+           placeholder:text-[var(--ink-faint)]
+           focus:border-[var(--brand)] focus:ring-2 focus:ring-[#E11B74]/20;
+  }
+
+  /* ── Contextual Surfaces ── */
+  .service-glow {
+    background:
+      radial-gradient(circle at top right,   rgba(197, 160,  89, 0.24), transparent 28%),
+      radial-gradient(circle at bottom left, rgba(225, 27, 116, 0.12), transparent 32%);
+  }
+
+  .beauty-note {
+    background: rgba(255, 255, 255, 0.88);
+    @apply rounded-[22px] border border-[#F2C8D4] px-4 py-3 text-sm leading-6 text-[var(--ink-muted)] shadow-[0_10px_22px_rgba(225,27,116,0.10)];
+  }
+
+  .premium-notice {
+    background: linear-gradient(135deg, rgba(251, 244, 227, 0.96), rgba(242, 231, 209, 0.90));
+    @apply rounded-[24px] border border-[#EDD9A3] px-5 py-4 text-sm leading-7 text-[var(--gold-dark)];
+  }
+
+  /* ── Flow Guide (3-step booking) ── */
+  .flow-guide {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.90), rgba(254, 234, 244, 0.80));
+    @apply grid gap-3 rounded-[26px] border border-[#EDD9A3]/70 p-3 shadow-[0_16px_36px_rgba(225,27,116,0.10)] sm:grid-cols-3;
+  }
+
+  .flow-guide-step {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(254, 236, 246, 0.96));
+    @apply rounded-[22px] border border-[#F2C8D4] px-4 py-4 text-left shadow-[0_12px_24px_rgba(225,27,116,0.10)];
+  }
+
+  /* Gold-numbered step indicator */
+  .flow-guide-index {
+    @apply mb-2 inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white shadow-[0_8px_18px_rgba(197,160,89,0.30)];
+    background: linear-gradient(180deg, #D4B878 0%, #C5A059 100%);
+  }
+
+  .flow-guide-title {
+    @apply text-sm font-bold uppercase tracking-[0.18em] text-[var(--brand)];
+  }
+
+  .flow-guide-copy {
+    @apply mt-2 text-sm leading-6 text-[var(--ink-muted)];
+  }
+
+  /* ── Decorative Elements ── */
+  .floating-orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(10px);
+    opacity: 0.65;
+    animation: float-orb 7s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* Shine sweep: hover shimmer effect on buttons / cards */
+  .shine-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+  .shine-sweep::before {
+    content: '';
+    position: absolute;
+    inset: -20% auto -20% -40%;
+    width: 35%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+    transform: skewX(-20deg);
+    transition: transform 700ms ease;
+    pointer-events: none;
+  }
+  .shine-sweep:hover::before {
+    transform: translateX(420%) skewX(-20deg);
+  }
+
+  /* Skip-to-content accessibility link */
+  .skip-link {
+    @apply absolute left-4 top-4 z-50 -translate-y-24 rounded-full bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white transition-transform duration-200 focus:translate-y-0;
+  }
+}
+
+/* ── Keyframes ───────────────────────────────────────────────── */
+@keyframes float-orb {
+  0%, 100% { transform: translateY(0)     scale(1);    }
+  50%       { transform: translateY(-10px) scale(1.05); }
+}
+
+/* ── Reduced Motion ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .premium-card:hover { transform: none; }
+  .shine-sweep::before { display: none; }
+}

@@ -25,20 +25,23 @@ const DISABLED_DAYS = [];
  * Maneja las solicitudes OPTIONS (pre-vuelo) para CORS.
  */
 function doOptions(e) {
-  return ContentService.createTextOutput()
-    .setHeader('Access-Control-Allow-Origin', PROD_ORIGIN)
-    .setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  return ContentService
+    .createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT);
 }
 
 /**
  * Unifica la creación de respuestas JSON con las cabeceras CORS correctas.
  */
 function createJsonResponse(data, statusCode = 200) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeader('Access-Control-Allow-Origin', PROD_ORIGIN)
-    .setStatusCode(statusCode);
+  const payload = Object.assign({}, data);
+  if (statusCode !== 200 && payload.statusCode == null) {
+    payload.statusCode = statusCode;
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
@@ -153,7 +156,9 @@ function doPost(e) {
         }
       });
     }
-    const eventLink = event.getHtmlLink() || "";
+    const eventLink = typeof event.getId === 'function' && CALENDAR_ID
+      ? `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(CALENDAR_ID)}`
+      : "";
 
     const appendedRow = appendToSheet([ new Date(), nombre, email, telefono, serviceName, Utilities.formatDate(start, TZ, "yyyy-MM-dd HH:mm"), Utilities.formatDate(end, TZ, "yyyy-MM-dd HH:mm"), durationMin, extraCupo ? "SI" : "NO", event.getId(), eventLink ]);
     const html = buildEmailHtml({ clientName: nombre, fecha, hora, duracion: durationMin, telefono, serviceName, htmlLink: eventLink });

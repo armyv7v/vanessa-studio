@@ -10,32 +10,67 @@ export default function BookingConfirmation({ service, date, time, client, isExt
   const formatDate = (d) => format(d, 'd MMMM yyyy', { locale: es });
 
   return (
-    <div className="text-center">
-      <h2 className="text-2xl font-bold text-green-600 mb-2">¡Cita Confirmada!</h2>
-      <p className="text-gray-600 mb-6">Recibirás un correo con los detalles de tu reserva.</p>
-      
-      <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 text-left">
-        <h3 className="font-semibold mb-3 text-lg text-gray-800">
-          Resumen de tu cita {isExtra && '(EXTRA CUPO)'}:
+    <section className="premium-card mx-auto max-w-3xl overflow-hidden p-6 text-center sm:p-10">
+      {/* Confirmation badge — green kept intentionally (semantic success signal) */}
+      <span className="badge-pill mx-auto !border-[#b9efd0] !bg-[#ecfff4] !text-[#2f9b67]">
+        Reserva confirmada
+      </span>
+
+      <h2 className="headline-section mt-6 text-center" style={{ color: 'var(--brand-darker)' }}>
+        ¡Tu cita ya quedó lista!
+      </h2>
+
+      <p className="mx-auto mt-4 max-w-2xl text-base leading-7" style={{ color: 'var(--ink-muted)' }}>
+        Enviaremos el detalle de la reserva a{' '}
+        <strong style={{ color: 'var(--ink-medium)' }}>{client.email}</strong>.
+        Todo quedó registrado correctamente.
+      </p>
+
+      <div
+        className="mt-8 rounded-[28px] p-6 text-left sm:p-8"
+        style={{
+          background: 'linear-gradient(180deg, #FFF8FC 0%, #FFFEFE 100%)',
+          border: '1px solid var(--gold-light)',
+        }}
+      >
+        <h3
+          className="text-sm font-semibold uppercase tracking-[0.24em]"
+          style={{ color: 'var(--brand)' }}
+        >
+          Resumen de tu cita {isExtra ? '(extra cupo)' : ''}
         </h3>
-        <div className="space-y-2">
-          <p className="flex justify-between items-center">
-            <span className="font-medium text-gray-600">Servicio:</span>
-            <span className="text-gray-800 font-semibold text-right">{service.name}</span>
-          </p>
-          <p className="flex justify-between items-center">
-            <span className="font-medium text-gray-600">Fecha:</span>
-            <span className="text-gray-800 font-semibold">{formatDate(date)}</span>
-          </p>
-          <p className="flex justify-between items-center">
-            <span className="font-medium text-gray-600">Hora:</span>
-            <span className="text-gray-800 font-semibold">{time}</span>
-          </p>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--gold-dark)' }}>
+              Servicio
+            </p>
+            <p className="mt-2 text-base font-semibold" style={{ color: 'var(--ink-medium)' }}>
+              {service.name}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--gold-dark)' }}>
+              Fecha
+            </p>
+            <p className="mt-2 text-base font-semibold" style={{ color: 'var(--ink-medium)' }}>
+              {formatDate(date)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--gold-dark)' }}>
+              Hora
+            </p>
+            <p className="mt-2 text-base font-semibold" style={{ color: 'var(--ink-medium)' }}>
+              {time}
+            </p>
+          </div>
         </div>
       </div>
-      <p className="mt-4 text-sm text-gray-500">
-        Redirigiendo al inicio en unos segundos...
+
+      <p className="mt-6 text-sm" style={{ color: 'var(--ink-muted)' }}>
+        Te redirigiremos al inicio en unos segundos.
       </p>
-    </div>
+    </section>
   );
 }
