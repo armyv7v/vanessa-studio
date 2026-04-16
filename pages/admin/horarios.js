@@ -17,9 +17,8 @@ export default function AdminHorarios() {
   const [blackoutRanges, setBlackoutRanges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [singleDisabledDate, setSingleDisabledDate] = useState('');
-  const [rangeAnchorDate, setRangeAnchorDate] = useState('');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [calendarBlockMode, setCalendarBlockMode] = useState('day');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -119,12 +118,6 @@ export default function AdminHorarios() {
     );
   };
 
-  const addDisabledDate = () => {
-    if (!singleDisabledDate) return;
-    setDisabledDates((prev) => Array.from(new Set([...prev, singleDisabledDate])).sort());
-    setSingleDisabledDate('');
-  };
-
   const removeDisabledDate = (date) => {
     setDisabledDates((prev) => prev.filter((item) => item !== date));
   };
@@ -133,23 +126,22 @@ export default function AdminHorarios() {
     setDisabledDates((prev) => prev.includes(dateKey) ? prev.filter((item) => item !== dateKey) : [...prev, dateKey].sort());
   };
 
-  const addBlackoutRange = (mode) => {
-    if (!rangeAnchorDate) return;
-
-    const baseDate = new Date(`${rangeAnchorDate}T12:00:00`);
+  const toggleBlackoutRangeForDate = (mode, baseDate) => {
     const start = mode === 'month' ? startOfMonth(baseDate) : startOfWeek(baseDate, { weekStartsOn: 1 });
     const end = mode === 'month' ? endOfMonth(baseDate) : endOfWeek(baseDate, { weekStartsOn: 1 });
 
-    const nextRange = {
+    const targetRange = {
       start: format(start, 'yyyy-MM-dd'),
       end: format(end, 'yyyy-MM-dd'),
       label: mode === 'month' ? `Mes ${format(baseDate, 'MM/yyyy')}` : `Semana ${format(start, 'dd/MM')} - ${format(end, 'dd/MM')}`,
     };
 
     setBlackoutRanges((prev) => {
-      const exists = prev.some((range) => range.start === nextRange.start && range.end === nextRange.end);
-      if (exists) return prev;
-      return [...prev, nextRange].sort((a, b) => a.start.localeCompare(b.start));
+      const exists = prev.some((range) => range.start === targetRange.start && range.end === targetRange.end);
+      if (exists) {
+        return prev.filter((range) => !(range.start === targetRange.start && range.end === targetRange.end));
+      }
+      return [...prev, targetRange].sort((a, b) => a.start.localeCompare(b.start));
     });
   };
 
@@ -163,6 +155,16 @@ export default function AdminHorarios() {
   };
 
   const isDateInsideRange = (dateKey) => blackoutRanges.some((range) => dateKey >= range.start && dateKey <= range.end);
+
+  const handleCalendarBlockToggle = (day) => {
+    const dateKey = format(day, 'yyyy-MM-dd');
+    if (calendarBlockMode === 'day') {
+      toggleDisabledDate(dateKey);
+      return;
+    }
+
+    toggleBlackoutRangeForDate(calendarBlockMode, day);
+  };
 
   return (
     <AdminShell
@@ -218,6 +220,26 @@ export default function AdminHorarios() {
 
           <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
             <div>
+              <div className="mb-4 flex flex-wrap gap-2">
+                {[
+                  { id: 'day', label: 'Bloqueo por día' },
+                  { id: 'week', label: 'Bloqueo por semana' },
+                  { id: 'month', label: 'Bloqueo por mes' },
+                ].map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setCalendarBlockMode(mode.id)}
+                    className="rounded-full px-4 py-2 text-sm font-semibold transition"
+                    style={calendarBlockMode === mode.id
+                      ? { background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)', color: '#fff', boxShadow: '0 8px 18px rgba(225,27,116,0.20)' }
+                      : { background: 'var(--bg-blush)', color: 'var(--ink-muted)', border: '1px solid var(--gold-lighter)' }}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+
               <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--ink-faint)' }}>
                 {calendarWeekDays.map((day) => <div key={day}>{day}</div>)}
               </div>
@@ -233,7 +255,7 @@ export default function AdminHorarios() {
                     <button
                       key={dateKey}
                       type="button"
-                      onClick={() => toggleDisabledDate(dateKey)}
+                      onClick={() => handleCalendarBlockToggle(day)}
                       className="admin-calendar-day rounded-2xl border p-3 text-left transition"
                       style={isBlockedDay
                         ? { background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 12px 24px rgba(225,27,116,0.18)' }
@@ -246,7 +268,7 @@ export default function AdminHorarios() {
                         {isToday ? <CalendarIcon className="h-4 w-4" /> : null}
                       </div>
                       <div className="mt-5 text-[11px] font-medium uppercase tracking-[0.16em]">
-                        {isBlockedDay ? 'Día bloqueado' : isInRange ? 'En rango' : 'Disponible'}
+                        {isBlockedDay ? 'Bloqueado' : isInRange ? 'Rango' : 'Libre'}
                       </div>
                     </button>
                   );
@@ -255,6 +277,9 @@ export default function AdminHorarios() {
             </div>
 
             <div className="space-y-3 text-xs">
+              <div className="rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] p-4 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
+                El modo activo ahora es <strong style={{ color: 'var(--brand-dark)' }}>{calendarBlockMode === 'day' ? 'bloqueo por día' : calendarBlockMode === 'week' ? 'bloqueo por semana' : 'bloqueo por mes'}</strong>. Haz clic sobre cualquier fecha del calendario para aplicar o quitar ese tipo de bloqueo.
+              </div>
               <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)', borderColor: 'var(--brand)' }} /> Día exacto bloqueado</div>
               <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(253, 232, 242, 0.88)', borderColor: 'rgba(225,27,116,0.18)' }} /> Dentro de semana/mes bloqueado</div>
               <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(255,255,255,0.92)', borderColor: 'rgba(242, 200, 212, 0.6)' }} /> Día sin bloqueo directo</div>
@@ -377,27 +402,14 @@ export default function AdminHorarios() {
         </div>
 
         <div className="admin-surface-card rounded-3xl p-6 shadow-sm" style={{ border: '1px solid rgba(242, 200, 212, 0.6)', background: 'rgba(255,255,255,0.97)' }}>
-          <h2 className="mb-2 text-lg font-bold" style={{ color: 'var(--ink-medium)' }}>Bloqueos exactos y rangos completos</h2>
+          <h2 className="mb-2 text-lg font-bold" style={{ color: 'var(--ink-medium)' }}>Resumen de bloqueos activos</h2>
           <p className="mb-5 text-sm" style={{ color: 'var(--ink-muted)' }}>
-            Desactiva un día puntual o crea bloqueos completos por semana o por mes. Estos bloqueos prevalecen sobre la disponibilidad normal del calendario.
+            Este bloque resume lo que está activo ahora mismo para que puedas revisarlo o limpiar bloqueos viejos sin salir del flujo principal.
           </p>
 
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4">
-              <h3 className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--brand-light)' }}>Bloquear día puntual</h3>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <input
-                  type="date"
-                  value={singleDisabledDate}
-                  onChange={(e) => setSingleDisabledDate(e.target.value)}
-                  className="rounded-xl border border-[#f2c8d4] bg-white px-4 py-3 outline-none focus:ring-2"
-                  style={{ color: 'var(--ink-medium)' }}
-                />
-                <button type="button" onClick={addDisabledDate} className="premium-button-secondary">
-                  Agregar día
-                </button>
-              </div>
-
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--brand-light)' }}>Fechas exactas</h3>
               <div className="mt-4 flex flex-wrap gap-2">
                 {disabledDates.length === 0 ? (
                   <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>No hay fechas puntuales bloqueadas.</p>
@@ -416,25 +428,7 @@ export default function AdminHorarios() {
             </div>
 
             <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4">
-              <h3 className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--brand-light)' }}>Bloquear semana o mes</h3>
-              <div className="mt-4 flex flex-col gap-3">
-                <input
-                  type="date"
-                  value={rangeAnchorDate}
-                  onChange={(e) => setRangeAnchorDate(e.target.value)}
-                  className="rounded-xl border border-[#f2c8d4] bg-white px-4 py-3 outline-none focus:ring-2"
-                  style={{ color: 'var(--ink-medium)' }}
-                />
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <button type="button" onClick={() => addBlackoutRange('week')} className="premium-button-secondary">
-                    Bloquear semana
-                  </button>
-                  <button type="button" onClick={() => addBlackoutRange('month')} className="premium-button-secondary">
-                    Bloquear mes
-                  </button>
-                </div>
-              </div>
-
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--brand-light)' }}>Rangos activos</h3>
               <div className="mt-4 space-y-2">
                 {blackoutRanges.length === 0 ? (
                   <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>No hay rangos bloqueados.</p>
