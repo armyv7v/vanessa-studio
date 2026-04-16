@@ -4,6 +4,8 @@ import HorarioEditor from '../../components/HorarioEditor';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
 
+const HORARIOS_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
+
 export default function AdminHorarios() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -21,15 +23,19 @@ export default function AdminHorarios() {
           return;
         }
 
-        const res = await fetch('/api/horarios');
-        if (res.ok) {
-          setIsAuthenticated(true);
-          const data = await res.json();
-          setHorarios(data.horarioAtencion || {});
-          setDisabledDays(data.disabledDays || []);
+        setIsAuthenticated(true);
+
+        const res = await fetch(HORARIOS_ENDPOINT);
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          throw new Error(data?.error || 'No se pudo cargar la configuración de horarios.');
         }
-      } catch {
-        // Not authenticated
+
+        setHorarios(data?.horarioAtencion || {});
+        setDisabledDays(data?.disabledDays || []);
+      } catch (e) {
+        setError(e.message || 'No se pudo cargar horarios.');
       } finally {
         setLoading(false);
       }
@@ -39,14 +45,20 @@ export default function AdminHorarios() {
 
   const handleSave = async () => {
     try {
-      const res = await fetch('/api/horarios', {
+      setError(null);
+
+      const res = await fetch(HORARIOS_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ horarioAtencion: horarios, disabledDays }),
       });
-      if (!res.ok) throw new Error('Error al guardar horarios');
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || 'Error al guardar horarios');
+
       alert('Horarios guardados correctamente');
     } catch (e) {
+      setError(e.message);
       alert(e.message);
     }
   };
@@ -71,9 +83,16 @@ export default function AdminHorarios() {
   if (!isAuthenticated) return null;
   if (error) {
     return (
-      <p className="p-6" style={{ color: 'var(--brand-dark)' }}>
-        Error: {error}
-      </p>
+      <AdminShell
+        title="Administrar horarios"
+        description="Configura horarios de atención y bloquea sábados o domingos específicos del mes para controlar la disponibilidad visible en la reserva."
+      >
+        <div className="mx-auto max-w-4xl">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900">
+            Error: {error}
+          </div>
+        </div>
+      </AdminShell>
     );
   }
 
