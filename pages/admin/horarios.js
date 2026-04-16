@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isSameDay, startOfMonth, startOfWeek, subMonths } from 'date-fns';
+import { es } from 'date-fns/locale';
 import HorarioEditor from '../../components/HorarioEditor';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
