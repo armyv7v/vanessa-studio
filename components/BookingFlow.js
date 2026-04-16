@@ -4,6 +4,7 @@ import { es } from 'date-fns/locale';
 import Confetti from 'react-confetti';
 import BookingConfirmation from './BookingConfirmation';
 import { GemIcon, PolishBottleIcon, SparkleIcon, SwirlDivider } from './BrandMotifs';
+import { bookAppointment } from '../lib/api';
 import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 import { isAllowedBusinessDay } from '../lib/calendarConfig';
 import { services as servicesData } from '../lib/services';
@@ -322,17 +323,7 @@ export default function BookingFlow({ config }) {
         client: clientInfo,
       };
 
-      const response = await fetch('/api/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || 'Error al confirmar la cita');
-      }
+      await bookAppointment(payload);
 
       setBookingStatus({ success: true, message: '¡Cita confirmada!' });
 
