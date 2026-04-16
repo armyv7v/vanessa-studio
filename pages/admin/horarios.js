@@ -19,6 +19,7 @@ export default function AdminHorarios() {
   const [error, setError] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [calendarBlockMode, setCalendarBlockMode] = useState('day');
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -158,12 +159,25 @@ export default function AdminHorarios() {
 
   const handleCalendarBlockToggle = (day) => {
     const dateKey = format(day, 'yyyy-MM-dd');
+    setSelectedCalendarDate(dateKey);
     if (calendarBlockMode === 'day') {
       toggleDisabledDate(dateKey);
       return;
     }
 
     toggleBlackoutRangeForDate(calendarBlockMode, day);
+  };
+
+  const applyQuickBlockAction = (mode) => {
+    if (!selectedCalendarDate) return;
+
+    const selectedDate = new Date(`${selectedCalendarDate}T12:00:00`);
+    if (mode === 'day') {
+      toggleDisabledDate(selectedCalendarDate);
+      return;
+    }
+
+    toggleBlackoutRangeForDate(mode, selectedDate);
   };
 
   return (
@@ -250,6 +264,7 @@ export default function AdminHorarios() {
                   const isToday = isSameDay(day, new Date());
                   const isBlockedDay = disabledDates.includes(dateKey);
                   const isInRange = isDateInsideRange(dateKey);
+                  const isSelectedDate = selectedCalendarDate === dateKey;
 
                   return (
                     <button
@@ -260,10 +275,10 @@ export default function AdminHorarios() {
                       aria-label={`${format(day, "d 'de' MMMM", { locale: es })}: ${isBlockedDay ? 'bloqueado' : isInRange ? 'dentro de rango bloqueado' : 'disponible'}`}
                       className="admin-calendar-day rounded-2xl border p-3 text-left transition"
                       style={isBlockedDay
-                        ? { background: 'rgba(251, 146, 60, 0.20)', borderColor: '#FB923C', color: '#9A3412', boxShadow: '0 12px 24px rgba(251,146,60,0.16)' }
+                        ? { background: 'rgba(251, 146, 60, 0.20)', borderColor: isSelectedDate ? '#EA580C' : '#FB923C', color: '#9A3412', boxShadow: isSelectedDate ? '0 0 0 2px rgba(234,88,12,0.18), 0 12px 24px rgba(251,146,60,0.16)' : '0 12px 24px rgba(251,146,60,0.16)' }
                         : isInRange
-                          ? { background: 'rgba(254, 215, 170, 0.38)', borderColor: '#FDBA74', color: '#9A3412' }
-                          : { background: 'rgba(134, 239, 172, 0.16)', borderColor: '#86EFAC', color: '#166534', opacity: isCurrentMonthDay ? 1 : 0.42 }}
+                          ? { background: 'rgba(254, 215, 170, 0.38)', borderColor: isSelectedDate ? '#EA580C' : '#FDBA74', color: '#9A3412', boxShadow: isSelectedDate ? '0 0 0 2px rgba(234,88,12,0.14)' : 'none' }
+                          : { background: 'rgba(134, 239, 172, 0.16)', borderColor: isSelectedDate ? '#16A34A' : '#86EFAC', color: '#166534', opacity: isCurrentMonthDay ? 1 : 0.42, boxShadow: isSelectedDate ? '0 0 0 2px rgba(34,197,94,0.12)' : 'none' }}
                     >
                       <div className="flex items-start justify-between">
                         <span className="text-sm font-semibold">{format(day, 'd')}</span>
@@ -281,6 +296,22 @@ export default function AdminHorarios() {
             <div className="space-y-3 text-xs">
               <div className="rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] p-4 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
                 El modo activo ahora es <strong style={{ color: 'var(--brand-dark)' }}>{calendarBlockMode === 'day' ? 'bloqueo por día' : calendarBlockMode === 'week' ? 'bloqueo por semana' : 'bloqueo por mes'}</strong>. Haz clic sobre cualquier fecha del calendario para aplicar o quitar ese tipo de bloqueo.
+              </div>
+              <div className="rounded-2xl border border-[#f3d9e4] bg-white/90 p-4 text-sm" style={{ color: 'var(--ink-muted)' }}>
+                <p className="font-semibold" style={{ color: 'var(--ink-medium)' }}>
+                  Fecha seleccionada: {selectedCalendarDate || 'ninguna'}
+                </p>
+                <div className="mt-3 grid gap-2">
+                  <button type="button" onClick={() => applyQuickBlockAction('day')} disabled={!selectedCalendarDate} className="premium-button-secondary disabled:opacity-50 disabled:cursor-not-allowed">
+                    Alternar día exacto
+                  </button>
+                  <button type="button" onClick={() => applyQuickBlockAction('week')} disabled={!selectedCalendarDate} className="premium-button-secondary disabled:opacity-50 disabled:cursor-not-allowed">
+                    Alternar semana completa
+                  </button>
+                  <button type="button" onClick={() => applyQuickBlockAction('month')} disabled={!selectedCalendarDate} className="premium-button-secondary disabled:opacity-50 disabled:cursor-not-allowed">
+                    Alternar mes completo
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(251, 146, 60, 0.20)', borderColor: '#FB923C' }} /> Naranja: bloqueado</div>
               <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(254, 215, 170, 0.38)', borderColor: '#FDBA74' }} /> Ámbar: dentro de rango bloqueado</div>
