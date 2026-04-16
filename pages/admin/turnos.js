@@ -12,6 +12,7 @@ import { bookAppointment, getAvailableSlots, getAvailableSlotsRange } from '../.
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
 import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon, CloseIcon, GemIcon, LaunchIcon, SparkleIcon } from '../../components/BrandMotifs';
+import { isAllowedBusinessDay } from '../../lib/calendarConfig';
 import { services } from '../../lib/services';
 import horariosConfig from '../../config/horarios.json';
 
@@ -38,6 +39,7 @@ export default function AdminTurnos() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedDayEvents, setSelectedDayEvents] = useState(null);
   const [horarioAtencion, setHorarioAtencion] = useState(horariosConfig.horarioAtencion || {});
+  const [blackoutConfig, setBlackoutConfig] = useState({ disabledDays: [], disabledDates: [], blackoutRanges: [] });
   const [bookingSlot, setBookingSlot] = useState(null);
   const [bookingForm, setBookingForm] = useState({
     serviceId: String(services[0]?.id || ''),
@@ -72,6 +74,11 @@ export default function AdminTurnos() {
         const data = await response.json().catch(() => null);
         if (response.ok && data?.horarioAtencion) {
           setHorarioAtencion(data.horarioAtencion);
+          setBlackoutConfig({
+            disabledDays: Array.isArray(data?.disabledDays) ? data.disabledDays : [],
+            disabledDates: Array.isArray(data?.disabledDates) ? data.disabledDates : [],
+            blackoutRanges: Array.isArray(data?.blackoutRanges) ? data.blackoutRanges : [],
+          });
         }
       } catch {
         // fallback local config only
@@ -100,6 +107,10 @@ export default function AdminTurnos() {
 
   // Uses brand-aware color map instead of raw Tailwind colors
   const getAvailabilityStyle = (day) => {
+    if (!isAllowedBusinessDay(day, blackoutConfig)) {
+      return { bg: 'rgba(251, 146, 60, 0.20)', border: '#FB923C' };
+    }
+
     const dayStr = format(day, 'yyyy-MM-dd');
     const totalPossibleSlots = 26;
     const availableCount = availableSlots.filter(
@@ -373,10 +384,10 @@ export default function AdminTurnos() {
           </div>
           <div className="flex flex-wrap gap-4 text-xs">
             {[
-              { label: 'Alta (>75%)',    style: AVAILABILITY_COLORS.high    },
-              { label: 'Media (50-75%)', style: AVAILABILITY_COLORS.medium  },
-              { label: 'Baja (25-50%)',  style: AVAILABILITY_COLORS.low     },
-              { label: 'Muy baja (<25%)',style: AVAILABILITY_COLORS.veryLow },
+              { label: 'Bloqueado', style: { bg: 'rgba(251, 146, 60, 0.20)', border: '#FB923C' } },
+              { label: 'Disponible', style: AVAILABILITY_COLORS.high },
+              { label: 'Demanda media', style: AVAILABILITY_COLORS.low },
+              { label: 'Ocupado / sin huecos', style: AVAILABILITY_COLORS.veryLow },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-2">
                 <div
