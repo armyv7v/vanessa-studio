@@ -11,6 +11,7 @@ import { es } from 'date-fns/locale';
 import { bookAppointment, getAvailableSlots, getAvailableSlotsRange } from '../../lib/api';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
+import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon, CloseIcon, GemIcon, LaunchIcon } from '../../components/BrandMotifs';
 import { services } from '../../lib/services';
 import horariosConfig from '../../config/horarios.json';
 
@@ -284,12 +285,17 @@ export default function AdminTurnos() {
       <div className="mx-auto max-w-6xl">
         {/* ── Top bar ─────────────────────────────────────── */}
         <div className="mb-4 flex flex-col items-center justify-between gap-4 md:flex-row">
-          <h1
-            className="text-3xl font-bold"
-            style={{ color: 'var(--ink-medium)' }}
-          >
-            📅 Calendario de Turnos
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border shadow-sm" style={{ borderColor: 'var(--gold-lighter)', background: 'rgba(255,255,255,0.92)', color: 'var(--brand)' }}>
+              <CalendarIcon className="h-5 w-5" />
+            </span>
+            <h1
+              className="text-3xl font-bold"
+              style={{ color: 'var(--ink-medium)' }}
+            >
+              Calendario de Turnos
+            </h1>
+          </div>
 
           {/* View Mode Toggle */}
           <div
@@ -373,7 +379,7 @@ export default function AdminTurnos() {
               className="rounded-full p-2 transition hover:scale-110"
               style={{ color: 'var(--brand)', background: 'var(--bg-blush)' }}
             >
-              ←
+              <ArrowLeftIcon className="h-5 w-5" />
             </button>
             <h2
               className="text-xl font-semibold capitalize"
@@ -390,7 +396,7 @@ export default function AdminTurnos() {
               className="rounded-full p-2 transition hover:scale-110"
               style={{ color: 'var(--brand)', background: 'var(--bg-blush)' }}
             >
-              →
+              <ArrowRightIcon className="h-5 w-5" />
             </button>
           </div>
 
@@ -568,9 +574,10 @@ export default function AdminTurnos() {
                       <button
                         type="button"
                         onClick={() => openBookingModal(event)}
-                        className="rounded-xl px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                        className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
                         style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
                       >
+                        <GemIcon className="h-4 w-4" />
                         Crear cita
                       </button>
                     </div>
@@ -615,7 +622,7 @@ export default function AdminTurnos() {
                     </p>
                   </div>
                   <button type="button" onClick={closeBookingModal} className="rounded-full p-2 transition hover:bg-white/10" aria-label="Cerrar modal">
-                    ✕
+                    <CloseIcon className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -701,9 +708,10 @@ export default function AdminTurnos() {
                     <button
                       type="submit"
                       disabled={submittingBooking}
-                      className="w-full rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                       style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
                     >
+                      <LaunchIcon className="h-4 w-4" />
                       {submittingBooking ? 'Creando cita...' : 'Crear cita'}
                     </button>
                   </div>

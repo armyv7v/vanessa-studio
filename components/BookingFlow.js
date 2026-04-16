@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Confetti from 'react-confetti';
 import BookingConfirmation from './BookingConfirmation';
-import { GemIcon, PolishBottleIcon, SparkleIcon, SwirlDivider } from './BrandMotifs';
+import { ErrorIcon, GemIcon, LaunchIcon, PolishBottleIcon, SparkleIcon, SuccessIcon, SwirlDivider } from './BrandMotifs';
 import { bookAppointment } from '../lib/api';
 import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 import { isAllowedBusinessDay } from '../lib/calendarConfig';
@@ -116,16 +116,22 @@ function StatusBanner({ bookingStatus }) {
       ) : null}
 
       {bookingStatus.success ? (
-        <div>
+        <div className="flex items-start gap-3">
+          <SuccessIcon className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
           <p className="font-semibold">{bookingStatus.message}</p>
           <p className="mt-1 text-sm">Revisa tu correo para el detalle de la reserva.</p>
+          </div>
         </div>
       ) : null}
 
       {bookingStatus.error ? (
-        <div>
+        <div className="flex items-start gap-3">
+          <ErrorIcon className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
           <p className="font-semibold">Error: {bookingStatus.message}</p>
           <p className="mt-1 text-sm">Por favor, inténtalo nuevamente.</p>
+          </div>
         </div>
       ) : null}
     </div>
@@ -382,9 +388,7 @@ export default function BookingFlow({ config }) {
 
                 <span className="mt-auto inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--brand)' }}>
                   Elegir servicio
-                  <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
+                  <LaunchIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
               </button>
             ))}

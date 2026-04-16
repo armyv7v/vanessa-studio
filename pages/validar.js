@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { AdminShieldIcon, ErrorIcon, ScanIcon, SuccessIcon } from '../components/BrandMotifs';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_WORKER_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 
@@ -112,7 +113,7 @@ export default function ValidarAsistencia() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
-          <div className="mb-4 text-5xl text-rose-500">!</div>
+          <div className="mb-4 flex justify-center text-rose-500"><ErrorIcon className="h-12 w-12" /></div>
           <h1 className="text-2xl font-bold text-slate-900">Error de validación</h1>
           <p className="mt-2 text-slate-600">{error}</p>
           <button
@@ -135,6 +136,7 @@ export default function ValidarAsistencia() {
 
       <div className="mx-auto max-w-md overflow-hidden rounded-3xl bg-white shadow-xl">
         <div className="bg-pink-600 px-6 py-8 text-center text-white">
+          <div className="mb-4 flex justify-center text-pink-100"><ScanIcon className="h-8 w-8" /></div>
           <h1 className="text-3xl font-bold">Validar Asistencia</h1>
           <p className="mt-2 text-pink-100">Confirmación de cita</p>
         </div>
@@ -152,7 +154,7 @@ export default function ValidarAsistencia() {
 
           {success ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
-              <div className="mb-3 text-5xl text-emerald-500">OK</div>
+              <div className="mb-3 flex justify-center text-emerald-500"><SuccessIcon className="h-12 w-12" /></div>
               <h3 className="text-xl font-bold text-emerald-800">Validación exitosa</h3>
               <p className="mt-2 text-emerald-700">La asistencia quedó registrada correctamente.</p>
             </div>
@@ -160,7 +162,10 @@ export default function ValidarAsistencia() {
             <form onSubmit={handleValidate} className="space-y-6">
               <div>
                 <label htmlFor="pin" className="mb-1 block text-sm font-medium text-slate-700">
-                  PIN de Administrador
+                  <span className="inline-flex items-center gap-2">
+                    <AdminShieldIcon className="h-4 w-4" />
+                    <span>PIN de Administrador</span>
+                  </span>
                 </label>
                 <input
                   id="pin"
