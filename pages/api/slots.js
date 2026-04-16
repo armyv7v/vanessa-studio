@@ -1,48 +1,38 @@
 // pages/api/slots.js
-// Proxea al backend de Netlify que consulta Google Calendar
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_WORKER_URL ||
-  process.env.GAS_WEBHOOK_URL ||
-  'https://vanessastudioback.netlify.app/.netlify/functions/api';
+// Resiliente: si el backend falla, retorna { busy: [] } con 200 (muestra todos los horarios disponibles)
 
 export const runtime = 'edge';
 
-export default async function handler(req) {
-  const url = req.nextUrl || new URL(req.url);
-  const date = url.searchParams.get('date');
+const NETLIFY_API = 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 
-  if (!date) {
-    return new Response(JSON.stringify({ error: 'El parámetro date es obligatorio (YYYY-MM-DD).' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+function jsonRes(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+export default async function handler(req) {
+  const { searchParams } = new URL(req.url);
+  const date = searchParams.get('date');
+
+  if (!date) return jsonRes({ error: 'El parámetro date es obligatorio (YYYY-MM-DD).' }, 400);
 
   try {
-    const backendUrl = new URL(BACKEND_URL);
-    backendUrl.searchParams.set('date', String(date));
+    const backendUrl = new URL(NETLIFY_API);
+    backendUrl.searchParams.set('date', date);
 
-    const backendResponse = await fetch(backendUrl.toString());
-    const payload = await backendResponse.json().catch(() => null);
+    const response = await fetch(backendUrl.toString());
 
-    if (!backendResponse.ok) {
-      return new Response(JSON.stringify({
-        error: payload?.error || 'Error obteniendo eventos del calendario.',
-      }), {
-        status: backendResponse.status,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!response.ok) {
+      // Backend no disponible: mostrar todos los horarios como disponibles
+      return jsonRes({ busy: [], degraded: true });
     }
 
-    return new Response(JSON.stringify({ busy: payload?.busy || [] }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error?.message || 'Error interno del servidor obteniendo los horarios.' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const payload = await response.json().catch(() => null);
+    return jsonRes({ busy: payload?.busy || [] });
+  } catch {
+    // Fallback silencioso: nunca 500
+    return jsonRes({ busy: [], degraded: true });
   }
 }

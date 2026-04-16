@@ -1,67 +1,51 @@
 // pages/api/gs-check.js
-// Proxy al backend de Netlify para obtener configuración del calendario
+// Resiliente: nunca retorna 500. Siempre cae a DEFAULT_CONFIG si algo falla.
 
 export const runtime = 'edge';
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_WORKER_URL ||
-  process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL ||
-  'https://vanessastudioback.netlify.app/.netlify/functions/api';
+const NETLIFY_HORARIOS = 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
 
 const DEFAULT_CONFIG = {
   ok: true,
   disabledDays: [],
-  workingHours: {
-    start: '10:00',
-    end: '21:00',
-  },
+  workingHours: { start: '10:00', end: '21:00' },
 };
 
-export default function handler(req) {
-  const url = req.nextUrl || new URL(req.url);
-
-  if (req.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const action = url.searchParams.get('action');
-
-  if (action === 'getConfig') {
-    return fetchCalendarConfig();
-  }
-
-  return new Response(JSON.stringify({ message: 'gs-check operativo', ...DEFAULT_CONFIG }), {
-    status: 200,
+function jsonRes(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
     headers: { 'Content-Type': 'application/json' },
   });
 }
 
-async function fetchCalendarConfig() {
+export default async function handler(req) {
+  if (req.method !== 'GET') return jsonRes({ error: 'Method Not Allowed' }, 405);
+
+  const { searchParams } = new URL(req.url);
+  const action = searchParams.get('action');
+
+  if (action !== 'getConfig') {
+    return jsonRes({ message: 'gs-check operativo', ...DEFAULT_CONFIG });
+  }
+
+  // action === 'getConfig': obtener días deshabilitados desde Netlify backend
   try {
-    const backendUrl = new URL(BACKEND_URL.replace(/\/api$/, '/horarios'));
-    const response = await fetch(backendUrl.toString(), { method: 'GET' });
-    const data = await response.json().catch(() => null);
+    const response = await fetch(NETLIFY_HORARIOS, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-    if (!response.ok) {
-      throw new Error(data?.error || `Backend config error (${response.status})`);
-    }
+    if (!response.ok) throw new Error(`Backend status ${response.status}`);
 
-    return new Response(JSON.stringify({
+    const data = await response.json();
+
+    return jsonRes({
       ok: true,
       disabledDays: Array.isArray(data?.disabledDays) ? data.disabledDays : [],
       workingHours: data?.horarioAtencion || DEFAULT_CONFIG.workingHours,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
   } catch {
-    // Fallback silencioso: nunca retorna 500 al cliente
-    return new Response(JSON.stringify(DEFAULT_CONFIG), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // Fallback silencioso: nunca 500, siempre 200 con config local
+    return jsonRes(DEFAULT_CONFIG);
   }
 }
