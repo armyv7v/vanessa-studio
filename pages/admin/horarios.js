@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from 'date-fns';
+import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isSameDay, startOfMonth, startOfWeek, subMonths } from 'date-fns';
 import HorarioEditor from '../../components/HorarioEditor';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
+import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon } from '../../components/BrandMotifs';
 
 const HORARIOS_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
 
@@ -18,6 +19,7 @@ export default function AdminHorarios() {
   const [error, setError] = useState(null);
   const [singleDisabledDate, setSingleDisabledDate] = useState('');
   const [rangeAnchorDate, setRangeAnchorDate] = useState('');
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -105,6 +107,11 @@ export default function AdminHorarios() {
 
   const ordinalOptions = [1, 2, 3, 4, 5];
   const todayKey = format(new Date(), 'yyyy-MM-dd');
+  const calendarDays = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(calendarMonth), { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(calendarMonth), { weekStartsOn: 1 }),
+  });
+  const calendarWeekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   const toggleDisabledDay = (code) => {
     setDisabledDays((prev) =>
@@ -120,6 +127,10 @@ export default function AdminHorarios() {
 
   const removeDisabledDate = (date) => {
     setDisabledDates((prev) => prev.filter((item) => item !== date));
+  };
+
+  const toggleDisabledDate = (dateKey) => {
+    setDisabledDates((prev) => prev.includes(dateKey) ? prev.filter((item) => item !== dateKey) : [...prev, dateKey].sort());
   };
 
   const addBlackoutRange = (mode) => {
@@ -151,6 +162,8 @@ export default function AdminHorarios() {
     setBlackoutRanges((prev) => prev.filter((range) => range.end >= todayKey));
   };
 
+  const isDateInsideRange = (dateKey) => blackoutRanges.some((range) => dateKey >= range.start && dateKey <= range.end);
+
   return (
     <AdminShell
       title="Administrar horarios"
@@ -178,6 +191,73 @@ export default function AdminHorarios() {
               <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--brand-light)' }}>Rangos activos</p>
               <p className="mt-2 text-3xl font-bold" style={{ color: 'var(--ink-medium)' }}>{blackoutRanges.length}</p>
               <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>Semanas o meses completos bloqueados</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="admin-surface-card rounded-3xl p-6 shadow-sm" style={{ border: '1px solid rgba(242, 200, 212, 0.6)', background: 'rgba(255,255,255,0.97)' }}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: 'var(--ink-medium)' }}>Calendario visual de bloqueos</h2>
+              <p className="mt-1 text-sm" style={{ color: 'var(--ink-muted)' }}>
+                Haz clic sobre un día para bloquearlo o desbloquearlo rápidamente. Los rangos semanales y mensuales aparecen resaltados.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setCalendarMonth((prev) => subMonths(prev, 1))} className="rounded-full p-2" style={{ background: 'var(--bg-blush)', color: 'var(--brand)' }}>
+                <ArrowLeftIcon className="h-5 w-5" />
+              </button>
+              <div className="rounded-full border px-4 py-2 text-sm font-semibold capitalize" style={{ borderColor: 'var(--gold-lighter)', color: 'var(--ink-medium)', background: 'rgba(255,255,255,0.92)' }}>
+                {format(calendarMonth, 'MMMM yyyy')}
+              </div>
+              <button type="button" onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))} className="rounded-full p-2" style={{ background: 'var(--bg-blush)', color: 'var(--brand)' }}>
+                <ArrowRightIcon className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
+            <div>
+              <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--ink-faint)' }}>
+                {calendarWeekDays.map((day) => <div key={day}>{day}</div>)}
+              </div>
+              <div className="mt-3 grid grid-cols-7 gap-2">
+                {calendarDays.map((day) => {
+                  const dateKey = format(day, 'yyyy-MM-dd');
+                  const isCurrentMonthDay = isSameMonth(day, calendarMonth);
+                  const isToday = isSameDay(day, new Date());
+                  const isBlockedDay = disabledDates.includes(dateKey);
+                  const isInRange = isDateInsideRange(dateKey);
+
+                  return (
+                    <button
+                      key={dateKey}
+                      type="button"
+                      onClick={() => toggleDisabledDate(dateKey)}
+                      className="admin-calendar-day rounded-2xl border p-3 text-left transition"
+                      style={isBlockedDay
+                        ? { background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 12px 24px rgba(225,27,116,0.18)' }
+                        : isInRange
+                          ? { background: 'rgba(253, 232, 242, 0.88)', borderColor: 'rgba(225,27,116,0.18)', color: 'var(--ink-medium)' }
+                          : { background: 'rgba(255,255,255,0.92)', borderColor: 'rgba(242, 200, 212, 0.6)', color: 'var(--ink-medium)', opacity: isCurrentMonthDay ? 1 : 0.42 }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <span className="text-sm font-semibold">{format(day, 'd')}</span>
+                        {isToday ? <CalendarIcon className="h-4 w-4" /> : null}
+                      </div>
+                      <div className="mt-5 text-[11px] font-medium uppercase tracking-[0.16em]">
+                        {isBlockedDay ? 'Día bloqueado' : isInRange ? 'En rango' : 'Disponible'}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)', borderColor: 'var(--brand)' }} /> Día exacto bloqueado</div>
+              <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(253, 232, 242, 0.88)', borderColor: 'rgba(225,27,116,0.18)' }} /> Dentro de semana/mes bloqueado</div>
+              <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(255,255,255,0.92)', borderColor: 'rgba(242, 200, 212, 0.6)' }} /> Día sin bloqueo directo</div>
             </div>
           </div>
         </div>

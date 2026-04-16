@@ -387,6 +387,11 @@
     box-shadow: 0 18px 32px rgba(225, 27, 116, 0.08);
   }
 
+  .admin-calendar-day:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 28px rgba(225, 27, 116, 0.10);
+  }
+
   .admin-section-kicker {
     display: inline-flex;
     align-items: center;
