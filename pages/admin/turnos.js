@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { DateTime } from 'luxon';
 import {
   format, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
   eachDayOfInterval, addMonths, subMonths, addWeeks, subWeeks,
   isSameMonth, isSameDay, parseISO,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getAvailableSlotsRange } from '../../lib/api';
+import { bookAppointment, getAvailableSlots, getAvailableSlotsRange } from '../../lib/api';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
+import { services } from '../../lib/services';
+import horariosConfig from '../../config/horarios.json';
 
 // ── Brand palette availability map ────────────────────────────
 // Keeps semantic meaning (green=good, red=bad) but tinted
@@ -21,6 +24,8 @@ const AVAILABILITY_COLORS = {
   veryLow:{ bg: 'rgba(254, 202, 202, 0.70)', border: '#FCA5A5' }, // rose-red — very low
 };
 
+const HORARIOS_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
+
 export default function AdminTurnos() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -31,6 +36,17 @@ export default function AdminTurnos() {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedDayEvents, setSelectedDayEvents] = useState(null);
+  const [horarioAtencion, setHorarioAtencion] = useState(horariosConfig.horarioAtencion || {});
+  const [bookingSlot, setBookingSlot] = useState(null);
+  const [bookingForm, setBookingForm] = useState({
+    serviceId: String(services[0]?.id || ''),
+    name: '',
+    email: '',
+    phone: '',
+  });
+  const [bookingError, setBookingError] = useState('');
+  const [bookingSuccess, setBookingSuccess] = useState('');
+  const [submittingBooking, setSubmittingBooking] = useState(false);
 
   // Auth
   useEffect(() => {
@@ -46,32 +62,23 @@ export default function AdminTurnos() {
     checkAuth();
   }, [router]);
 
-  // Data fetch
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const fetchSlots = async () => {
-      setLoadingSlots(true);
+    const fetchHorarios = async () => {
       try {
-        let start, end;
-        if (viewMode === 'month') {
-          start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 });
-          end   = endOfWeek(endOfMonth(currentDate),   { weekStartsOn: 1 });
-        } else {
-          start = startOfWeek(currentDate, { weekStartsOn: 1 });
-          end   = endOfWeek(currentDate,   { weekStartsOn: 1 });
+        const response = await fetch(HORARIOS_ENDPOINT);
+        const data = await response.json().catch(() => null);
+        if (response.ok && data?.horarioAtencion) {
+          setHorarioAtencion(data.horarioAtencion);
         }
-        const slots = await getAvailableSlotsRange(start, end);
-        setAvailableSlots(slots);
-      } catch (error) {
-        console.error('Error fetching slots:', error);
-      } finally {
-        setLoadingSlots(false);
+      } catch {
+        // fallback local config only
       }
     };
 
-    fetchSlots();
-  }, [isAuthenticated, currentDate, viewMode]);
+    fetchHorarios();
+  }, [isAuthenticated]);
 
   const nextPeriod = () => {
     if (viewMode === 'month') setCurrentDate(addMonths(currentDate, 1));
@@ -104,6 +111,135 @@ export default function AdminTurnos() {
     if (pct > 25) return AVAILABILITY_COLORS.low;
     return AVAILABILITY_COLORS.veryLow;
   };
+
+  const refreshSlots = useCallback(async () => {
+    let start;
+    let end;
+
+    if (viewMode === 'month') {
+      start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 });
+      end = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 });
+    } else {
+      start = startOfWeek(currentDate, { weekStartsOn: 1 });
+      end = endOfWeek(currentDate, { weekStartsOn: 1 });
+    }
+
+    const slots = await getAvailableSlotsRange(start, end);
+    setAvailableSlots(slots);
+  }, [currentDate, viewMode]);
+
+  const openBookingModal = (event) => {
+    setBookingSlot(event);
+    setBookingError('');
+    setBookingSuccess('');
+  };
+
+  const closeBookingModal = () => {
+    setBookingSlot(null);
+    setBookingError('');
+    setBookingSuccess('');
+    setSubmittingBooking(false);
+  };
+
+  const validateServiceFitsSlot = async () => {
+    const selectedService = services.find((service) => String(service.id) === bookingForm.serviceId);
+    if (!selectedService || !bookingSlot) {
+      throw new Error('Servicio o turno inválido.');
+    }
+
+    const slotStart = DateTime.fromISO(bookingSlot.start).setZone('America/Santiago');
+    const slotEnd = slotStart.plus({ minutes: selectedService.duration });
+
+    const dayName = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][slotStart.weekday === 7 ? 0 : slotStart.weekday];
+    const dayHours = horarioAtencion?.[dayName];
+
+    if (!Array.isArray(dayHours) || dayHours.length !== 2) {
+      throw new Error('Ese día no tiene horario de atención configurado.');
+    }
+
+    const [openHour, openMinute] = dayHours[0].split(':').map(Number);
+    const [closeHour, closeMinute] = dayHours[1].split(':').map(Number);
+    const dayOpen = slotStart.set({ hour: openHour, minute: openMinute, second: 0, millisecond: 0 });
+    const dayClose = slotStart.set({ hour: closeHour, minute: closeMinute, second: 0, millisecond: 0 });
+
+    if (slotStart < dayOpen || slotEnd > dayClose) {
+      throw new Error('Ese servicio no entra completo dentro del horario configurado.');
+    }
+
+    const busy = await getAvailableSlots(slotStart.toJSDate(), selectedService.id);
+    const hasConflict = busy.some((item) => {
+      if (!item?.start || !item?.end) return false;
+      const busyStart = DateTime.fromISO(item.start).setZone('America/Santiago');
+      const busyEnd = DateTime.fromISO(item.end).setZone('America/Santiago');
+      return slotStart < busyEnd && slotEnd > busyStart;
+    });
+
+    if (hasConflict) {
+      throw new Error('Ese horario ya no está disponible para la duración del servicio seleccionado.');
+    }
+
+    return selectedService;
+  };
+
+  const handleBookingSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!bookingForm.name.trim() || !bookingForm.email.trim()) {
+      setBookingError('Nombre y email son obligatorios.');
+      return;
+    }
+
+    try {
+      setSubmittingBooking(true);
+      setBookingError('');
+      setBookingSuccess('');
+
+      const selectedService = await validateServiceFitsSlot();
+      const slotStart = DateTime.fromISO(bookingSlot.start).setZone('America/Santiago');
+
+      await bookAppointment({
+        serviceId: selectedService.id,
+        serviceName: selectedService.name,
+        durationMin: selectedService.duration,
+        date: slotStart.toFormat('yyyy-MM-dd'),
+        start: slotStart.toFormat('HH:mm'),
+        extraCupo: false,
+        adminCreated: true,
+        client: {
+          name: bookingForm.name.trim(),
+          email: bookingForm.email.trim(),
+          phone: bookingForm.phone.trim(),
+        },
+      });
+
+      setBookingSuccess('Cita creada correctamente desde el panel admin.');
+      setSelectedDayEvents(null);
+      await refreshSlots();
+      setBookingForm((previous) => ({ ...previous, name: '', email: '', phone: '' }));
+    } catch (error) {
+      setBookingError(error.message || 'No se pudo crear la cita.');
+    } finally {
+      setSubmittingBooking(false);
+    }
+  };
+
+  // Data fetch
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const fetchSlots = async () => {
+      setLoadingSlots(true);
+      try {
+        await refreshSlots();
+      } catch (error) {
+        console.error('Error fetching slots:', error);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchSlots();
+  }, [isAuthenticated, refreshSlots]);
 
   // ── Loading state ──────────────────────────────────────────
   if (loading) {
@@ -404,29 +540,39 @@ export default function AdminTurnos() {
                   {selectedDayEvents.events.map((event, i) => (
                     <div
                       key={i}
-                      className="flex items-center rounded-xl border p-3"
+                      className="flex items-center justify-between gap-3 rounded-xl border p-3"
                       style={{
                         background: 'rgba(200,240,215,0.50)',
                         borderColor: '#86EFAC',
                       }}
                     >
-                      <div
-                        className="mr-3 rounded px-2 py-1 text-sm font-bold"
-                        style={{
-                          background: 'rgba(200,240,215,0.80)',
-                          color: '#166534',
-                        }}
+                      <div className="flex items-center">
+                        <div
+                          className="mr-3 rounded px-2 py-1 text-sm font-bold"
+                          style={{
+                            background: 'rgba(200,240,215,0.80)',
+                            color: '#166534',
+                          }}
+                        >
+                          {format(parseISO(event.start), 'HH:mm')}
+                        </div>
+                        <div>
+                          <p className="font-medium" style={{ color: 'var(--ink-medium)' }}>
+                            Turno Disponible
+                          </p>
+                          <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>
+                            {format(parseISO(event.start), 'HH:mm')} — {event.end}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openBookingModal(event)}
+                        className="rounded-xl px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                        style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
                       >
-                        {format(parseISO(event.start), 'HH:mm')}
-                      </div>
-                      <div>
-                        <p className="font-medium" style={{ color: 'var(--ink-medium)' }}>
-                          Turno Disponible
-                        </p>
-                        <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>
-                          {format(parseISO(event.start), 'HH:mm')} — {event.end}
-                        </p>
-                      </div>
+                        Crear cita
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -447,6 +593,122 @@ export default function AdminTurnos() {
               >
                 Cerrar
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {bookingSlot ? (
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/55 p-3 sm:p-4" onClick={closeBookingModal}>
+          <div className="flex min-h-full items-start justify-center py-3 sm:items-center sm:py-6">
+            <div
+              className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="shrink-0 p-4 sm:p-5 text-white" style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pink-100">Reserva manual</p>
+                    <h3 className="mt-1 text-lg font-bold sm:text-xl">Crear cita desde turno libre</h3>
+                    <p className="mt-2 text-sm text-pink-50">
+                      {format(parseISO(bookingSlot.start), "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })}
+                    </p>
+                  </div>
+                  <button type="button" onClick={closeBookingModal} className="rounded-full p-2 transition hover:bg-white/10" aria-label="Cerrar modal">
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleBookingSubmit} className="flex min-h-0 flex-1 flex-col">
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+                  {bookingError ? (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                      {bookingError}
+                    </div>
+                  ) : null}
+
+                  {bookingSuccess ? (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                      {bookingSuccess}
+                    </div>
+                  ) : null}
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">Servicio</label>
+                    <select
+                      value={bookingForm.serviceId}
+                      onChange={(e) => setBookingForm((previous) => ({ ...previous, serviceId: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
+                    >
+                      {services.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name} ({service.duration} min)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">Nombre</label>
+                    <input
+                      type="text"
+                      value={bookingForm.name}
+                      onChange={(e) => setBookingForm((previous) => ({ ...previous, name: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
+                      placeholder="Nombre de la clienta"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">Email</label>
+                    <input
+                      type="email"
+                      value={bookingForm.email}
+                      onChange={(e) => setBookingForm((previous) => ({ ...previous, email: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
+                      placeholder="correo@cliente.com"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">Teléfono</label>
+                    <input
+                      type="tel"
+                      value={bookingForm.phone}
+                      onChange={(e) => setBookingForm((previous) => ({ ...previous, phone: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
+                      placeholder="Opcional"
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 text-sm text-pink-900">
+                    La cita se validará nuevamente contra disponibilidad real antes de enviarse al backend.
+                  </div>
+                </div>
+
+                <div className="shrink-0 border-t border-slate-100 bg-white/95 p-4 backdrop-blur sm:p-5">
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={closeBookingModal}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingBooking}
+                      className="w-full rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
+                    >
+                      {submittingBooking ? 'Creando cita...' : 'Crear cita'}
+                    </button>
+                  </div>
+                </div>
+              </form>
             </div>
           </div>
         </div>
