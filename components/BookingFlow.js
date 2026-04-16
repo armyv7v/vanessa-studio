@@ -170,7 +170,7 @@ export default function BookingFlow({ config }) {
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-  const [disabledDaysConfig, setDisabledDaysConfig] = useState([]);
+  const [disabledDaysConfig, setDisabledDaysConfig] = useState({ disabledDays: [], disabledDates: [], blackoutRanges: [] });
   const [reduceMotion, setReduceMotion] = useState(false);
 
   const { isFetchingClient, handleEmailBlur } = useClientAutocomplete(setClientInfo);
@@ -229,12 +229,16 @@ export default function BookingFlow({ config }) {
           throw new Error('No se pudo cargar la configuración de disponibilidad.');
         }
 
-        if (isMounted && Array.isArray(data?.disabledDays)) {
-          setDisabledDaysConfig(data.disabledDays);
+        if (isMounted) {
+          setDisabledDaysConfig({
+            disabledDays: Array.isArray(data?.disabledDays) ? data.disabledDays : [],
+            disabledDates: Array.isArray(data?.disabledDates) ? data.disabledDates : [],
+            blackoutRanges: Array.isArray(data?.blackoutRanges) ? data.blackoutRanges : [],
+          });
         }
       } catch {
         if (isMounted) {
-          setDisabledDaysConfig([]);
+          setDisabledDaysConfig({ disabledDays: [], disabledDates: [], blackoutRanges: [] });
         }
       }
     }
