@@ -144,9 +144,10 @@ export default function ValidarCitas() {
       description="Respaldo manual para confirmar asistencia cuando el QR no esté disponible. Al validar, la cita queda marcada como asistida y sigue el flujo de fidelidad existente."
     >
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="rounded-3xl border border-white/70 bg-white p-6 shadow-sm">
+        <div className="admin-highlight-card rounded-3xl border border-white/70 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
+              <p className="admin-section-kicker">Validación editorial</p>
               <div className="mb-4 flex flex-wrap gap-3">
                 {[
                   { id: 'today', label: 'Hoy' },
@@ -199,7 +200,7 @@ export default function ValidarCitas() {
           {successMessage ? <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{successMessage}</div> : null}
         </div>
 
-        <div className="rounded-3xl border border-white/70 bg-white p-6 shadow-sm">
+        <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h2 className="text-xl font-bold text-gray-800">Listado manual de citas</h2>
             {listLoading ? <span className="text-sm text-gray-500">Actualizando...</span> : <span className="text-sm text-gray-500">{reservations.length} citas</span>}
@@ -214,7 +215,7 @@ export default function ValidarCitas() {
           ) : (
             <div className="space-y-4">
               {reservations.map((reservation) => (
-                <div key={reservation.code} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                <div key={reservation.code} className="admin-list-card rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="min-w-0 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">

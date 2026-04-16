@@ -359,6 +359,49 @@
     @apply inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#F2C8D4] bg-white text-[var(--brand)] shadow-[0_12px_28px_rgba(225,27,116,0.14)];
   }
 
+  .admin-highlight-card {
+    background:
+      radial-gradient(circle at top right, rgba(197, 160, 89, 0.16), transparent 28%),
+      linear-gradient(135deg, rgba(255,255,255,0.98), rgba(254,236,244,0.90));
+    border: 1px solid rgba(242, 200, 212, 0.68);
+    box-shadow: 0 18px 36px rgba(225, 27, 116, 0.10);
+  }
+
+  .admin-surface-card {
+    box-shadow: 0 18px 34px rgba(225, 27, 116, 0.08);
+    transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease;
+  }
+
+  .admin-surface-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 44px rgba(225, 27, 116, 0.12);
+  }
+
+  .admin-list-card {
+    transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease;
+  }
+
+  .admin-list-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(225, 27, 116, 0.18);
+    box-shadow: 0 18px 32px rgba(225, 27, 116, 0.08);
+  }
+
+  .admin-section-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    background: rgba(253, 232, 242, 0.92);
+    border: 1px solid rgba(242, 200, 212, 0.9);
+    padding: 0.45rem 0.85rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--brand);
+  }
+
   .date-card:not(:disabled):hover {
     transform: translateY(-3px);
     box-shadow: 0 20px 38px rgba(225, 27, 116, 0.16);

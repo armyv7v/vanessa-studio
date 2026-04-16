@@ -110,9 +110,17 @@ export default function AdminHorarios() {
       description="Configura horarios de atención y bloquea sábados o domingos específicos del mes para controlar la disponibilidad visible en la reserva."
     >
       <div className="mx-auto max-w-4xl space-y-6">
+        <div className="admin-highlight-card rounded-3xl p-5 sm:p-6">
+          <p className="admin-section-kicker">Operación del calendario</p>
+          <h2 className="mt-3 text-xl font-bold" style={{ color: 'var(--ink-medium)' }}>Ajusta disponibilidad real del estudio</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
+            Aquí defines la ventana de atención por día y también ocultas sábados o domingos específicos para que el flujo público nunca muestre espacios que no quieres abrir.
+          </p>
+        </div>
+
         {/* Horario Editor Card */}
         <div
-          className="rounded-3xl p-6 shadow-sm"
+          className="admin-surface-card rounded-3xl p-6 shadow-sm"
           style={{
             border: '1px solid rgba(242, 200, 212, 0.6)',
             background: 'rgba(255,255,255,0.97)',
@@ -131,7 +139,7 @@ export default function AdminHorarios() {
 
         {/* Disabled Days Card */}
         <div
-          className="rounded-3xl p-6 shadow-sm"
+          className="admin-surface-card rounded-3xl p-6 shadow-sm"
           style={{
             border: '1px solid var(--gold-lighter)',
             background: 'linear-gradient(135deg, var(--gold-lightest), rgba(255,255,255,0.90))',
