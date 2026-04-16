@@ -15,7 +15,12 @@ const emptyClient = { name: '', email: '', phone: '' };
 
 async function listSlotsViaApi({ date, serviceId }) {
   const params = new URLSearchParams({ date, serviceId: String(serviceId) });
-  const response = await fetch(`/api/slots?${params.toString()}`);
+  const directSlotsUrl = process.env.NEXT_PUBLIC_API_WORKER_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/api';
+  const isProductionHost = typeof window !== 'undefined' && window.location.hostname.includes('pages.dev');
+
+  const response = isProductionHost
+    ? await fetch(`${directSlotsUrl}?date=${encodeURIComponent(date)}`)
+    : await fetch(`/api/slots?${params.toString()}`);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
