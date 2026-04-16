@@ -256,6 +256,8 @@ export default function AdminHorarios() {
                       key={dateKey}
                       type="button"
                       onClick={() => handleCalendarBlockToggle(day)}
+                      title={isBlockedDay ? 'Día bloqueado manualmente' : isInRange ? 'Fecha incluida en un rango bloqueado' : 'Fecha disponible'}
+                      aria-label={`${format(day, "d 'de' MMMM", { locale: es })}: ${isBlockedDay ? 'bloqueado' : isInRange ? 'dentro de rango bloqueado' : 'disponible'}`}
                       className="admin-calendar-day rounded-2xl border p-3 text-left transition"
                       style={isBlockedDay
                         ? { background: 'rgba(251, 146, 60, 0.20)', borderColor: '#FB923C', color: '#9A3412', boxShadow: '0 12px 24px rgba(251,146,60,0.16)' }

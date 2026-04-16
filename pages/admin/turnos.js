@@ -16,14 +16,10 @@ import { isAllowedBusinessDay } from '../../lib/calendarConfig';
 import { services } from '../../lib/services';
 import horariosConfig from '../../config/horarios.json';
 
-// ── Brand palette availability map ────────────────────────────
-// Keeps semantic meaning (green=good, red=bad) but tinted
-// to match the brand blush/warm palette
 const AVAILABILITY_COLORS = {
-  high:   { bg: 'rgba(200, 240, 215, 0.80)', border: '#86EFAC' }, // green tint — high availability
-  medium: { bg: 'rgba(251, 244, 227, 0.90)', border: '#C5A059' }, // gold tint — medium
-  low:    { bg: 'rgba(255, 220, 200, 0.80)', border: '#FDBA74' }, // warm orange — low
-  veryLow:{ bg: 'rgba(254, 202, 202, 0.70)', border: '#FCA5A5' }, // rose-red — very low
+  blocked: { bg: 'rgba(251, 146, 60, 0.20)', border: '#FB923C' },
+  available: { bg: 'rgba(200, 240, 215, 0.80)', border: '#86EFAC' },
+  occupied: { bg: 'rgba(254, 202, 202, 0.70)', border: '#FCA5A5' },
 };
 
 const HORARIOS_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
@@ -108,20 +104,15 @@ export default function AdminTurnos() {
   // Uses brand-aware color map instead of raw Tailwind colors
   const getAvailabilityStyle = (day) => {
     if (!isAllowedBusinessDay(day, blackoutConfig)) {
-      return { bg: 'rgba(251, 146, 60, 0.20)', border: '#FB923C' };
+      return AVAILABILITY_COLORS.blocked;
     }
 
     const dayStr = format(day, 'yyyy-MM-dd');
-    const totalPossibleSlots = 26;
     const availableCount = availableSlots.filter(
       (slot) => format(parseISO(slot.start), 'yyyy-MM-dd') === dayStr
     ).length;
-    const pct = (availableCount / totalPossibleSlots) * 100;
 
-    if (pct > 75) return AVAILABILITY_COLORS.high;
-    if (pct > 50) return AVAILABILITY_COLORS.medium;
-    if (pct > 25) return AVAILABILITY_COLORS.low;
-    return AVAILABILITY_COLORS.veryLow;
+    return availableCount > 0 ? AVAILABILITY_COLORS.available : AVAILABILITY_COLORS.occupied;
   };
 
   const refreshSlots = useCallback(async () => {
@@ -384,10 +375,9 @@ export default function AdminTurnos() {
           </div>
           <div className="flex flex-wrap gap-4 text-xs">
             {[
-              { label: 'Bloqueado', style: { bg: 'rgba(251, 146, 60, 0.20)', border: '#FB923C' } },
-              { label: 'Disponible', style: AVAILABILITY_COLORS.high },
-              { label: 'Demanda media', style: AVAILABILITY_COLORS.low },
-              { label: 'Ocupado / sin huecos', style: AVAILABILITY_COLORS.veryLow },
+              { label: 'Bloqueado', style: AVAILABILITY_COLORS.blocked },
+              { label: 'Disponible', style: AVAILABILITY_COLORS.available },
+              { label: 'Ocupado / sin huecos', style: AVAILABILITY_COLORS.occupied },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-2">
                 <div
