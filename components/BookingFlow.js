@@ -185,14 +185,18 @@ export default function BookingFlow({ config }) {
     let isMounted = true;
 
     async function fetchDisabledDays() {
+      const directHorariosUrl = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
+      const isProductionHost = typeof window !== 'undefined' && window.location.hostname.includes('pages.dev');
+
       try {
-        const response = await fetch('/api/gs-check?action=getConfig');
+        const response = isProductionHost
+          ? await fetch(directHorariosUrl)
+          : await fetch('/api/gs-check?action=getConfig');
+        const data = await response.json().catch(() => null);
 
         if (!response.ok) {
           throw new Error('No se pudo cargar la configuración de disponibilidad.');
         }
-
-        const data = await response.json();
 
         if (isMounted && Array.isArray(data?.disabledDays)) {
           setDisabledDaysConfig(data.disabledDays);
