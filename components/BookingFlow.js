@@ -364,7 +364,7 @@ export default function BookingFlow({ config }) {
                 style={{ '--tw-ring-color': 'rgba(225,27,116,0.25)' }}
               >
                 <div className="mb-6 flex items-start justify-between gap-4">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]" style={{ background: 'linear-gradient(180deg, var(--brand-lightest) 0%, rgba(248,161,195,0.50) 100%)', color: 'var(--brand)' }}>
+                  <span className="service-icon-orb inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]" style={{ background: 'linear-gradient(180deg, var(--brand-lightest) 0%, rgba(248,161,195,0.50) 100%)', color: 'var(--brand)' }}>
                     <PolishBottleIcon className="h-5 w-5" />
                   </span>
                   <span className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]" style={{ background: 'var(--gold-lightest)', color: 'var(--gold-dark)' }}>
@@ -377,19 +377,28 @@ export default function BookingFlow({ config }) {
                 </h3>
 
                 <p className="mb-5 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
-                  Ideal para una agenda beauty que quiere verse prolija, luminosa y con acabado cuidado.
+                  {service.summary}
                 </p>
 
-                <div className="mb-5 flex items-center gap-2" style={{ color: 'var(--brand-light)' }}>
-                  <SparkleIcon className="h-4 w-4" />
-                  <GemIcon className="h-4 w-4" />
-                  <SwirlDivider className="motif-divider h-5 w-16" />
+                <div className="mb-5 flex flex-wrap items-center gap-2" style={{ color: 'var(--brand-light)' }}>
+                  {service.highlights?.map((highlight) => (
+                    <span key={highlight} className="service-mini-chip">
+                      <SparkleIcon className="h-3.5 w-3.5" />
+                      {highlight}
+                    </span>
+                  ))}
                 </div>
 
-                <span className="mt-auto inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--brand)' }}>
+                <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#f3d9e4] pt-4">
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--gold-dark)' }}>
+                    <GemIcon className="h-4 w-4" />
+                    Resultado premium
+                  </span>
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--brand)' }}>
                   Elegir servicio
                   <LaunchIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </span>
+                  </span>
+                </div>
               </button>
             ))}
           </div>

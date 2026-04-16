@@ -219,6 +219,13 @@
   .sparkle-chip {
     background: rgba(255, 255, 255, 0.90);
     @apply inline-flex items-center gap-2 rounded-full border border-white/95 px-3 py-1.5 text-xs font-semibold text-[var(--brand)] shadow-[0_8px_18px_rgba(225,27,116,0.12)];
+    transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+  }
+
+  .sparkle-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(225, 27, 116, 0.16);
+    border-color: rgba(225, 27, 116, 0.18);
   }
 
   /* Gold accent chip */
@@ -230,6 +237,12 @@
   .motif-icon {
     background: rgba(255, 255, 255, 0.90);
     @apply inline-flex items-center justify-center rounded-full border border-white/85 text-[var(--brand)] shadow-[0_10px_20px_rgba(225,27,116,0.14)];
+    transition: transform 260ms ease, box-shadow 260ms ease;
+  }
+
+  .motif-icon:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 16px 28px rgba(225, 27, 116, 0.18);
   }
 
   .motif-divider {
@@ -286,6 +299,28 @@
       radial-gradient(circle at bottom left, rgba(225, 27, 116, 0.12), transparent 32%);
   }
 
+  .service-icon-orb {
+    transition: transform 260ms ease, box-shadow 260ms ease, background 260ms ease;
+  }
+
+  .group:hover .service-icon-orb {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 18px 34px rgba(225, 27, 116, 0.20);
+    background: linear-gradient(180deg, rgba(253, 232, 242, 1) 0%, rgba(240, 74, 148, 0.20) 100%);
+  }
+
+  .service-mini-chip {
+    background: rgba(255, 255, 255, 0.88);
+    @apply inline-flex items-center gap-1.5 rounded-full border border-[#f3d9e4] px-2.5 py-1 text-[11px] font-semibold tracking-[0.08em] text-[var(--brand-dark)] shadow-[0_8px_18px_rgba(225,27,116,0.08)];
+    transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+  }
+
+  .group:hover .service-mini-chip {
+    transform: translateY(-1px);
+    border-color: rgba(225, 27, 116, 0.22);
+    box-shadow: 0 12px 22px rgba(225, 27, 116, 0.12);
+  }
+
   .beauty-note {
     background: rgba(255, 255, 255, 0.88);
     @apply rounded-[22px] border border-[#F2C8D4] px-4 py-3 text-sm leading-6 text-[var(--ink-muted)] shadow-[0_10px_22px_rgba(225,27,116,0.10)];
@@ -305,6 +340,13 @@
   .flow-guide-step {
     background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(254, 236, 246, 0.96));
     @apply rounded-[22px] border border-[#F2C8D4] px-4 py-4 text-left shadow-[0_12px_24px_rgba(225,27,116,0.10)];
+    transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
+  }
+
+  .flow-guide-step:hover {
+    transform: translateY(-3px);
+    border-color: rgba(225, 27, 116, 0.24);
+    box-shadow: 0 20px 34px rgba(225, 27, 116, 0.14);
   }
 
   /* Gold-numbered step indicator */
