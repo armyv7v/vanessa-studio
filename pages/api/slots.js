@@ -1,62 +1,48 @@
 // pages/api/slots.js
-import { DateTime } from 'luxon';
+// Proxea al backend de Netlify que consulta Google Calendar
+
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_WORKER_URL ||
+  process.env.GAS_WEBHOOK_URL ||
+  'https://vanessastudioback.netlify.app/.netlify/functions/api';
 
 export const runtime = 'edge';
 
-const jsonRes = (data, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-
 export default async function handler(req) {
-  const { searchParams } = new URL(req.url);
-  const date = searchParams.get('date');
+  const url = req.nextUrl || new URL(req.url);
+  const date = url.searchParams.get('date');
 
-  if (!date) return jsonRes({ error: 'El parámetro date es obligatorio (YYYY-MM-DD).' }, 400);
-
-  const calendarId = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID;
-  const apiKey = process.env.GCAL_API_KEY;
-  const timezone = process.env.NEXT_PUBLIC_TZ ?? 'UTC';
-
-  if (!calendarId || !apiKey)
-    return jsonRes({ error: 'Faltan configuraciones de Google Calendar en las variables de entorno del servidor.' }, 500);
+  if (!date) {
+    return new Response(JSON.stringify({ error: 'El parámetro date es obligatorio (YYYY-MM-DD).' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   try {
-    const range = buildCalendarRange(date, timezone);
-    const requestUrl = buildGoogleCalendarUrl(calendarId, apiKey, range);
+    const backendUrl = new URL(BACKEND_URL);
+    backendUrl.searchParams.set('date', String(date));
 
-    const gcResponse = await fetch(requestUrl.toString());
-    const payload = await gcResponse.json();
+    const backendResponse = await fetch(backendUrl.toString());
+    const payload = await backendResponse.json().catch(() => null);
 
-    if (!gcResponse.ok) {
-      const message = payload?.error?.message || 'Error obteniendo eventos del calendario.';
-      return jsonRes({ error: message }, gcResponse.status);
+    if (!backendResponse.ok) {
+      return new Response(JSON.stringify({
+        error: payload?.error || 'Error obteniendo eventos del calendario.',
+      }), {
+        status: backendResponse.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    const busy = (payload.items || [])
-      .filter((event) => !event.start?.date)
-      .map((event) => ({
-        start: event.start?.dateTime ?? null,
-        end: event.end?.dateTime ?? null,
-      }));
-
-    return jsonRes({ busy });
+    return new Response(JSON.stringify({ busy: payload?.busy || [] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    return jsonRes({ error: error?.message ?? 'Error interno del servidor obteniendo los horarios.' }, 500);
+    return new Response(JSON.stringify({ error: error?.message || 'Error interno del servidor obteniendo los horarios.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-}
-
-function buildCalendarRange(date, timezone) {
-  const start = DateTime.fromISO(`${date}T00:00:00`, { zone: timezone });
-  if (!start.isValid) throw new Error('Fecha inválida');
-  const end = start.endOf('day');
-  return { timeMin: start.toUTC().toISO(), timeMax: end.toUTC().toISO() };
-}
-
-function buildGoogleCalendarUrl(calendarId, apiKey, range) {
-  if (!range.timeMin || !range.timeMax) throw new Error('Rango de tiempo inválido');
-  const params = new URLSearchParams({
-    key: apiKey, timeMin: range.timeMin, timeMax: range.timeMax,
-    singleEvents: 'true', orderBy: 'startTime', maxResults: '2500',
-  });
-  const encodedCalendar = encodeURIComponent(calendarId);
-  return new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodedCalendar}/events?${params.toString()}`);
 }
