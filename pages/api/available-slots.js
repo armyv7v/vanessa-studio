@@ -5,8 +5,18 @@ export const runtime = 'edge';
 const BACKEND_URL = 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 const TIMEZONE = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
 
-// Importar horarios desde el archivo de configuración
-import horariosConfig from '../../config/horarios.json';
+// Config de horarios inlineada (no puede ser import JSON en Cloudflare edge)
+const horariosConfig = {
+    horarioAtencion: {
+        lunes:      ['09:00', '22:00'],
+        martes:     ['09:00', '22:00'],
+        miércoles:  ['09:00', '22:00'],
+        jueves:     ['09:00', '22:00'],
+        viernes:    ['09:00', '22:00'],
+        sábado:     ['09:00', '22:00'],
+        domingo:    ['09:00', '22:00'],
+    },
+};
 
 // Mapeo de días de la semana (0=domingo, 1=lunes, etc.)
 const DAY_NAMES = {
