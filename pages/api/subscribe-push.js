@@ -1,25 +1,19 @@
-﻿﻿﻿// pages/api/subscribe-push.js
+// pages/api/subscribe-push.js
+export const runtime = 'edge';
 
-export const runtime = 'nodejs';
+const jsonRes = (data, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+export default async function handler(req) {
+  if (req.method !== 'POST') return jsonRes({ error: 'Method Not Allowed' }, 405);
 
   const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL || process.env.GAS_WEBAPP_URL;
-  if (!GAS_URL) {
-    return res.status(500).json({ error: 'La URL del webhook no esta configurada.' });
-  }
+  if (!GAS_URL) return jsonRes({ error: 'La URL del webhook no esta configurada.' }, 500);
 
   try {
     const { subscription, email } = await req.json();
 
-    const payload = {
-      action: 'saveSubscription',
-      subscription,
-      email,
-    };
+    const payload = { action: 'saveSubscription', subscription, email };
 
     await fetch(GAS_URL, {
       method: 'POST',
@@ -27,9 +21,8 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload),
     });
 
-    return res.status(201).json({ success: true });
+    return jsonRes({ success: true }, 201);
   } catch (error) {
-    console.error('Error en /api/subscribe-push:', error);
-    return res.status(500).json({ error: 'Error al guardar la suscripcion.' });
+    return jsonRes({ error: 'Error al guardar la suscripcion.' }, 500);
   }
 }

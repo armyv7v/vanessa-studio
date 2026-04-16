@@ -1,8 +1,9 @@
-﻿// pages/api/gs-check.js
-// VERSIÓN DE PRUEBA "HOLA MUNDO"
+// pages/api/gs-check.js
+export const runtime = 'edge';
 
-export default function handler(req, res) {
-  // Esta función ignora todo y simplemente devuelve un mensaje de éxito.
-  // Si esto funciona, significa que la API se está desplegando.
-  res.status(200).json({ message: "Hola Mundo! La API está funcionando." });
+export default function handler(req) {
+  return new Response(
+    JSON.stringify({ message: 'Hola Mundo! La API está funcionando.' }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
 }

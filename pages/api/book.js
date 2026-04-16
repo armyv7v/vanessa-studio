@@ -15,37 +15,24 @@ function normalizeTzOffset(value) {
   return `${match[1]}${match[2]}:${match[3]}`;
 }
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
-export default async function handler(req, res) {
+const jsonRes = (data, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
+
+export default async function handler(req) {
   try {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method Not Allowed' });
-    }
+    if (req.method !== 'POST') return jsonRes({ error: 'Method Not Allowed' }, 405);
 
     const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL || process.env.GAS_WEBAPP_URL;
     const CALENDAR = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID || '';
     const TZ = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
     const TZ_OFFSET_ENV = process.env.NEXT_PUBLIC_TZ_OFFSET;
 
-    if (!GAS_URL) {
-      return res.status(500).json({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL o GAS_WEBAPP_URL' });
-    }
+    if (!GAS_URL) return jsonRes({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL o GAS_WEBAPP_URL' }, 500);
 
-    const body = typeof req.body === 'string'
-      ? JSON.parse(req.body || '{}')
-      : (req.body || {});
-    const {
-      serviceId,
-      serviceName,
-      date,
-      start,
-      durationMin,
-      client,
-      extraCupo,
-      extraCup,
-      durationOverrideMin,
-    } = body;
+    const body = await req.json();
+    const { serviceId, serviceName, date, start, durationMin, client, extraCupo, extraCup, durationOverrideMin } = body;
 
     const normalizedClient = {
       name: client?.name ? String(client.name).trim() : '',
@@ -53,49 +40,33 @@ export default async function handler(req, res) {
       phone: client?.phone ? String(client.phone).trim() : '',
     };
 
-    if (!serviceId || !date || !start || !normalizedClient.name || !normalizedClient.email) {
-      return res.status(400).json({ error: 'Datos incompletos' });
-    }
-    if (!isEmailValid(normalizedClient.email)) {
-      return res.status(400).json({ error: 'Email invalido' });
-    }
+    if (!serviceId || !date || !start || !normalizedClient.name || !normalizedClient.email)
+      return jsonRes({ error: 'Datos incompletos' }, 400);
+    if (!isEmailValid(normalizedClient.email))
+      return jsonRes({ error: 'Email invalido' }, 400);
 
     const resolvedDurationMin = durationOverrideMin != null
       ? Number(durationOverrideMin)
-      : durationMin != null
-        ? Number(durationMin)
-        : undefined;
+      : durationMin != null ? Number(durationMin) : undefined;
 
-    if (!Number.isFinite(resolvedDurationMin)) {
-      return res.status(400).json({ error: 'Duracion invalida' });
-    }
+    if (!Number.isFinite(resolvedDurationMin))
+      return jsonRes({ error: 'Duracion invalida' }, 400);
 
     const timezone = typeof TZ === 'string' && TZ ? TZ : 'UTC';
     const startDateTime = DateTime.fromISO(`${date}T${start}`, { zone: timezone });
-    if (!startDateTime.isValid) {
-      return res.status(400).json({ error: 'Fecha u hora invalida' });
-    }
+    if (!startDateTime.isValid) return jsonRes({ error: 'Fecha u hora invalida' }, 400);
+
     const endDateTime = startDateTime.plus({ minutes: resolvedDurationMin });
     const tzOffset = normalizeTzOffset(TZ_OFFSET_ENV) ?? startDateTime.toFormat('ZZ');
 
     const payload = {
-      client: normalizedClient,
-      nombre: normalizedClient.name,
-      email: normalizedClient.email,
-      telefono: normalizedClient.phone,
-      date,
-      fecha: date,
-      start,
-      hora: start,
-      startIso: startDateTime.toISO(),
-      endIso: endDateTime.toISO(),
-      tzOffset,
-      serviceId: String(serviceId),
-      serviceName: serviceName || '',
+      client: normalizedClient, nombre: normalizedClient.name,
+      email: normalizedClient.email, telefono: normalizedClient.phone,
+      date, fecha: date, start, hora: start,
+      startIso: startDateTime.toISO(), endIso: endDateTime.toISO(), tzOffset,
+      serviceId: String(serviceId), serviceName: serviceName || '',
       extraCupo: extraCupo ?? extraCup ?? false,
-      durationMin: resolvedDurationMin,
-      calendarId: CALENDAR,
-      tz: timezone,
+      durationMin: resolvedDurationMin, calendarId: CALENDAR, tz: timezone,
     };
 
     const r = await fetch(GAS_URL, {
@@ -106,21 +77,16 @@ export default async function handler(req, res) {
 
     const text = await r.text();
     let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { raw: text };
-    }
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
     if (!r.ok || data?.success === false) {
       const statusFromData = Number(data?.statusCode);
       const status = Number.isFinite(statusFromData) && statusFromData >= 400 ? statusFromData : (r.ok ? 500 : r.status);
-      return res.status(status).json({ error: data?.error || 'GAS error', data });
+      return jsonRes({ error: data?.error || 'GAS error', data }, status);
     }
-    return res.status(200).json({ success: true, data });
+    return jsonRes({ success: true, data });
 
   } catch (err) {
-    console.error('Error en /api/book:', err);
-    return res.status(500).json({ error: String(err) });
+    return jsonRes({ error: String(err) }, 500);
   }
 }

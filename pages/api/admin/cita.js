@@ -27,13 +27,14 @@ function checkAdminAuth(req) {
   return token === adminToken;
 }
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
-export default async function handler(req, res) {
+const jsonRes = (data, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
+
+export default async function handler(req) {
   try {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method Not Allowed' });
-    }
+    if (req.method !== 'POST') return jsonRes({ error: 'Method Not Allowed' }, 405);
 
     // Validar autenticación (comentado por ahora - descomenta cuando agregues token)
     // if (!checkAdminAuth(req)) {
@@ -45,13 +46,9 @@ export default async function handler(req, res) {
     const TZ = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
     const TZ_OFFSET_ENV = process.env.NEXT_PUBLIC_TZ_OFFSET;
 
-    if (!GAS_URL) {
-      return res.status(500).json({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL o GAS_WEBAPP_URL' });
-    }
+    if (!GAS_URL) return jsonRes({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL o GAS_WEBAPP_URL' }, 500);
 
-    const body = typeof req.body === 'string'
-      ? JSON.parse(req.body || '{}')
-      : (req.body || {});
+    const body = await req.json();
 
     const {
       serviceId,
@@ -71,13 +68,11 @@ export default async function handler(req, res) {
       phone: client?.phone ? String(client.phone).trim() : '',
     };
 
-    if (!serviceId || !date || !start || !normalizedClient.name || !normalizedClient.email) {
-      return res.status(400).json({ error: 'Datos incompletos' });
-    }
+    if (!serviceId || !date || !start || !normalizedClient.name || !normalizedClient.email)
+      return jsonRes({ error: 'Datos incompletos' }, 400);
 
-    if (!isEmailValid(normalizedClient.email)) {
-      return res.status(400).json({ error: 'Email invalido' });
-    }
+    if (!isEmailValid(normalizedClient.email))
+      return jsonRes({ error: 'Email invalido' }, 400);
 
     const resolvedDurationMin = durationOverrideMin != null
       ? Number(durationOverrideMin)
@@ -85,16 +80,13 @@ export default async function handler(req, res) {
         ? Number(durationMin)
         : undefined;
 
-    if (!Number.isFinite(resolvedDurationMin)) {
-      return res.status(400).json({ error: 'Duracion invalida' });
-    }
+    if (!Number.isFinite(resolvedDurationMin))
+      return jsonRes({ error: 'Duracion invalida' }, 400);
 
     const timezone = typeof TZ === 'string' && TZ ? TZ : 'UTC';
     const startDateTime = DateTime.fromISO(`${date}T${start}`, { zone: timezone });
     
-    if (!startDateTime.isValid) {
-      return res.status(400).json({ error: 'Fecha u hora invalida' });
-    }
+    if (!startDateTime.isValid) return jsonRes({ error: 'Fecha u hora invalida' }, 400);
 
     const endDateTime = startDateTime.plus({ minutes: resolvedDurationMin });
     const tzOffset = normalizeTzOffset(TZ_OFFSET_ENV) ?? startDateTime.toFormat('ZZ');
@@ -137,13 +129,12 @@ export default async function handler(req, res) {
     if (!r.ok || data?.success === false) {
       const statusFromData = Number(data?.statusCode);
       const status = Number.isFinite(statusFromData) && statusFromData >= 400 ? statusFromData : (r.ok ? 500 : r.status);
-      return res.status(status).json({ error: data?.error || 'GAS error', data });
+      return jsonRes({ error: data?.error || 'GAS error', data }, status);
     }
 
-    return res.status(200).json({ success: true, data, message: 'Cita creada exitosamente' });
+    return jsonRes({ success: true, data, message: 'Cita creada exitosamente' });
 
   } catch (err) {
-    console.error('Error en /api/admin/cita:', err);
-    return res.status(500).json({ error: String(err) });
+    return jsonRes({ error: String(err) }, 500);
   }
 }

@@ -1,5 +1,4 @@
-// runtime = 'edge' eliminado: open-next con Cloudflare Pages corre todo en edge,
-// declararlo explícitamente rompe el bundler (OpenNext no lo soporta como override individual).
+export const runtime = 'edge';
 
 const BACKEND_URL = 'https://vanessastudioback.netlify.app/.netlify/functions';
 
