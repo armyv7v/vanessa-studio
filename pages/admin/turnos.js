@@ -11,7 +11,7 @@ import { es } from 'date-fns/locale';
 import { bookAppointment, getAvailableSlots, getAvailableSlotsRange } from '../../lib/api';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
-import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon, CloseIcon, GemIcon, LaunchIcon } from '../../components/BrandMotifs';
+import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon, CloseIcon, GemIcon, LaunchIcon, SparkleIcon } from '../../components/BrandMotifs';
 import { services } from '../../lib/services';
 import horariosConfig from '../../config/horarios.json';
 
@@ -272,6 +272,20 @@ export default function AdminTurnos() {
       });
 
   const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const availableSlotsCount = availableSlots.length;
+  const daysWithAvailability = days.filter((day) => getEventsForDay(day).length > 0).length;
+  const peakDay = days
+    .map((day) => ({ day, count: getEventsForDay(day).length }))
+    .sort((a, b) => b.count - a.count)[0];
+  const occupancySummary = [
+    { label: 'Slots visibles', value: String(availableSlotsCount), detail: 'turnos libres en este rango' },
+    { label: 'Días con disponibilidad', value: String(daysWithAvailability), detail: 'jornadas con al menos un bloque libre' },
+    {
+      label: 'Pico actual',
+      value: peakDay?.count ? `${peakDay.count}` : '0',
+      detail: peakDay?.count ? `${format(peakDay.day, "d MMM", { locale: es })} concentra más huecos` : 'sin huecos destacados',
+    },
+  ];
 
   return (
     <AdminShell
@@ -283,63 +297,80 @@ export default function AdminTurnos() {
       </Head>
 
       <div className="mx-auto max-w-6xl">
-        {/* ── Top bar ─────────────────────────────────────── */}
-        <div className="mb-4 flex flex-col items-center justify-between gap-4 md:flex-row">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border shadow-sm" style={{ borderColor: 'var(--gold-lighter)', background: 'rgba(255,255,255,0.92)', color: 'var(--brand)' }}>
-              <CalendarIcon className="h-5 w-5" />
-            </span>
-            <h1
-              className="text-3xl font-bold"
-              style={{ color: 'var(--ink-medium)' }}
+        <div className="admin-highlight-card mb-5 rounded-3xl p-5 sm:p-6">
+          <div className="mb-5 flex flex-col items-center justify-between gap-4 md:flex-row">
+            <div>
+              <p className="admin-section-kicker">Disponibilidad editorial</p>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border shadow-sm" style={{ borderColor: 'var(--gold-lighter)', background: 'rgba(255,255,255,0.92)', color: 'var(--brand)' }}>
+                  <CalendarIcon className="h-5 w-5" />
+                </span>
+                <h1
+                  className="text-3xl font-bold"
+                  style={{ color: 'var(--ink-medium)' }}
+                >
+                  Calendario de Turnos
+                </h1>
+              </div>
+              <p className="mt-3 max-w-2xl text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
+                Lee de un vistazo dónde está la mayor disponibilidad y entra al detalle del día para crear citas manuales cuando sea necesario.
+              </p>
+            </div>
+
+            {/* View Mode Toggle */}
+            <div
+              className="flex items-center rounded-xl p-1 shadow-sm"
+              style={{
+                background: 'rgba(255,255,255,0.95)',
+                border: '1px solid var(--gold-lighter)',
+              }}
             >
-              Calendario de Turnos
-            </h1>
+              {['month', 'week'].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className="rounded-lg px-4 py-2 text-sm font-medium transition"
+                  style={
+                    viewMode === mode
+                      ? {
+                          background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
+                          color: '#fff',
+                          boxShadow: '0 6px 14px rgba(225,27,116,0.20)',
+                        }
+                      : { color: 'var(--ink-muted)' }
+                  }
+                >
+                  {mode === 'month' ? 'Mes' : 'Semana'}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* View Mode Toggle */}
-          <div
-            className="flex items-center rounded-xl p-1 shadow-sm"
-            style={{
-              background: 'rgba(255,255,255,0.95)',
-              border: '1px solid var(--gold-lighter)',
-            }}
-          >
-            {['month', 'week'].map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className="rounded-lg px-4 py-2 text-sm font-medium transition"
-                style={
-                  viewMode === mode
-                    ? {
-                        background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
-                        color: '#fff',
-                        boxShadow: '0 6px 14px rgba(225,27,116,0.20)',
-                      }
-                    : { color: 'var(--ink-muted)' }
-                }
-              >
-                {mode === 'month' ? 'Mes' : 'Semana'}
-              </button>
+          <div className="grid gap-3 md:grid-cols-3">
+            {occupancySummary.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4 shadow-[0_10px_24px_rgba(225,27,116,0.06)]">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--brand-light)' }}>{item.label}</p>
+                <p className="mt-2 text-3xl font-bold" style={{ color: 'var(--ink-medium)' }}>{item.value}</p>
+                <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>{item.detail}</p>
+              </div>
             ))}
           </div>
         </div>
 
         {/* ── Availability Legend ──────────────────────────── */}
         <div
-          className="mb-4 rounded-xl p-4 shadow-sm"
+          className="admin-surface-card mb-4 rounded-2xl p-4 shadow-sm"
           style={{
             background: 'rgba(255,255,255,0.95)',
             border: '1px solid var(--gold-lighter)',
           }}
         >
-          <h3
-            className="mb-2 text-sm font-semibold"
-            style={{ color: 'var(--ink-muted)' }}
-          >
-            Disponibilidad:
-          </h3>
+          <div className="mb-3 flex items-center gap-2">
+            <SparkleIcon className="h-4 w-4" />
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--ink-muted)' }}>
+              Lectura cromática del calendario
+            </h3>
+          </div>
           <div className="flex flex-wrap gap-4 text-xs">
             {[
               { label: 'Alta (>75%)',    style: AVAILABILITY_COLORS.high    },
@@ -349,7 +380,7 @@ export default function AdminTurnos() {
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-2">
                 <div
-                  className="h-6 w-6 rounded"
+                  className="h-6 w-6 rounded-xl shadow-sm"
                   style={{
                     background: item.style.bg,
                     border: `1px solid ${item.style.border}`,
@@ -363,7 +394,7 @@ export default function AdminTurnos() {
 
         {/* ── Calendar ─────────────────────────────────────── */}
         <div
-          className="overflow-hidden rounded-2xl shadow-lg"
+          className="admin-surface-card overflow-hidden rounded-2xl shadow-lg"
           style={{ background: 'rgba(255,255,255,0.98)' }}
         >
           {/* Calendar Header */}
@@ -433,7 +464,7 @@ export default function AdminTurnos() {
                 <div
                   key={day.toString()}
                   onClick={() => setSelectedDayEvents({ date: day, events: dayEvents })}
-                  className="relative min-h-[100px] cursor-pointer border-b border-r p-2 transition hover:opacity-80"
+                  className="relative min-h-[100px] cursor-pointer border-b border-r p-2 transition hover:opacity-90"
                   style={{
                     borderColor: 'rgba(242,200,212,0.30)',
                     background: !isCurrentMonth && viewMode === 'month'
@@ -508,11 +539,11 @@ export default function AdminTurnos() {
           style={{ background: 'rgba(28, 10, 20, 0.50)' }}
           onClick={() => setSelectedDayEvents(null)}
         >
-          <div
-            className="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl"
-            style={{ background: '#fff' }}
-            onClick={(e) => e.stopPropagation()}
-          >
+            <div
+              className="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl"
+              style={{ background: '#fff' }}
+              onClick={(e) => e.stopPropagation()}
+            >
             {/* Modal Header */}
             <div
               className="flex items-center justify-between p-4 text-white"
@@ -520,17 +551,20 @@ export default function AdminTurnos() {
                 background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
               }}
             >
-              <h3 className="text-lg font-bold capitalize">
-                {format(selectedDayEvents.date, "EEEE d 'de' MMMM", { locale: es })}
-              </h3>
-              <button
-                onClick={() => setSelectedDayEvents(null)}
-                className="rounded-full p-1 text-white transition"
-                style={{ background: 'rgba(255,255,255,0.18)' }}
-              >
-                ✕
-              </button>
-            </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pink-100">Detalle diario</p>
+                  <h3 className="mt-1 text-lg font-bold capitalize">
+                    {format(selectedDayEvents.date, "EEEE d 'de' MMMM", { locale: es })}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setSelectedDayEvents(null)}
+                  className="rounded-full p-1 text-white transition"
+                  style={{ background: 'rgba(255,255,255,0.18)' }}
+                >
+                  <CloseIcon className="h-4 w-4" />
+                </button>
+              </div>
 
             {/* Modal Body */}
             <div className="max-h-[60vh] overflow-y-auto p-6">
