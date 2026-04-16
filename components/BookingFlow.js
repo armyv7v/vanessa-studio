@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Confetti from 'react-confetti';
 import BookingConfirmation from './BookingConfirmation';
-import { ErrorIcon, GemIcon, LaunchIcon, PolishBottleIcon, SparkleIcon, SuccessIcon, SwirlDivider } from './BrandMotifs';
+import { CalendarIcon, ErrorIcon, GemIcon, LaunchIcon, PolishBottleIcon, SparkleIcon, SuccessIcon, SwirlDivider } from './BrandMotifs';
 import { bookAppointment } from '../lib/api';
 import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 import { isAllowedBusinessDay } from '../lib/calendarConfig';
@@ -13,6 +13,7 @@ import { generateTimeSlots } from '../lib/slots';
 const services = [...servicesData].sort((a, b) => a.duration - b.duration);
 const stepLabels = ['Servicio', 'Fecha', 'Hora', 'Datos'];
 const emptyClient = { name: '', email: '', phone: '' };
+const stepIcons = [PolishBottleIcon, CalendarIcon, SparkleIcon, LaunchIcon];
 
 async function listSlotsViaApi({ date, serviceId }) {
   const params = new URLSearchParams({ date, serviceId: String(serviceId) });
@@ -47,19 +48,23 @@ function StepIndicator({ step }) {
           const stepNumber = index + 1;
           const isActive = step >= stepNumber;
           const isCurrent = step === stepNumber;
+          const StepIcon = stepIcons[index];
 
           return (
-            <li key={label} className="flex items-center gap-3" aria-current={step === stepNumber ? 'step' : undefined}>
+            <li key={label} className="stepper-item flex items-center gap-3" aria-current={step === stepNumber ? 'step' : undefined}>
               <div
-                className="flex h-11 w-11 items-center justify-center rounded-full border text-sm font-semibold transition-all"
+                className="stepper-orb flex h-12 w-12 items-center justify-center rounded-full border text-sm font-semibold transition-all"
                 style={isActive
                   ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 12px 30px rgba(225,27,116,0.28)', transform: 'scale(1.10)' }
                   : { borderColor: 'var(--gold-lighter)', background: 'rgba(255,255,255,0.90)', color: 'var(--ink-faint)' }
                 }
               >
-                {stepNumber}
+                <div className="flex flex-col items-center leading-none">
+                  <span className="text-[10px] font-bold">{stepNumber}</span>
+                  <StepIcon className="mt-1 h-3.5 w-3.5" />
+                </div>
               </div>
-              <div>
+              <div className="stepper-copy min-w-[74px]">
                 <p className="text-[11px] uppercase tracking-[0.24em]" style={{ color: 'var(--brand-light)' }}>Paso {stepNumber}</p>
                 <p className="text-sm font-semibold" style={{ color: isCurrent ? 'var(--brand-darker)' : isActive ? 'var(--ink-medium)' : 'var(--ink-faint)' }}>{label}</p>
               </div>
@@ -447,17 +452,17 @@ export default function BookingFlow({ config }) {
                   disabled={isDisabled}
                   aria-pressed={isSelected}
                   aria-label={`${isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}, ${format(day, 'd')} de ${format(day, 'MMMM', { locale: es })}${isDisabled ? ', no disponible' : ''}`}
-                   className="premium-card gloss-card gradient-outline p-4 text-left transition duration-200 focus:outline-none focus:ring-2"
-                   style={isSelected
+                  className="date-card premium-card gloss-card gradient-outline p-4 text-left transition duration-200 focus:outline-none focus:ring-2"
+                  style={isSelected
                      ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 26px 50px rgba(225,27,116,0.28)', transform: 'scale(1.03)' }
                      : isDisabled
                        ? { cursor: 'not-allowed', borderColor: 'var(--gold-lighter)', background: 'rgba(255,252,254,0.90)', color: 'var(--ink-faint)', boxShadow: 'none' }
                        : { color: 'var(--ink-medium)' }
-                   }
-                 >
-                   <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--brand-light)' }}>
-                     {isToday ? 'Hoy' : format(day, 'EEE', { locale: es })}
-                   </p>
+                  }
+                >
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--brand-light)' }}>
+                      {isToday ? 'Hoy' : format(day, 'EEE', { locale: es })}
+                    </p>
                    <p className="mt-3 text-3xl font-semibold">{format(day, 'd')}</p>
                    <p className="mt-1 text-sm" style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : 'var(--ink-muted)' }}>
                      {format(day, 'MMMM', { locale: es })}
@@ -510,7 +515,7 @@ export default function BookingFlow({ config }) {
                     onClick={() => handleTimeSelect(slot)}
                     aria-pressed={isSelected}
                     aria-label={`Seleccionar horario ${slot}`}
-                    className="premium-card gloss-card gradient-outline px-4 py-4 text-center text-base font-semibold transition duration-200 focus:outline-none focus:ring-2"
+                    className="time-slot-card premium-card gloss-card gradient-outline px-4 py-4 text-center text-base font-semibold transition duration-200 focus:outline-none focus:ring-2"
                     style={isSelected
                       ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 22px 42px rgba(225,27,116,0.28)', transform: 'scale(1.03)' }
                       : { color: 'var(--ink-medium)' }
