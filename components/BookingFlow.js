@@ -95,6 +95,20 @@ function SummaryRow({ label, value }) {
   );
 }
 
+function EmptyStateCard({ title, description, loading = false }) {
+  return (
+    <div className="premium-card gloss-card gradient-outline empty-state-card flex flex-col items-center justify-center gap-4 px-6 py-14 text-center">
+      <span className="empty-state-icon">
+        {loading ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-b-transparent" /> : <SparkleIcon className="h-5 w-5" />}
+      </span>
+      <div>
+        <p className="text-lg font-semibold" style={{ color: 'var(--ink-medium)' }}>{title}</p>
+        <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>{description}</p>
+      </div>
+    </div>
+  );
+}
+
 function StatusBanner({ bookingStatus }) {
   if (!bookingStatus) {
     return null;
@@ -354,20 +368,20 @@ export default function BookingFlow({ config }) {
           />
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {services.map((service) => (
+            {services.map((service, index) => (
               <button
                 key={service.id}
                 type="button"
                 onClick={() => handleServiceSelect(service.id)}
                 aria-label={`Seleccionar ${service.name}, duración ${service.duration} minutos`}
-                className="group premium-card gloss-card gradient-outline shine-sweep service-glow flex h-full flex-col overflow-hidden p-6 text-left transition duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2"
-                style={{ '--tw-ring-color': 'rgba(225,27,116,0.25)' }}
+                className="group premium-card gloss-card gradient-outline shine-sweep service-glow service-card-reveal flex h-full flex-col overflow-hidden p-6 text-left transition duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2"
+                style={{ '--tw-ring-color': 'rgba(225,27,116,0.25)', animationDelay: `${index * 80}ms` }}
               >
                 <div className="mb-6 flex items-start justify-between gap-4">
                   <span className="service-icon-orb inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]" style={{ background: 'linear-gradient(180deg, var(--brand-lightest) 0%, rgba(248,161,195,0.50) 100%)', color: 'var(--brand)' }}>
                     <PolishBottleIcon className="h-5 w-5" />
                   </span>
-                  <span className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]" style={{ background: 'var(--gold-lightest)', color: 'var(--gold-dark)' }}>
+                  <span className="service-duration-pill rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]" style={{ background: 'var(--gold-lightest)', color: 'var(--gold-dark)' }}>
                     {service.duration} min
                   </span>
                 </div>
@@ -376,7 +390,7 @@ export default function BookingFlow({ config }) {
                   {service.name}
                 </h3>
 
-                <p className="mb-5 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
+                <p className="service-summary-block mb-5 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
                   {service.summary}
                 </p>
 
@@ -477,13 +491,11 @@ export default function BookingFlow({ config }) {
           ) : null}
 
           {loadingSlots ? (
-            <div className="premium-card gloss-card gradient-outline flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-b-transparent" style={{ borderColor: 'var(--brand) transparent var(--brand) var(--brand)' }} />
-              <div>
-                <p className="font-semibold" style={{ color: 'var(--ink-medium)' }}>Cargando horarios disponibles</p>
-                <p className="mt-1 text-sm" style={{ color: 'var(--ink-muted)' }}>Estamos validando disponibilidad real para evitar reservas inválidas.</p>
-              </div>
-            </div>
+            <EmptyStateCard
+              loading
+              title="Cargando horarios disponibles"
+              description="Estamos validando disponibilidad real para evitar reservas inválidas."
+            />
           ) : null}
 
           {!loadingSlots && availableSlots.length > 0 ? (
@@ -512,10 +524,10 @@ export default function BookingFlow({ config }) {
           ) : null}
 
           {!loadingSlots && !availableSlots.length ? (
-            <div className="premium-card gloss-card gradient-outline px-6 py-14 text-center">
-              <p className="text-lg font-semibold" style={{ color: 'var(--ink-medium)' }}>No hay horarios disponibles para este día.</p>
-              <p className="mt-2 text-sm" style={{ color: 'var(--ink-muted)' }}>Te conviene probar con otra fecha para encontrar un bloque libre.</p>
-            </div>
+            <EmptyStateCard
+              title="No hay horarios disponibles para este día"
+              description="Te conviene probar con otra fecha para encontrar un bloque libre."
+            />
           ) : null}
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
