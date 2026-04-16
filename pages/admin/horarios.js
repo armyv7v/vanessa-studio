@@ -104,6 +104,7 @@ export default function AdminHorarios() {
   }
 
   const ordinalOptions = [1, 2, 3, 4, 5];
+  const todayKey = format(new Date(), 'yyyy-MM-dd');
 
   const toggleDisabledDay = (code) => {
     setDisabledDays((prev) =>
@@ -145,6 +146,11 @@ export default function AdminHorarios() {
     setBlackoutRanges((prev) => prev.filter((range) => !(range.start === rangeToDelete.start && range.end === rangeToDelete.end)));
   };
 
+  const clearExpiredBlackouts = () => {
+    setDisabledDates((prev) => prev.filter((date) => date >= todayKey));
+    setBlackoutRanges((prev) => prev.filter((range) => range.end >= todayKey));
+  };
+
   return (
     <AdminShell
       title="Administrar horarios"
@@ -157,6 +163,23 @@ export default function AdminHorarios() {
           <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
             Aquí defines la ventana de atención por día y también ocultas sábados o domingos específicos para que el flujo público nunca muestre espacios que no quieres abrir.
           </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4 shadow-[0_10px_24px_rgba(225,27,116,0.06)]">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--brand-light)' }}>Bloqueos ordinales</p>
+              <p className="mt-2 text-3xl font-bold" style={{ color: 'var(--ink-medium)' }}>{disabledDays.length}</p>
+              <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>Sábados y domingos ordinales ocultos</p>
+            </div>
+            <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4 shadow-[0_10px_24px_rgba(225,27,116,0.06)]">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--brand-light)' }}>Fechas puntuales</p>
+              <p className="mt-2 text-3xl font-bold" style={{ color: 'var(--ink-medium)' }}>{disabledDates.length}</p>
+              <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>Días específicos fuera de agenda</p>
+            </div>
+            <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4 shadow-[0_10px_24px_rgba(225,27,116,0.06)]">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--brand-light)' }}>Rangos activos</p>
+              <p className="mt-2 text-3xl font-bold" style={{ color: 'var(--ink-medium)' }}>{blackoutRanges.length}</p>
+              <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>Semanas o meses completos bloqueados</p>
+            </div>
+          </div>
         </div>
 
         {/* Horario Editor Card */}
@@ -348,6 +371,16 @@ export default function AdminHorarios() {
                 ))}
               </div>
             </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Mantenimiento rápido de bloqueos</p>
+              <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>Elimina fechas pasadas y rangos cuyo fin ya venció para mantener la agenda limpia.</p>
+            </div>
+            <button type="button" onClick={clearExpiredBlackouts} className="premium-button-secondary">
+              Limpiar vencidos
+            </button>
           </div>
         </div>
 
