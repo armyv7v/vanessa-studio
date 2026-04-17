@@ -182,6 +182,13 @@ export default function BookingFlow({ config }) {
     return day;
   });
 
+  const visibleDays = nextDays.filter((day) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPast = day < today;
+    return !isPast && isAllowedBusinessDay(day, disabledDaysConfig);
+  });
+
   useEffect(() => {
     function handleResize() {
       setWindowSize({ width: window.innerWidth, height: window.innerHeight });
@@ -437,32 +444,26 @@ export default function BookingFlow({ config }) {
           />
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {nextDays.map((day) => {
+            {visibleDays.map((day) => {
               const dayKey = format(day, 'yyyy-MM-dd');
               const today = new Date();
               today.setHours(0, 0, 0, 0);
 
               const isToday = dayKey === format(today, 'yyyy-MM-dd');
-              const isPast = day < today;
-              const isEnabled = isAllowedBusinessDay(day, disabledDaysConfig);
-              const isDisabled = isPast || !isEnabled;
               const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === dayKey;
 
               return (
                 <button
                   key={dayKey}
                   type="button"
-                  onClick={() => !isDisabled && handleDateSelect(day)}
-                  disabled={isDisabled}
+                  onClick={() => handleDateSelect(day)}
+                  disabled={false}
                   aria-pressed={isSelected}
-                  aria-label={`${isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}, ${format(day, 'd')} de ${format(day, 'MMMM', { locale: es })}${isDisabled ? ', no disponible' : ''}`}
+                  aria-label={`${isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}, ${format(day, 'd')} de ${format(day, 'MMMM', { locale: es })}`}
                   className="date-card premium-card gloss-card gradient-outline p-4 text-left transition duration-200 focus:outline-none focus:ring-2"
                   style={isSelected
                      ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 26px 50px rgba(225,27,116,0.28)', transform: 'scale(1.03)' }
-                     : isDisabled
-                       ? { cursor: 'not-allowed', borderColor: 'var(--gold-lighter)', background: 'rgba(255,252,254,0.90)', color: 'var(--ink-faint)', boxShadow: 'none' }
-                       : { color: 'var(--ink-medium)' }
-                  }
+                     : { color: 'var(--ink-medium)' }}
                 >
                     <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--brand-light)' }}>
                       {isToday ? 'Hoy' : format(day, 'EEE', { locale: es })}
@@ -475,6 +476,15 @@ export default function BookingFlow({ config }) {
               );
             })}
           </div>
+
+          {!visibleDays.length ? (
+            <div className="mt-6">
+              <EmptyStateCard
+                title="No hay fechas hábiles en este rango"
+                description="Los bloqueos activos o la configuración actual dejaron sin fechas visibles. Ajusta el calendario desde el panel admin o prueba otro rango." 
+              />
+            </div>
+          ) : null}
 
           <div className="mt-8 flex justify-center">
              <button type="button" onClick={() => setStep(1)} className="premium-button-secondary">
