@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import BloqueosCalendar from '../../components/BloqueosCalendar';
 import HorarioEditor from '../../components/HorarioEditor';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
@@ -85,12 +86,50 @@ export default function AdminHorarios() {
     );
   };
 
+  const getStats = () => {
+    const fixed = disabledDays.filter(d => d.startsWith('SAT') || d.startsWith('SUN')).length;
+    const dates = disabledDays.filter(d => d.includes('-')).length;
+    return { fixed, dates };
+  };
+
+  const stats = getStats();
+
   return (
     <AdminShell
       title="Administrar horarios"
       description="Configura horarios de atención y bloquea sábados o domingos específicos del mes para controlar la disponibilidad visible en la reserva."
     >
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        
+        {/* Ajuste disponibilidad panel */}
+        <div className="premium-panel">
+          <span className="section-kicker mb-3">Operación del calendario</span>
+          <h2 className="text-xl font-bold text-[var(--ink-medium)] mb-1">Ajuste disponibilidad real del estudio</h2>
+          <p className="text-sm text-[var(--ink-muted)] mb-6">
+            Usa el calendario visual o los botones de cada día y también oculta sábados o domingos específicos para que el flujo de turnos nunca te muestre espacios que no planeas abrir.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-[#F2C8D4] p-4 text-center sm:text-left">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand)] mb-1">Bloqueos Fijos</p>
+              <p className="text-3xl font-display font-semibold text-[var(--ink-medium)]">{stats.fixed}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-[#F2C8D4] p-4 text-center sm:text-left">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand)] mb-1">Fechas Puntuales</p>
+              <p className="text-3xl font-display font-semibold text-[var(--ink-medium)]">{stats.dates}</p>
+            </div>
+            <div className="bg-[#FEF0F4] rounded-2xl border border-[#F2C8D4] p-4 text-center sm:text-left flex items-center justify-between">
+               <div>
+                 <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand)] mb-1">Estado</p>
+                 <p className="text-sm font-semibold text-[var(--ink-medium)]">Disponibilidad en tiempo real</p>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Calendario visual de bloqueos */}
+        <BloqueosCalendar disabledDays={disabledDays} setDisabledDays={setDisabledDays} />
+
         {/* Horario Editor Card */}
         <div
           className="rounded-3xl p-6 shadow-sm"
