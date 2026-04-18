@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 
-export const runtime = 'edge';
+
 
 const BACKEND_URL = 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 const TIMEZONE = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';

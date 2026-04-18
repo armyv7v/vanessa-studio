@@ -1,7 +1,7 @@
 // pages/api/slots.js
 // Resiliente: si el backend falla, retorna { busy: [] } con 200 (muestra todos los horarios disponibles)
 
-export const runtime = 'edge';
+
 
 const NETLIFY_API = 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 
