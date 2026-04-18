@@ -404,29 +404,45 @@ export default function AdminTurnos() {
                   {selectedDayEvents.events.map((event, i) => (
                     <div
                       key={i}
-                      className="flex items-center rounded-xl border p-3"
+                      className="flex items-center justify-between rounded-xl border p-3 w-full"
                       style={{
                         background: 'rgba(200,240,215,0.50)',
                         borderColor: '#86EFAC',
                       }}
                     >
-                      <div
-                        className="mr-3 rounded px-2 py-1 text-sm font-bold"
-                        style={{
-                          background: 'rgba(200,240,215,0.80)',
-                          color: '#166534',
+                      <div className="flex items-center">
+                        <div
+                          className="mr-3 rounded px-2 py-1 text-sm font-bold"
+                          style={{
+                            background: 'rgba(200,240,215,0.80)',
+                            color: '#166534',
+                          }}
+                        >
+                          {format(parseISO(event.start), 'HH:mm')}
+                        </div>
+                        <div>
+                          <p className="font-medium" style={{ color: 'var(--ink-medium)' }}>
+                            Turno Disponible
+                          </p>
+                          <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>
+                            {format(parseISO(event.start), 'HH:mm')} — {event.end}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={() => {
+                          const dateStr = format(selectedDayEvents.date, 'yyyy-MM-dd');
+                          const timeStr = format(parseISO(event.start), 'HH:mm');
+                          // Redirect to appointment creation, or just alert for now since we don't have the explicit agendar page in context.
+                          // It aligns with the mockup for the button appearance.
+                          router.push(`/admin/agendar?date=${dateStr}&time=${timeStr}`);
                         }}
+                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:scale-105 active:scale-95"
+                        style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 100%)' }}
                       >
-                        {format(parseISO(event.start), 'HH:mm')}
-                      </div>
-                      <div>
-                        <p className="font-medium" style={{ color: 'var(--ink-medium)' }}>
-                          Turno Disponible
-                        </p>
-                        <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>
-                          {format(parseISO(event.start), 'HH:mm')} — {event.end}
-                        </p>
-                      </div>
+                        Crear cita
+                      </button>
                     </div>
                   ))}
                 </div>

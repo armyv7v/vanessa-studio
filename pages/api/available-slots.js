@@ -1,4 +1,5 @@
 import { DateTime } from 'luxon';
+import { generateTimeSlots } from '../../lib/slots';
 
 
 
@@ -50,61 +51,8 @@ function getHorarioAtencion() {
 
 const HORARIO_ATENCION = getHorarioAtencion();
 
-const DURACION_TURNO = 30; // minutos
+const DURACION_TURNO = 30; // minutos (fallback)
 
-function generateTimeSlots(startTime, endTime, duration) {
-    const slots = [];
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
-
-    let currentMinutes = startHour * 60 + startMin;
-    const endMinutes = endHour * 60 + endMin;
-
-    while (currentMinutes + duration <= endMinutes) {
-        const hours = Math.floor(currentMinutes / 60);
-        const mins = currentMinutes % 60;
-        const timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-        slots.push(timeStr);
-        currentMinutes += duration;
-    }
-
-    return slots;
-}
-
-function isSlotBusy(dateStr, timeStr, busySlots) {
-    if (!busySlots || busySlots.length === 0) return false;
-
-    // Construir el intervalo del slot en la zona horaria correcta
-    // dateStr es YYYY-MM-DD, timeStr es HH:MM
-    const slotStart = DateTime.fromISO(`${dateStr}T${timeStr}:00`, { zone: TIMEZONE });
-    const slotEnd = slotStart.plus({ minutes: DURACION_TURNO });
-
-    return busySlots.some(busy => {
-        if (!busy || !busy.start || !busy.end) return false;
-
-        try {
-            // Parsear las fechas del busy slot (vienen del backend, probablemente ISO con offset o UTC)
-            const busyStart = DateTime.fromISO(busy.start).setZone(TIMEZONE);
-            const busyEnd = DateTime.fromISO(busy.end).setZone(TIMEZONE);
-
-            // Verificar si hay overlap
-            // Hay overlap si: slotStart < busyEnd && slotEnd > busyStart
-            const hasOverlap = slotStart < busyEnd && slotEnd > busyStart;
-
-            if (hasOverlap) {
-                console.log('Slot ocupado encontrado:', {
-                    slot: slotStart.toISO(),
-                    busyPeriod: `${busyStart.toISO()} - ${busyEnd.toISO()}`
-                });
-            }
-
-            return hasOverlap;
-        } catch (error) {
-            console.error('Error parsing busy slot:', error, busy);
-            return false;
-        }
-    });
-}
 
 export default async function handler(req) {
     if (req.method !== 'GET') {
@@ -190,24 +138,26 @@ export default async function handler(req) {
 
             if (horario) {
                 const dateStr = currentDate.toISODate(); // YYYY-MM-DD
-                const timeSlots = generateTimeSlots(horario.inicio, horario.fin, DURACION_TURNO);
+                
+                // Allow dynamic duration from url if passed, else fallback
+                const requestedDuration = parseInt(url.searchParams.get('duration') || String(DURACION_TURNO), 10);
 
-                for (const time of timeSlots) {
-                    // Verificar si el slot ya pasó
-                    const slotDateTime = DateTime.fromISO(`${dateStr}T${time}:00`, { zone: TIMEZONE });
+                const generatedSlots = generateTimeSlots({
+                    date: dateStr,
+                    openHour: horario.inicio, 
+                    closeHour: horario.fin,   
+                    stepMinutes: DURACION_TURNO, 
+                    durationMinutes: requestedDuration, 
+                    busy: busySlots,
+                    tz: TIMEZONE,
+                    allowOverflowEnd: false, 
+                });
 
-                    if (slotDateTime <= now) {
-                        continue; // Saltar turnos pasados
-                    }
-
-                    const isBusy = isSlotBusy(dateStr, time, busySlots);
-                    if (!isBusy) {
-                        // Calcular hora de fin
-                        const slotEnd = slotDateTime.plus({ minutes: DURACION_TURNO });
-                        const endTimeStr = slotEnd.toFormat('HH:mm');
-
+                for (const slot of generatedSlots) {
+                    if (slot.available) {
+                        const endTimeStr = DateTime.fromISO(slot.end).setZone(TIMEZONE).toFormat('HH:mm');
                         availableSlots.push({
-                            start: slotDateTime.toISO(), // ISO completo con offset
+                            start: slot.start, 
                             end: endTimeStr,
                             available: true
                         });
