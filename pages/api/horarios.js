@@ -1,7 +1,7 @@
 // pages/api/horarios.js
 // Proxea al backend de Netlify con fallback a configuración local si el backend no responde
 
-export const runtime = 'edge';
+
 
 const DEFAULT_CONFIG = {
   horarioAtencion: {

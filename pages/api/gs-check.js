@@ -1,7 +1,7 @@
 // pages/api/gs-check.js
 // Resiliente: nunca retorna 500. Siempre cae a DEFAULT_CONFIG si algo falla.
 
-export const runtime = 'edge';
+
 
 const NETLIFY_HORARIOS = 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
 

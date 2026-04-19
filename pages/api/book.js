@@ -15,7 +15,7 @@ function normalizeTzOffset(value) {
   return `${match[1]}${match[2]}:${match[3]}`;
 }
 
-export const runtime = 'edge';
+
 
 const jsonRes = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });

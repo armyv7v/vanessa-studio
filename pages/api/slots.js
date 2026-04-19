@@ -1,22 +1,14 @@
 // pages/api/slots.js
 // Resiliente: si el backend falla, retorna { busy: [] } con 200 (muestra todos los horarios disponibles)
 
-export const runtime = 'edge';
-
 const NETLIFY_API = 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 
-function jsonRes(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+export default async function handler(req, res) {
+  const { date } = req.query;
 
-export default async function handler(req) {
-  const { searchParams } = new URL(req.url);
-  const date = searchParams.get('date');
-
-  if (!date) return jsonRes({ error: 'El parámetro date es obligatorio (YYYY-MM-DD).' }, 400);
+  if (!date) {
+    return res.status(400).json({ error: 'El parámetro date es obligatorio (YYYY-MM-DD).' });
+  }
 
   try {
     const backendUrl = new URL(NETLIFY_API);
@@ -26,13 +18,13 @@ export default async function handler(req) {
 
     if (!response.ok) {
       // Backend no disponible: mostrar todos los horarios como disponibles
-      return jsonRes({ busy: [], degraded: true });
+      return res.status(200).json({ busy: [], degraded: true });
     }
 
     const payload = await response.json().catch(() => null);
-    return jsonRes({ busy: payload?.busy || [] });
+    return res.status(200).json({ busy: payload?.busy || [] });
   } catch {
     // Fallback silencioso: nunca 500
-    return jsonRes({ busy: [], degraded: true });
+    return res.status(200).json({ busy: [], degraded: true });
   }
 }

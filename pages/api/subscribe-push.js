@@ -1,5 +1,5 @@
 // pages/api/subscribe-push.js
-export const runtime = 'edge';
+
 
 const jsonRes = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
