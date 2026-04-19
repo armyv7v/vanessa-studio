@@ -16,6 +16,13 @@ import { isAllowedBusinessDay } from '../../lib/calendarConfig';
 import { services } from '../../lib/services';
 import horariosConfig from '../../config/horarios.json';
 
+// ── Scheduling constants ────────────────────────────────────
+const SERVICE_DURATION_MIN = 120;  // duración real del turno (2h)
+const OPEN_HOUR = 9;
+const CLOSE_HOUR = 22;
+// Capacidad real: cuántas citas SIN solapamiento caben en la jornada
+const REAL_MAX_CAPACITY = Math.floor(((CLOSE_HOUR - OPEN_HOUR) * 60) / SERVICE_DURATION_MIN); // = 6
+
 const AVAILABILITY_COLORS = {
   blocked: { bg: 'rgba(251, 146, 60, 0.20)', border: '#FB923C' },
   available: { bg: 'rgba(200, 240, 215, 0.80)', border: '#86EFAC' },
@@ -101,18 +108,34 @@ export default function AdminTurnos() {
       .sort((a, b) => new Date(a.start) - new Date(b.start));
   };
 
-  // Uses brand-aware color map instead of raw Tailwind colors
+  // Calcula cuántas citas REALES (sin solapamiento) caben entre los
+  // candidatos disponibles de un día. Recorre los slots ordenados y
+  // escoge el siguiente cuyo start >= el end del último seleccionado.
+  const getRealCapacity = (daySlots) => {
+    if (!daySlots.length) return 0;
+    let count = 0;
+    let lastEnd = null;
+    for (const slot of daySlots) {
+      const sStart = parseISO(slot.start);
+      if (!lastEnd || sStart >= lastEnd) {
+        const endParts = slot.end.split(':');
+        const endDate = new Date(sStart);
+        endDate.setHours(parseInt(endParts[0], 10), parseInt(endParts[1], 10), 0, 0);
+        lastEnd = endDate;
+        count++;
+      }
+    }
+    return count;
+  };
+
+  // Availability style based on REAL capacity (non-overlapping fits)
   const getAvailabilityStyle = (day) => {
     if (!isAllowedBusinessDay(day, blackoutConfig)) {
       return AVAILABILITY_COLORS.blocked;
     }
 
-    const dayStr = format(day, 'yyyy-MM-dd');
-    const availableCount = availableSlots.filter(
-      (slot) => format(parseISO(slot.start), 'yyyy-MM-dd') === dayStr
-    ).length;
-
-    return availableCount > 0 ? AVAILABILITY_COLORS.available : AVAILABILITY_COLORS.occupied;
+    const daySlots = getEventsForDay(day);
+    return daySlots.length > 0 ? AVAILABILITY_COLORS.available : AVAILABILITY_COLORS.occupied;
   };
 
   const refreshSlots = useCallback(async () => {
@@ -490,17 +513,21 @@ export default function AdminTurnos() {
                     >
                       {format(day, 'd')}
                     </span>
-                    {dayEvents.length > 0 && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-xs font-bold"
-                        style={{
-                          background: 'var(--brand-lightest)',
-                          color: 'var(--brand)',
-                        }}
-                      >
-                        {dayEvents.length}
-                      </span>
-                    )}
+                    {dayEvents.length > 0 && (() => {
+                      const realFits = getRealCapacity(dayEvents);
+                      return (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-xs font-bold"
+                          style={{
+                            background: 'var(--brand-lightest)',
+                            color: 'var(--brand)',
+                          }}
+                          title={`${realFits} citas posibles (de ${REAL_MAX_CAPACITY} máx)`}
+                        >
+                          {realFits}/{REAL_MAX_CAPACITY}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div className="mt-2 space-y-1">
@@ -514,7 +541,7 @@ export default function AdminTurnos() {
                           borderLeft: '2px solid #86EFAC',
                         }}
                       >
-                        {format(parseISO(event.start), 'HH:mm')} — Libre
+                        {format(parseISO(event.start), 'HH:mm')}→{event.end}
                       </div>
                     ))}
                     {dayEvents.length > 3 && (
@@ -577,47 +604,80 @@ export default function AdminTurnos() {
                   No hay turnos disponibles para este día.
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {selectedDayEvents.events.map((event, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between gap-3 rounded-xl border p-3"
-                      style={{
-                        background: 'rgba(200,240,215,0.50)',
-                        borderColor: '#86EFAC',
-                      }}
+                <>
+                  {/* Capacidad real del día */}
+                  <div
+                    className="mb-4 flex items-center gap-2 rounded-lg p-3"
+                    style={{
+                      background: 'rgba(254,240,248,0.60)',
+                      border: '1px solid rgba(242,200,212,0.50)',
+                    }}
+                  >
+                    <span className="text-sm" style={{ color: 'var(--ink-muted)' }}>
+                      Capacidad real:
+                    </span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-xs font-bold"
+                      style={{ background: 'var(--brand-lightest)', color: 'var(--brand)' }}
                     >
-                      <div className="flex items-center">
-                        <div
-                          className="mr-3 rounded px-2 py-1 text-sm font-bold"
-                          style={{
-                            background: 'rgba(200,240,215,0.80)',
-                            color: '#166534',
-                          }}
-                        >
-                          {format(parseISO(event.start), 'HH:mm')}
-                        </div>
-                        <div>
-                          <p className="font-medium" style={{ color: 'var(--ink-medium)' }}>
-                            Turno Disponible
-                          </p>
-                          <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>
-                            {format(parseISO(event.start), 'HH:mm')} — {event.end}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => openBookingModal(event)}
-                        className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-                        style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
+                      {getRealCapacity(selectedDayEvents.events)}/{REAL_MAX_CAPACITY} citas
+                    </span>
+                    <span className="text-xs" style={{ color: 'var(--ink-faint)' }}>
+                      ({SERVICE_DURATION_MIN} min c/u)
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {selectedDayEvents.events.map((event, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-3 rounded-xl border p-3"
+                        style={{
+                          background: 'rgba(200,240,215,0.50)',
+                          borderColor: '#86EFAC',
+                        }}
                       >
-                        <GemIcon className="h-4 w-4" />
-                        Crear cita
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                        <div className="flex items-center">
+                          <div
+                            className="mr-3 rounded px-2 py-1 text-sm font-bold"
+                            style={{
+                              background: 'rgba(200,240,215,0.80)',
+                              color: '#166534',
+                            }}
+                          >
+                            {format(parseISO(event.start), 'HH:mm')}
+                          </div>
+                          <div>
+                            <p className="font-medium" style={{ color: 'var(--ink-medium)' }}>
+                              Turno Disponible
+                            </p>
+                            <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>
+                              {format(parseISO(event.start), 'HH:mm')} → {event.end}
+                            </p>
+                          </div>
+                          <span
+                            className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                            style={{
+                              background: 'rgba(200,240,215,0.60)',
+                              color: '#166534',
+                            }}
+                          >
+                            {SERVICE_DURATION_MIN} min
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openBookingModal(event)}
+                          className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                          style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
+                        >
+                          <GemIcon className="h-4 w-4" />
+                          Crear cita
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
