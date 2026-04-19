@@ -25,3 +25,6 @@ pnpm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Repo backend separado dentro del workspace local
+vanessa-studio-backend/
