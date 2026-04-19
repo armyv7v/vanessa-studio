@@ -5,7 +5,7 @@ import { es } from 'date-fns/locale';
 import HorarioEditor from '../../components/HorarioEditor';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
-import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon } from '../../components/BrandMotifs';
+import { ArrowLeftIcon, ArrowRightIcon } from '../../components/BrandMotifs';
 
 const HORARIOS_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
 
