@@ -17,11 +17,13 @@ import { services } from '../../lib/services';
 import horariosConfig from '../../config/horarios.json';
 
 // ── Scheduling constants ────────────────────────────────────
-const SERVICE_DURATION_MIN = 120;  // duración real del turno (2h)
 const OPEN_HOUR = 9;
 const CLOSE_HOUR = 22;
-// Capacidad real: cuántas citas SIN solapamiento caben en la jornada
-const REAL_MAX_CAPACITY = Math.floor(((CLOSE_HOUR - OPEN_HOUR) * 60) / SERVICE_DURATION_MIN); // = 6
+const TOTAL_MINUTES = (CLOSE_HOUR - OPEN_HOUR) * 60; // 780
+
+// Todas las duraciones únicas ordenadas de menor a mayor
+const UNIQUE_DURATIONS = [...new Set(services.map(s => s.duration))].sort((a, b) => a - b);
+const MIN_DURATION = UNIQUE_DURATIONS[0]; // 90 min (esmaltado)
 
 const AVAILABILITY_COLORS = {
   blocked: { bg: 'rgba(251, 146, 60, 0.20)', border: '#FB923C' },
@@ -40,6 +42,13 @@ export default function AdminTurnos() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState('all'); // 'all' = uses MIN_DURATION
+
+  // Dynamic duration based on selected service
+  const selectedDuration = selectedServiceId === 'all'
+    ? MIN_DURATION
+    : services.find(s => String(s.id) === selectedServiceId)?.duration || MIN_DURATION;
+  const REAL_MAX_CAPACITY = Math.floor(TOTAL_MINUTES / selectedDuration);
   const [selectedDayEvents, setSelectedDayEvents] = useState(null);
   const [horarioAtencion, setHorarioAtencion] = useState(horariosConfig.horarioAtencion || {});
   const [blackoutConfig, setBlackoutConfig] = useState({ disabledDays: [], disabledDates: [], blackoutRanges: [] });
@@ -150,9 +159,9 @@ export default function AdminTurnos() {
       end = endOfWeek(currentDate, { weekStartsOn: 1 });
     }
 
-    const slots = await getAvailableSlotsRange(start, end);
+    const slots = await getAvailableSlotsRange(start, end, selectedDuration);
     setAvailableSlots(slots);
-  }, [currentDate, viewMode]);
+  }, [currentDate, viewMode, selectedDuration]);
 
   const openBookingModal = (event) => {
     setBookingSlot(event);
@@ -342,32 +351,66 @@ export default function AdminTurnos() {
               </p>
             </div>
 
-            {/* View Mode Toggle */}
-            <div
-              className="flex items-center rounded-xl p-1 shadow-sm"
-              style={{
-                background: 'rgba(255,255,255,0.95)',
-                border: '1px solid var(--gold-lighter)',
-              }}
-            >
-              {['month', 'week'].map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  className="rounded-lg px-4 py-2 text-sm font-medium transition"
-                  style={
-                    viewMode === mode
-                      ? {
-                          background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
-                          color: '#fff',
-                          boxShadow: '0 6px 14px rgba(225,27,116,0.20)',
-                        }
-                      : { color: 'var(--ink-muted)' }
-                  }
+            {/* Controls row: service filter + view mode */}
+            <div className="flex flex-col items-end gap-3">
+              {/* Service Filter */}
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="service-filter"
+                  className="text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: 'var(--brand-light)' }}
                 >
-                  {mode === 'month' ? 'Mes' : 'Semana'}
-                </button>
-              ))}
+                  Servicio
+                </label>
+                <select
+                  id="service-filter"
+                  value={selectedServiceId}
+                  onChange={(e) => setSelectedServiceId(e.target.value)}
+                  className="rounded-xl border px-3 py-2 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2"
+                  style={{
+                    borderColor: 'var(--gold-lighter)',
+                    background: 'rgba(255,255,255,0.95)',
+                    color: 'var(--ink-medium)',
+                    minWidth: '200px',
+                    focusRingColor: 'var(--brand)',
+                  }}
+                >
+                  <option value="all">Todos ({MIN_DURATION} min mín.)</option>
+                  {services.map((svc) => (
+                    <option key={svc.id} value={String(svc.id)}>
+                      {svc.name} ({svc.duration} min)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* View Mode Toggle */}
+              <div
+                className="flex items-center rounded-xl p-1 shadow-sm"
+                style={{
+                  background: 'rgba(255,255,255,0.95)',
+                  border: '1px solid var(--gold-lighter)',
+                }}
+              >
+                {['month', 'week'].map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    className="rounded-lg px-4 py-2 text-sm font-medium transition"
+                    style={
+                      viewMode === mode
+                        ? {
+                            background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
+                            color: '#fff',
+                            boxShadow: '0 6px 14px rgba(225,27,116,0.20)',
+                          }
+                        : { color: 'var(--ink-muted)' }
+                    }
+                  >
+                    {mode === 'month' ? 'Mes' : 'Semana'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -623,7 +666,7 @@ export default function AdminTurnos() {
                       {getRealCapacity(selectedDayEvents.events)}/{REAL_MAX_CAPACITY} citas
                     </span>
                     <span className="text-xs" style={{ color: 'var(--ink-faint)' }}>
-                      ({SERVICE_DURATION_MIN} min c/u)
+                      ({selectedDuration} min c/u)
                     </span>
                   </div>
 
