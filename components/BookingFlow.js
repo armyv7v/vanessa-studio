@@ -3,7 +3,8 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Confetti from 'react-confetti';
 import BookingConfirmation from './BookingConfirmation';
-import { GemIcon, PolishBottleIcon, SparkleIcon, SwirlDivider } from './BrandMotifs';
+import { CalendarIcon, ErrorIcon, GemIcon, LaunchIcon, PolishBottleIcon, SparkleIcon, SuccessIcon, SwirlDivider } from './BrandMotifs';
+import { bookAppointment } from '../lib/api';
 import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 import { isAllowedBusinessDay } from '../lib/calendarConfig';
 import { services as servicesData } from '../lib/services';
@@ -12,10 +13,16 @@ import { generateTimeSlots } from '../lib/slots';
 const services = [...servicesData].sort((a, b) => a.duration - b.duration);
 const stepLabels = ['Servicio', 'Fecha', 'Hora', 'Datos'];
 const emptyClient = { name: '', email: '', phone: '' };
+const stepIcons = [PolishBottleIcon, CalendarIcon, SparkleIcon, LaunchIcon];
 
 async function listSlotsViaApi({ date, serviceId }) {
   const params = new URLSearchParams({ date, serviceId: String(serviceId) });
-  const response = await fetch(`/api/slots?${params.toString()}`);
+  const directSlotsUrl = process.env.NEXT_PUBLIC_API_WORKER_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/api';
+  const isProductionHost = typeof window !== 'undefined' && window.location.hostname.includes('pages.dev');
+
+  const response = isProductionHost
+    ? await fetch(`${directSlotsUrl}?date=${encodeURIComponent(date)}`)
+    : await fetch(`/api/slots?${params.toString()}`);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
@@ -41,19 +48,23 @@ function StepIndicator({ step }) {
           const stepNumber = index + 1;
           const isActive = step >= stepNumber;
           const isCurrent = step === stepNumber;
+          const StepIcon = stepIcons[index];
 
           return (
-            <li key={label} className="flex items-center gap-3" aria-current={step === stepNumber ? 'step' : undefined}>
+            <li key={label} className="stepper-item flex items-center gap-3" aria-current={step === stepNumber ? 'step' : undefined}>
               <div
-                className="flex h-11 w-11 items-center justify-center rounded-full border text-sm font-semibold transition-all"
+                className="stepper-orb flex h-12 w-12 items-center justify-center rounded-full border text-sm font-semibold transition-all"
                 style={isActive
                   ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 12px 30px rgba(225,27,116,0.28)', transform: 'scale(1.10)' }
                   : { borderColor: 'var(--gold-lighter)', background: 'rgba(255,255,255,0.90)', color: 'var(--ink-faint)' }
                 }
               >
-                {stepNumber}
+                <div className="flex flex-col items-center leading-none">
+                  <span className="text-[10px] font-bold">{stepNumber}</span>
+                  <StepIcon className="mt-1 h-3.5 w-3.5" />
+                </div>
               </div>
-              <div>
+              <div className="stepper-copy min-w-[74px]">
                 <p className="text-[11px] uppercase tracking-[0.24em]" style={{ color: 'var(--brand-light)' }}>Paso {stepNumber}</p>
                 <p className="text-sm font-semibold" style={{ color: isCurrent ? 'var(--brand-darker)' : isActive ? 'var(--ink-medium)' : 'var(--ink-faint)' }}>{label}</p>
               </div>
@@ -89,6 +100,20 @@ function SummaryRow({ label, value }) {
   );
 }
 
+function EmptyStateCard({ title, description, loading = false }) {
+  return (
+    <div className="premium-card gloss-card gradient-outline empty-state-card flex flex-col items-center justify-center gap-4 px-6 py-14 text-center">
+      <span className="empty-state-icon">
+        {loading ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-b-transparent" /> : <SparkleIcon className="h-5 w-5" />}
+      </span>
+      <div>
+        <p className="text-lg font-semibold" style={{ color: 'var(--ink-medium)' }}>{title}</p>
+        <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>{description}</p>
+      </div>
+    </div>
+  );
+}
+
 function StatusBanner({ bookingStatus }) {
   if (!bookingStatus) {
     return null;
@@ -110,16 +135,22 @@ function StatusBanner({ bookingStatus }) {
       ) : null}
 
       {bookingStatus.success ? (
-        <div>
+        <div className="flex items-start gap-3">
+          <SuccessIcon className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
           <p className="font-semibold">{bookingStatus.message}</p>
           <p className="mt-1 text-sm">Revisa tu correo para el detalle de la reserva.</p>
+          </div>
         </div>
       ) : null}
 
       {bookingStatus.error ? (
-        <div>
+        <div className="flex items-start gap-3">
+          <ErrorIcon className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
           <p className="font-semibold">Error: {bookingStatus.message}</p>
           <p className="mt-1 text-sm">Por favor, inténtalo nuevamente.</p>
+          </div>
         </div>
       ) : null}
     </div>
@@ -139,7 +170,7 @@ export default function BookingFlow({ config }) {
   const [errorSlots, setErrorSlots] = useState(null);
   const [bookingStatus, setBookingStatus] = useState(null);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-  const [disabledDaysConfig, setDisabledDaysConfig] = useState([]);
+  const [disabledDaysConfig, setDisabledDaysConfig] = useState({ disabledDays: [], disabledDates: [], blackoutRanges: [] });
   const [reduceMotion, setReduceMotion] = useState(false);
 
   const { isFetchingClient, handleEmailBlur } = useClientAutocomplete(setClientInfo);
@@ -149,6 +180,13 @@ export default function BookingFlow({ config }) {
     const day = new Date();
     day.setDate(day.getDate() + index);
     return day;
+  });
+
+  const visibleDays = nextDays.filter((day) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPast = day < today;
+    return !isPast && isAllowedBusinessDay(day, disabledDaysConfig);
   });
 
   useEffect(() => {
@@ -185,21 +223,29 @@ export default function BookingFlow({ config }) {
     let isMounted = true;
 
     async function fetchDisabledDays() {
+      const directHorariosUrl = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
+      const isProductionHost = typeof window !== 'undefined' && window.location.hostname.includes('pages.dev');
+
       try {
-        const response = await fetch('/api/gs-check?action=getConfig');
+        const response = isProductionHost
+          ? await fetch(directHorariosUrl)
+          : await fetch('/api/gs-check?action=getConfig');
+        const data = await response.json().catch(() => null);
 
         if (!response.ok) {
           throw new Error('No se pudo cargar la configuración de disponibilidad.');
         }
 
-        const data = await response.json();
-
-        if (isMounted && Array.isArray(data?.disabledDays)) {
-          setDisabledDaysConfig(data.disabledDays);
+        if (isMounted) {
+          setDisabledDaysConfig({
+            disabledDays: Array.isArray(data?.disabledDays) ? data.disabledDays : [],
+            disabledDates: Array.isArray(data?.disabledDates) ? data.disabledDates : [],
+            blackoutRanges: Array.isArray(data?.blackoutRanges) ? data.blackoutRanges : [],
+          });
         }
       } catch {
         if (isMounted) {
-          setDisabledDaysConfig([]);
+          setDisabledDaysConfig({ disabledDays: [], disabledDates: [], blackoutRanges: [] });
         }
       }
     }
@@ -313,17 +359,7 @@ export default function BookingFlow({ config }) {
         client: clientInfo,
       };
 
-      const response = await fetch('/api/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || 'Error al confirmar la cita');
-      }
+      await bookAppointment(payload);
 
       setBookingStatus({ success: true, message: '¡Cita confirmada!' });
 
@@ -348,20 +384,20 @@ export default function BookingFlow({ config }) {
           />
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {services.map((service) => (
+            {services.map((service, index) => (
               <button
                 key={service.id}
                 type="button"
                 onClick={() => handleServiceSelect(service.id)}
                 aria-label={`Seleccionar ${service.name}, duración ${service.duration} minutos`}
-                className="group premium-card gloss-card gradient-outline shine-sweep service-glow flex h-full flex-col overflow-hidden p-6 text-left transition duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2"
-                style={{ '--tw-ring-color': 'rgba(225,27,116,0.25)' }}
+                className="group premium-card gloss-card gradient-outline shine-sweep service-glow service-card-reveal flex h-full flex-col overflow-hidden p-6 text-left transition duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2"
+                style={{ '--tw-ring-color': 'rgba(225,27,116,0.25)', animationDelay: `${index * 80}ms` }}
               >
                 <div className="mb-6 flex items-start justify-between gap-4">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]" style={{ background: 'linear-gradient(180deg, var(--brand-lightest) 0%, rgba(248,161,195,0.50) 100%)', color: 'var(--brand)' }}>
+                  <span className="service-icon-orb inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]" style={{ background: 'linear-gradient(180deg, var(--brand-lightest) 0%, rgba(248,161,195,0.50) 100%)', color: 'var(--brand)' }}>
                     <PolishBottleIcon className="h-5 w-5" />
                   </span>
-                  <span className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]" style={{ background: 'var(--gold-lightest)', color: 'var(--gold-dark)' }}>
+                  <span className="service-duration-pill rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]" style={{ background: 'var(--gold-lightest)', color: 'var(--gold-dark)' }}>
                     {service.duration} min
                   </span>
                 </div>
@@ -370,22 +406,29 @@ export default function BookingFlow({ config }) {
                   {service.name}
                 </h3>
 
-                <p className="mb-5 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
-                  Ideal para una agenda beauty que quiere verse prolija, luminosa y con acabado cuidado.
+                <p className="service-summary-block mb-5 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
+                  {service.summary}
                 </p>
 
-                <div className="mb-5 flex items-center gap-2" style={{ color: 'var(--brand-light)' }}>
-                  <SparkleIcon className="h-4 w-4" />
-                  <GemIcon className="h-4 w-4" />
-                  <SwirlDivider className="motif-divider h-5 w-16" />
+                <div className="mb-5 flex flex-wrap items-center gap-2" style={{ color: 'var(--brand-light)' }}>
+                  {service.highlights?.map((highlight) => (
+                    <span key={highlight} className="service-mini-chip">
+                      <SparkleIcon className="h-3.5 w-3.5" />
+                      {highlight}
+                    </span>
+                  ))}
                 </div>
 
-                <span className="mt-auto inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--brand)' }}>
+                <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#f3d9e4] pt-4">
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--gold-dark)' }}>
+                    <GemIcon className="h-4 w-4" />
+                    Resultado premium
+                  </span>
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--brand)' }}>
                   Elegir servicio
-                  <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </span>
+                  <LaunchIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </div>
               </button>
             ))}
           </div>
@@ -401,36 +444,30 @@ export default function BookingFlow({ config }) {
           />
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {nextDays.map((day) => {
+            {visibleDays.map((day) => {
               const dayKey = format(day, 'yyyy-MM-dd');
               const today = new Date();
               today.setHours(0, 0, 0, 0);
 
               const isToday = dayKey === format(today, 'yyyy-MM-dd');
-              const isPast = day < today;
-              const isEnabled = isAllowedBusinessDay(day, disabledDaysConfig);
-              const isDisabled = isPast || !isEnabled;
               const isSelected = selectedDate && format(selectedDate, 'yyyy-MM-dd') === dayKey;
 
               return (
                 <button
                   key={dayKey}
                   type="button"
-                  onClick={() => !isDisabled && handleDateSelect(day)}
-                  disabled={isDisabled}
+                  onClick={() => handleDateSelect(day)}
+                  disabled={false}
                   aria-pressed={isSelected}
-                  aria-label={`${isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}, ${format(day, 'd')} de ${format(day, 'MMMM', { locale: es })}${isDisabled ? ', no disponible' : ''}`}
-                   className="premium-card gloss-card gradient-outline p-4 text-left transition duration-200 focus:outline-none focus:ring-2"
-                   style={isSelected
+                  aria-label={`${isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}, ${format(day, 'd')} de ${format(day, 'MMMM', { locale: es })}`}
+                  className="date-card premium-card gloss-card gradient-outline p-4 text-left transition duration-200 focus:outline-none focus:ring-2"
+                  style={isSelected
                      ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 26px 50px rgba(225,27,116,0.28)', transform: 'scale(1.03)' }
-                     : isDisabled
-                       ? { cursor: 'not-allowed', borderColor: 'var(--gold-lighter)', background: 'rgba(255,252,254,0.90)', color: 'var(--ink-faint)', boxShadow: 'none' }
-                       : { color: 'var(--ink-medium)' }
-                   }
-                 >
-                   <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--brand-light)' }}>
-                     {isToday ? 'Hoy' : format(day, 'EEE', { locale: es })}
-                   </p>
+                     : { color: 'var(--ink-medium)' }}
+                >
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--brand-light)' }}>
+                      {isToday ? 'Hoy' : format(day, 'EEE', { locale: es })}
+                    </p>
                    <p className="mt-3 text-3xl font-semibold">{format(day, 'd')}</p>
                    <p className="mt-1 text-sm" style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : 'var(--ink-muted)' }}>
                      {format(day, 'MMMM', { locale: es })}
@@ -439,6 +476,15 @@ export default function BookingFlow({ config }) {
               );
             })}
           </div>
+
+          {!visibleDays.length ? (
+            <div className="mt-6">
+              <EmptyStateCard
+                title="No hay fechas hábiles en este rango"
+                description="Los bloqueos activos o la configuración actual dejaron sin fechas visibles. Ajusta el calendario desde el panel admin o prueba otro rango." 
+              />
+            </div>
+          ) : null}
 
           <div className="mt-8 flex justify-center">
              <button type="button" onClick={() => setStep(1)} className="premium-button-secondary">
@@ -464,13 +510,11 @@ export default function BookingFlow({ config }) {
           ) : null}
 
           {loadingSlots ? (
-            <div className="premium-card gloss-card gradient-outline flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-b-transparent" style={{ borderColor: 'var(--brand) transparent var(--brand) var(--brand)' }} />
-              <div>
-                <p className="font-semibold" style={{ color: 'var(--ink-medium)' }}>Cargando horarios disponibles</p>
-                <p className="mt-1 text-sm" style={{ color: 'var(--ink-muted)' }}>Estamos validando disponibilidad real para evitar reservas inválidas.</p>
-              </div>
-            </div>
+            <EmptyStateCard
+              loading
+              title="Cargando horarios disponibles"
+              description="Estamos validando disponibilidad real para evitar reservas inválidas."
+            />
           ) : null}
 
           {!loadingSlots && availableSlots.length > 0 ? (
@@ -485,7 +529,7 @@ export default function BookingFlow({ config }) {
                     onClick={() => handleTimeSelect(slot)}
                     aria-pressed={isSelected}
                     aria-label={`Seleccionar horario ${slot}`}
-                    className="premium-card gloss-card gradient-outline px-4 py-4 text-center text-base font-semibold transition duration-200 focus:outline-none focus:ring-2"
+                    className="time-slot-card premium-card gloss-card gradient-outline px-4 py-4 text-center text-base font-semibold transition duration-200 focus:outline-none focus:ring-2"
                     style={isSelected
                       ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 22px 42px rgba(225,27,116,0.28)', transform: 'scale(1.03)' }
                       : { color: 'var(--ink-medium)' }
@@ -499,10 +543,10 @@ export default function BookingFlow({ config }) {
           ) : null}
 
           {!loadingSlots && !availableSlots.length ? (
-            <div className="premium-card gloss-card gradient-outline px-6 py-14 text-center">
-              <p className="text-lg font-semibold" style={{ color: 'var(--ink-medium)' }}>No hay horarios disponibles para este día.</p>
-              <p className="mt-2 text-sm" style={{ color: 'var(--ink-muted)' }}>Te conviene probar con otra fecha para encontrar un bloque libre.</p>
-            </div>
+            <EmptyStateCard
+              title="No hay horarios disponibles para este día"
+              description="Te conviene probar con otra fecha para encontrar un bloque libre."
+            />
           ) : null}
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">

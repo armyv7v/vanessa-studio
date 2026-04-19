@@ -1,6 +1,7 @@
 // components/BookingConfirmation.js
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { CalendarIcon, GemIcon, LaunchIcon, SuccessIcon } from './BrandMotifs';
 
 export default function BookingConfirmation({ service, date, time, client, isExtra }) {
   if (!service || !date || !time || !client) {
@@ -10,9 +11,9 @@ export default function BookingConfirmation({ service, date, time, client, isExt
   const formatDate = (d) => format(d, 'd MMMM yyyy', { locale: es });
 
   return (
-    <section className="premium-card mx-auto max-w-3xl overflow-hidden p-6 text-center sm:p-10">
-      {/* Confirmation badge — green kept intentionally (semantic success signal) */}
+    <section className="premium-card gloss-card gradient-outline mx-auto max-w-3xl overflow-hidden p-6 text-center sm:p-10">
       <span className="badge-pill mx-auto !border-[#b9efd0] !bg-[#ecfff4] !text-[#2f9b67]">
+        <SuccessIcon className="h-4 w-4" />
         Reserva confirmada
       </span>
 
@@ -34,30 +35,33 @@ export default function BookingConfirmation({ service, date, time, client, isExt
         }}
       >
         <h3
-          className="text-sm font-semibold uppercase tracking-[0.24em]"
+          className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em]"
           style={{ color: 'var(--brand)' }}
         >
+          <LaunchIcon className="h-4 w-4" />
           Resumen de tu cita {isExtra ? '(extra cupo)' : ''}
         </h3>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div>
+          <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--gold-dark)' }}>
               Servicio
             </p>
-            <p className="mt-2 text-base font-semibold" style={{ color: 'var(--ink-medium)' }}>
-              {service.name}
+            <p className="mt-2 inline-flex items-start gap-2 text-base font-semibold" style={{ color: 'var(--ink-medium)' }}>
+              <GemIcon className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{service.name}</span>
             </p>
           </div>
-          <div>
+          <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--gold-dark)' }}>
               Fecha
             </p>
-            <p className="mt-2 text-base font-semibold" style={{ color: 'var(--ink-medium)' }}>
-              {formatDate(date)}
+            <p className="mt-2 inline-flex items-center gap-2 text-base font-semibold" style={{ color: 'var(--ink-medium)' }}>
+              <CalendarIcon className="h-4 w-4" />
+              <span>{formatDate(date)}</span>
             </p>
           </div>
-          <div>
+          <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--gold-dark)' }}>
               Hora
             </p>

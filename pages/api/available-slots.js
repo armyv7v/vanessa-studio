@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
-import { generateTimeSlots } from '../../lib/slots';
+
+export const runtime = 'edge';
 
 const BACKEND_URL = 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 const TIMEZONE = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
@@ -49,23 +50,86 @@ function getHorarioAtencion() {
 
 const HORARIO_ATENCION = getHorarioAtencion();
 
-const DURACION_TURNO = 30; // minutos (step entre candidatos)
+const STEP_MINUTES = 30;        // espacio entre candidatos de inicio
+const SERVICE_DURATION = 120;   // duración real del servicio (2h)
 
+function generateTimeSlots(startTime, endTime, step, serviceDuration) {
+    const slots = [];
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
 
-export default async function handler(req, res) {
+    let currentMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    while (currentMinutes + serviceDuration <= endMinutes) {
+        const hours = Math.floor(currentMinutes / 60);
+        const mins = currentMinutes % 60;
+        const timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        slots.push(timeStr);
+        currentMinutes += step;
+    }
+
+    return slots;
+}
+
+function isSlotBusy(dateStr, timeStr, busySlots) {
+    if (!busySlots || busySlots.length === 0) return false;
+
+    // Construir el intervalo del slot en la zona horaria correcta
+    // dateStr es YYYY-MM-DD, timeStr es HH:MM
+    const slotStart = DateTime.fromISO(`${dateStr}T${timeStr}:00`, { zone: TIMEZONE });
+    const slotEnd = slotStart.plus({ minutes: SERVICE_DURATION });
+
+    return busySlots.some(busy => {
+        if (!busy || !busy.start || !busy.end) return false;
+
+        try {
+            // Parsear las fechas del busy slot (vienen del backend, probablemente ISO con offset o UTC)
+            const busyStart = DateTime.fromISO(busy.start).setZone(TIMEZONE);
+            const busyEnd = DateTime.fromISO(busy.end).setZone(TIMEZONE);
+
+            // Verificar si hay overlap
+            // Hay overlap si: slotStart < busyEnd && slotEnd > busyStart
+            const hasOverlap = slotStart < busyEnd && slotEnd > busyStart;
+
+            if (hasOverlap) {
+                console.log('Slot ocupado encontrado:', {
+                    slot: slotStart.toISO(),
+                    busyPeriod: `${busyStart.toISO()} - ${busyEnd.toISO()}`
+                });
+            }
+
+            return hasOverlap;
+        } catch (error) {
+            console.error('Error parsing busy slot:', error, busy);
+            return false;
+        }
+    });
+}
+
+export default async function handler(req) {
     if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+            status: 405,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
 
     try {
-        const { startDate, endDate, duration } = req.query;
+        // En Edge Runtime, usar nextUrl si está disponible
+        const url = req.nextUrl || new URL(req.url, `http://${req.headers.get('host') || 'localhost'}`);
+        const startDate = url.searchParams.get('startDate');
+        const endDate = url.searchParams.get('endDate');
 
         console.log('Available slots request:', { startDate, endDate, timezone: TIMEZONE });
 
         if (!startDate || !endDate) {
-            return res.status(400).json({
+            return new Response(JSON.stringify({
                 error: 'Missing required parameters: startDate and endDate',
                 received: { startDate, endDate }
+            }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
             });
         }
 
@@ -104,10 +168,12 @@ export default async function handler(req, res) {
         // Usar Luxon para iterar días en la zona horaria correcta
         const start = DateTime.fromISO(startDate, { zone: TIMEZONE }).startOf('day');
         const end = DateTime.fromISO(endDate, { zone: TIMEZONE }).endOf('day');
+        const now = DateTime.now().setZone(TIMEZONE);
 
         console.log('Generating slots for date range:', {
             start: start.toISO(),
             end: end.toISO(),
+            now: now.toISO()
         });
 
         let currentDate = start;
@@ -125,26 +191,24 @@ export default async function handler(req, res) {
 
             if (horario) {
                 const dateStr = currentDate.toISODate(); // YYYY-MM-DD
-                
-                // Allow dynamic duration from url if passed, else fallback to average service logic (120)
-                const requestedDuration = parseInt(duration || '120', 10);
+                const timeSlots = generateTimeSlots(horario.inicio, horario.fin, STEP_MINUTES, SERVICE_DURATION);
 
-                const generatedSlots = generateTimeSlots({
-                    date: dateStr,
-                    openHour: horario.inicio, 
-                    closeHour: horario.fin,   
-                    stepMinutes: DURACION_TURNO, 
-                    durationMinutes: requestedDuration, 
-                    busy: busySlots,
-                    tz: TIMEZONE,
-                    allowOverflowEnd: false, 
-                });
+                for (const time of timeSlots) {
+                    // Verificar si el slot ya pasó
+                    const slotDateTime = DateTime.fromISO(`${dateStr}T${time}:00`, { zone: TIMEZONE });
 
-                for (const slot of generatedSlots) {
-                    if (slot.available) {
-                        const endTimeStr = DateTime.fromISO(slot.end).setZone(TIMEZONE).toFormat('HH:mm');
+                    if (slotDateTime <= now) {
+                        continue; // Saltar turnos pasados
+                    }
+
+                    const isBusy = isSlotBusy(dateStr, time, busySlots);
+                    if (!isBusy) {
+                        // Calcular hora de fin
+                        const slotEnd = slotDateTime.plus({ minutes: SERVICE_DURATION });
+                        const endTimeStr = slotEnd.toFormat('HH:mm');
+
                         availableSlots.push({
-                            start: slot.start, 
+                            start: slotDateTime.toISO(), // ISO completo con offset
                             end: endTimeStr,
                             available: true
                         });
@@ -158,12 +222,18 @@ export default async function handler(req, res) {
 
         console.log('Generated available slots:', availableSlots.length);
 
-        return res.status(200).json({ available: availableSlots });
+        return new Response(JSON.stringify({ available: availableSlots }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
     } catch (error) {
         console.error('Available slots error:', error);
-        return res.status(500).json({
+        return new Response(JSON.stringify({
             error: 'Failed to fetch available slots',
             details: error.message
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
         });
     }
 }

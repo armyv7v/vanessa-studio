@@ -2,12 +2,21 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { clearAdminToken } from '../lib/adminAuth';
-import { GemIcon, PolishBottleIcon, SparkleIcon, SwirlDivider } from './BrandMotifs';
+import {
+  AdminShieldIcon,
+  CloseIcon,
+  GemIcon,
+  MenuIcon,
+  PolishBottleIcon,
+  SparkleIcon,
+  SwirlDivider,
+  ValidationIcon,
+} from './BrandMotifs';
 
 const navigation = [
   { href: '/admin/horarios', label: 'Horarios',      icon: <PolishBottleIcon className="h-4 w-4" /> },
   { href: '/admin/turnos',   label: 'Turnos',        icon: <GemIcon className="h-4 w-4" /> },
-  { href: '/admin/validar-citas', label: 'Validar citas', icon: <SparkleIcon className="h-4 w-4" /> },
+  { href: '/admin/validar-citas', label: 'Validar citas', icon: <ValidationIcon className="h-4 w-4" /> },
 ];
 
 export default function AdminShell({ title, description, children }) {
@@ -77,7 +86,7 @@ export default function AdminShell({ title, description, children }) {
             className="inline-flex h-10 w-10 items-center justify-center rounded-full"
             style={{ background: 'var(--gold-lightest)' }}
           >
-            <PolishBottleIcon className="h-4 w-4" />
+            <AdminShieldIcon className="h-4 w-4" />
           </span>
           <SwirlDivider className="h-5 w-16" />
           <span
@@ -167,7 +176,7 @@ export default function AdminShell({ title, description, children }) {
               style={{ color: 'var(--ink-faint)', background: 'var(--bg-blush)' }}
               aria-label="Cerrar menú"
             >
-              ✕
+              <CloseIcon className="h-5 w-5" />
             </button>
           </div>
 
@@ -203,7 +212,7 @@ export default function AdminShell({ title, description, children }) {
                 }}
                 aria-label="Abrir menú"
               >
-                ☰
+                <MenuIcon className="h-5 w-5" />
               </button>
 
               <h2

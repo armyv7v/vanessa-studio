@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { setAdminToken } from '../../lib/adminAuth';
+import { AdminShieldIcon } from '../../components/BrandMotifs';
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD_FALLBACK;
 
@@ -59,7 +60,7 @@ export default function AdminLogin() {
               className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-[22px] shadow-[0_20px_48px_rgba(225,27,116,0.22)]"
               style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
             >
-              <span className="text-2xl">💅</span>
+              <AdminShieldIcon className="h-7 w-7" />
             </div>
             <h1
               className="font-display text-3xl font-semibold leading-tight"
