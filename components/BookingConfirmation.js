@@ -66,6 +66,22 @@ export default function BookingConfirmation({ service, date, time, client, isExt
             </p>
           </div>
         </div>
+
+        <div
+          className="mt-6 rounded-[24px] border px-5 py-4 text-sm leading-6"
+          style={{
+            borderColor: 'rgba(214, 51, 132, 0.18)',
+            background: 'rgba(255, 240, 246, 0.9)',
+            color: 'var(--ink-medium)',
+          }}
+        >
+          <p>
+            Para asegurar tu hora, debes enviar un abono de <strong>$10.000</strong>.
+          </p>
+          <p className="mt-2">
+            Si el pago no se confirma dentro de las proximas <strong>24 horas</strong>, la hora se liberara automaticamente.
+          </p>
+        </div>
       </div>
 
       <p className="mt-6 text-sm" style={{ color: 'var(--ink-muted)' }}>

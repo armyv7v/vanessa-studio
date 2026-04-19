@@ -560,6 +560,22 @@ export default function BookingFlow({ config }) {
                 <SummaryRow label="Hora" value={selectedTime || '-'} />
                 {isExtra ? <SummaryRow label="Recargo" value="$5.000" /> : null}
               </div>
+
+              <div
+                className="mt-5 rounded-[24px] border px-5 py-4 text-sm leading-6"
+                style={{
+                  borderColor: 'rgba(214, 51, 132, 0.18)',
+                  background: 'rgba(255, 240, 246, 0.9)',
+                  color: 'var(--ink-medium)',
+                }}
+              >
+                <p>
+                  Para asegurar tu hora, debes enviar un abono de <strong>$10.000</strong>.
+                </p>
+                <p className="mt-2">
+                  Si el pago no se confirma dentro de las proximas <strong>24 horas</strong>, la hora se liberara automaticamente.
+                </p>
+              </div>
             </aside>
 
              <div className="premium-card gloss-card gradient-outline p-6 sm:p-8">
