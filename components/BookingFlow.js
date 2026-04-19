@@ -359,9 +359,14 @@ export default function BookingFlow({ config }) {
         client: clientInfo,
       };
 
-      await bookAppointment(payload);
+      const bookingResult = await bookAppointment(payload);
 
-      setBookingStatus({ success: true, message: '¡Cita confirmada!' });
+      setBookingStatus({
+        success: true,
+        message: '¡Cita confirmada!',
+        reservationCode: bookingResult?.validationCode || '',
+        paymentExpiresAt: bookingResult?.paymentExpiresAt || '',
+      });
 
       setTimeout(() => {
         resetFlow();
@@ -580,6 +585,8 @@ export default function BookingFlow({ config }) {
               time={selectedTime}
               client={clientInfo}
               isExtra={isExtra}
+              reservationCode={bookingStatus?.reservationCode}
+              paymentExpiresAt={bookingStatus?.paymentExpiresAt}
             />
           </>
         ) : (

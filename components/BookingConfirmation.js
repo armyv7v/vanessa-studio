@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CalendarIcon, GemIcon, LaunchIcon, SuccessIcon } from './BrandMotifs';
 
-export default function BookingConfirmation({ service, date, time, client, isExtra }) {
+export default function BookingConfirmation({ service, date, time, client, isExtra, reservationCode, paymentExpiresAt }) {
   if (!service || !date || !time || !client) {
     return null;
   }
@@ -85,6 +85,16 @@ export default function BookingConfirmation({ service, date, time, client, isExt
           <p className="mt-2">
             Si el pago no se confirma dentro de las proximas <strong>24 horas</strong>, la hora se liberara automaticamente.
           </p>
+          {reservationCode ? (
+            <p className="mt-2">
+              Codigo de reserva: <strong>{reservationCode}</strong>. Incluyelo junto a tu comprobante para validar el pago mas rapido.
+            </p>
+          ) : null}
+          {paymentExpiresAt ? (
+            <p className="mt-2">
+              Fecha limite de confirmacion: <strong>{format(new Date(paymentExpiresAt), 'dd/MM/yyyy HH:mm')}</strong>.
+            </p>
+          ) : null}
         </div>
       </div>
 
