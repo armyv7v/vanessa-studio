@@ -50,9 +50,10 @@ function getHorarioAtencion() {
 
 const HORARIO_ATENCION = getHorarioAtencion();
 
-const DURACION_TURNO = 30; // minutos
+const STEP_MINUTES = 30;        // espacio entre candidatos de inicio
+const SERVICE_DURATION = 120;   // duración real del servicio (2h)
 
-function generateTimeSlots(startTime, endTime, duration) {
+function generateTimeSlots(startTime, endTime, step, serviceDuration) {
     const slots = [];
     const [startHour, startMin] = startTime.split(':').map(Number);
     const [endHour, endMin] = endTime.split(':').map(Number);
@@ -60,12 +61,12 @@ function generateTimeSlots(startTime, endTime, duration) {
     let currentMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
 
-    while (currentMinutes + duration <= endMinutes) {
+    while (currentMinutes + serviceDuration <= endMinutes) {
         const hours = Math.floor(currentMinutes / 60);
         const mins = currentMinutes % 60;
         const timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
         slots.push(timeStr);
-        currentMinutes += duration;
+        currentMinutes += step;
     }
 
     return slots;
@@ -77,7 +78,7 @@ function isSlotBusy(dateStr, timeStr, busySlots) {
     // Construir el intervalo del slot en la zona horaria correcta
     // dateStr es YYYY-MM-DD, timeStr es HH:MM
     const slotStart = DateTime.fromISO(`${dateStr}T${timeStr}:00`, { zone: TIMEZONE });
-    const slotEnd = slotStart.plus({ minutes: DURACION_TURNO });
+    const slotEnd = slotStart.plus({ minutes: SERVICE_DURATION });
 
     return busySlots.some(busy => {
         if (!busy || !busy.start || !busy.end) return false;
@@ -190,7 +191,7 @@ export default async function handler(req) {
 
             if (horario) {
                 const dateStr = currentDate.toISODate(); // YYYY-MM-DD
-                const timeSlots = generateTimeSlots(horario.inicio, horario.fin, DURACION_TURNO);
+                const timeSlots = generateTimeSlots(horario.inicio, horario.fin, STEP_MINUTES, SERVICE_DURATION);
 
                 for (const time of timeSlots) {
                     // Verificar si el slot ya pasó
@@ -203,7 +204,7 @@ export default async function handler(req) {
                     const isBusy = isSlotBusy(dateStr, time, busySlots);
                     if (!isBusy) {
                         // Calcular hora de fin
-                        const slotEnd = slotDateTime.plus({ minutes: DURACION_TURNO });
+                        const slotEnd = slotDateTime.plus({ minutes: SERVICE_DURATION });
                         const endTimeStr = slotEnd.toFormat('HH:mm');
 
                         availableSlots.push({
