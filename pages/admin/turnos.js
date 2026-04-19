@@ -11,6 +11,14 @@ import { getAvailableSlotsRange } from '../../lib/api';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
 
+// ── Scheduling constants ────────────────────────────────────
+const SERVICE_DURATION_MIN = 120;  // duración real del turno (2h)
+const STEP_MINUTES = 30;           // granularidad de candidatos
+const OPEN_HOUR = 9;
+const CLOSE_HOUR = 22;
+// Capacidad real: cuántas citas SIN solapamiento caben en la jornada
+const REAL_MAX_CAPACITY = Math.floor(((CLOSE_HOUR - OPEN_HOUR) * 60) / SERVICE_DURATION_MIN); // = 6
+
 // ── Brand palette availability map ────────────────────────────
 // Keeps semantic meaning (green=good, red=bad) but tinted
 // to match the brand blush/warm palette
@@ -90,14 +98,33 @@ export default function AdminTurnos() {
       .sort((a, b) => new Date(a.start) - new Date(b.start));
   };
 
-  // Uses brand-aware color map instead of raw Tailwind colors
+  // Calcula cuántas citas REALES (sin solapamiento) caben entre los
+  // candidatos disponibles de un día. Recorre los slots ordenados y
+  // escoge el siguiente cuyo start >= el end del último seleccionado.
+  const getRealCapacity = (daySlots) => {
+    if (!daySlots.length) return 0;
+    let count = 0;
+    let lastEnd = null;
+    for (const slot of daySlots) {
+      const sStart = parseISO(slot.start);
+      if (!lastEnd || sStart >= lastEnd) {
+        // end viene como 'HH:mm'; reconstituirlo con la fecha del slot
+        const dayStr = format(sStart, 'yyyy-MM-dd');
+        const endParts = slot.end.split(':');
+        const endDate = new Date(sStart);
+        endDate.setHours(parseInt(endParts[0], 10), parseInt(endParts[1], 10), 0, 0);
+        lastEnd = endDate;
+        count++;
+      }
+    }
+    return count;
+  };
+
+  // Availability style based on REAL capacity (non-overlapping fits)
   const getAvailabilityStyle = (day) => {
-    const dayStr = format(day, 'yyyy-MM-dd');
-    const totalPossibleSlots = 26;
-    const availableCount = availableSlots.filter(
-      (slot) => format(parseISO(slot.start), 'yyyy-MM-dd') === dayStr
-    ).length;
-    const pct = (availableCount / totalPossibleSlots) * 100;
+    const daySlots = getEventsForDay(day);
+    const realFits = getRealCapacity(daySlots);
+    const pct = (realFits / REAL_MAX_CAPACITY) * 100;
 
     if (pct > 75) return AVAILABILITY_COLORS.high;
     if (pct > 50) return AVAILABILITY_COLORS.medium;
@@ -196,14 +223,14 @@ export default function AdminTurnos() {
             className="mb-2 text-sm font-semibold"
             style={{ color: 'var(--ink-muted)' }}
           >
-            Disponibilidad:
+            Capacidad del día (citas de {SERVICE_DURATION_MIN} min):
           </h3>
           <div className="flex flex-wrap gap-4 text-xs">
             {[
-              { label: 'Alta (>75%)',    style: AVAILABILITY_COLORS.high    },
-              { label: 'Media (50-75%)', style: AVAILABILITY_COLORS.medium  },
-              { label: 'Baja (25-50%)',  style: AVAILABILITY_COLORS.low     },
-              { label: 'Muy baja (<25%)',style: AVAILABILITY_COLORS.veryLow },
+              { label: `Alta (${Math.ceil(REAL_MAX_CAPACITY * 0.75)}-${REAL_MAX_CAPACITY} citas)`, style: AVAILABILITY_COLORS.high },
+              { label: `Media (${Math.ceil(REAL_MAX_CAPACITY * 0.50)}-${Math.ceil(REAL_MAX_CAPACITY * 0.75) - 1} citas)`, style: AVAILABILITY_COLORS.medium },
+              { label: `Baja (${Math.ceil(REAL_MAX_CAPACITY * 0.25)}-${Math.ceil(REAL_MAX_CAPACITY * 0.50) - 1} citas)`, style: AVAILABILITY_COLORS.low },
+              { label: `Muy baja (0-${Math.ceil(REAL_MAX_CAPACITY * 0.25) - 1} citas)`, style: AVAILABILITY_COLORS.veryLow },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-2">
                 <div
@@ -316,17 +343,21 @@ export default function AdminTurnos() {
                     >
                       {format(day, 'd')}
                     </span>
-                    {dayEvents.length > 0 && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-xs font-bold"
-                        style={{
-                          background: 'var(--brand-lightest)',
-                          color: 'var(--brand)',
-                        }}
-                      >
-                        {dayEvents.length}
-                      </span>
-                    )}
+                    {dayEvents.length > 0 && (() => {
+                      const realFits = getRealCapacity(dayEvents);
+                      return (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-xs font-bold"
+                          style={{
+                            background: 'var(--brand-lightest)',
+                            color: 'var(--brand)',
+                          }}
+                          title={`${realFits} citas posibles (de ${REAL_MAX_CAPACITY} máx)`}
+                        >
+                          {realFits}/{REAL_MAX_CAPACITY}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div className="mt-2 space-y-1">
@@ -340,7 +371,7 @@ export default function AdminTurnos() {
                           borderLeft: '2px solid #86EFAC',
                         }}
                       >
-                        {format(parseISO(event.start), 'HH:mm')} — Libre
+                        {format(parseISO(event.start), 'HH:mm')}→{event.end}
                       </div>
                     ))}
                     {dayEvents.length > 3 && (
@@ -400,52 +431,83 @@ export default function AdminTurnos() {
                   No hay turnos disponibles para este día.
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {selectedDayEvents.events.map((event, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between rounded-xl border p-3 w-full"
-                      style={{
-                        background: 'rgba(200,240,215,0.50)',
-                        borderColor: '#86EFAC',
-                      }}
+                <>
+                  {/* Capacidad real del día */}
+                  <div
+                    className="mb-4 flex items-center gap-2 rounded-lg p-3"
+                    style={{
+                      background: 'rgba(254,240,248,0.60)',
+                      border: '1px solid rgba(242,200,212,0.50)',
+                    }}
+                  >
+                    <span className="text-sm" style={{ color: 'var(--ink-muted)' }}>
+                      Capacidad real:
+                    </span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-xs font-bold"
+                      style={{ background: 'var(--brand-lightest)', color: 'var(--brand)' }}
                     >
-                      <div className="flex items-center">
-                        <div
-                          className="mr-3 rounded px-2 py-1 text-sm font-bold"
-                          style={{
-                            background: 'rgba(200,240,215,0.80)',
-                            color: '#166534',
-                          }}
-                        >
-                          {format(parseISO(event.start), 'HH:mm')}
-                        </div>
-                        <div>
-                          <p className="font-medium" style={{ color: 'var(--ink-medium)' }}>
-                            Turno Disponible
-                          </p>
-                          <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>
-                            {format(parseISO(event.start), 'HH:mm')} — {event.end}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <button 
-                        onClick={() => {
-                          const dateStr = format(selectedDayEvents.date, 'yyyy-MM-dd');
-                          const timeStr = format(parseISO(event.start), 'HH:mm');
-                          // Redirect to appointment creation, or just alert for now since we don't have the explicit agendar page in context.
-                          // It aligns with the mockup for the button appearance.
-                          router.push(`/admin/agendar?date=${dateStr}&time=${timeStr}`);
+                      {getRealCapacity(selectedDayEvents.events)}/{REAL_MAX_CAPACITY} citas
+                    </span>
+                    <span className="text-xs" style={{ color: 'var(--ink-faint)' }}>
+                      ({SERVICE_DURATION_MIN} min c/u)
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {selectedDayEvents.events.map((event, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between rounded-xl border p-3 w-full"
+                        style={{
+                          background: 'rgba(200,240,215,0.50)',
+                          borderColor: '#86EFAC',
                         }}
-                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:scale-105 active:scale-95"
-                        style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 100%)' }}
                       >
-                        Crear cita
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                        <div className="flex items-center">
+                          <div
+                            className="mr-3 rounded px-2 py-1 text-sm font-bold"
+                            style={{
+                              background: 'rgba(200,240,215,0.80)',
+                              color: '#166534',
+                            }}
+                          >
+                            {format(parseISO(event.start), 'HH:mm')}
+                          </div>
+                          <div>
+                            <p className="font-medium" style={{ color: 'var(--ink-medium)' }}>
+                              Turno Disponible
+                            </p>
+                            <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>
+                              {format(parseISO(event.start), 'HH:mm')} → {event.end}
+                            </p>
+                          </div>
+                          <span
+                            className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                            style={{
+                              background: 'rgba(200,240,215,0.60)',
+                              color: '#166534',
+                            }}
+                          >
+                            {SERVICE_DURATION_MIN} min
+                          </span>
+                        </div>
+                        
+                        <button 
+                          onClick={() => {
+                            const dateStr = format(selectedDayEvents.date, 'yyyy-MM-dd');
+                            const timeStr = format(parseISO(event.start), 'HH:mm');
+                            router.push(`/admin/agendar?date=${dateStr}&time=${timeStr}`);
+                          }}
+                          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:scale-105 active:scale-95"
+                          style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 100%)' }}
+                        >
+                          Crear cita
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 

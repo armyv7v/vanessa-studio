@@ -1,8 +1,6 @@
 import { DateTime } from 'luxon';
 import { generateTimeSlots } from '../../lib/slots';
 
-
-
 const BACKEND_URL = 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 const TIMEZONE = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
 
@@ -51,32 +49,23 @@ function getHorarioAtencion() {
 
 const HORARIO_ATENCION = getHorarioAtencion();
 
-const DURACION_TURNO = 30; // minutos (fallback)
+const DURACION_TURNO = 30; // minutos (step entre candidatos)
 
 
-export default async function handler(req) {
+export default async function handler(req, res) {
     if (req.method !== 'GET') {
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-            status: 405,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
     try {
-        // En Edge Runtime, usar nextUrl si está disponible
-        const url = req.nextUrl || new URL(req.url, `http://${req.headers.get('host') || 'localhost'}`);
-        const startDate = url.searchParams.get('startDate');
-        const endDate = url.searchParams.get('endDate');
+        const { startDate, endDate, duration } = req.query;
 
         console.log('Available slots request:', { startDate, endDate, timezone: TIMEZONE });
 
         if (!startDate || !endDate) {
-            return new Response(JSON.stringify({
+            return res.status(400).json({
                 error: 'Missing required parameters: startDate and endDate',
                 received: { startDate, endDate }
-            }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' },
             });
         }
 
@@ -115,12 +104,10 @@ export default async function handler(req) {
         // Usar Luxon para iterar días en la zona horaria correcta
         const start = DateTime.fromISO(startDate, { zone: TIMEZONE }).startOf('day');
         const end = DateTime.fromISO(endDate, { zone: TIMEZONE }).endOf('day');
-        const now = DateTime.now().setZone(TIMEZONE);
 
         console.log('Generating slots for date range:', {
             start: start.toISO(),
             end: end.toISO(),
-            now: now.toISO()
         });
 
         let currentDate = start;
@@ -140,7 +127,7 @@ export default async function handler(req) {
                 const dateStr = currentDate.toISODate(); // YYYY-MM-DD
                 
                 // Allow dynamic duration from url if passed, else fallback to average service logic (120)
-                const requestedDuration = parseInt(url.searchParams.get('duration') || '120', 10);
+                const requestedDuration = parseInt(duration || '120', 10);
 
                 const generatedSlots = generateTimeSlots({
                     date: dateStr,
@@ -171,18 +158,12 @@ export default async function handler(req) {
 
         console.log('Generated available slots:', availableSlots.length);
 
-        return new Response(JSON.stringify({ available: availableSlots }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(200).json({ available: availableSlots });
     } catch (error) {
         console.error('Available slots error:', error);
-        return new Response(JSON.stringify({
+        return res.status(500).json({
             error: 'Failed to fetch available slots',
             details: error.message
-        }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
         });
     }
 }
