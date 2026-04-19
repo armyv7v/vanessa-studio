@@ -233,7 +233,7 @@ export default function AdminHorarios() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="mt-5 grid gap-5">
             <div>
               <div className="mb-4 flex flex-wrap gap-2">
                 {[
@@ -255,7 +255,7 @@ export default function AdminHorarios() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] sm:gap-2" style={{ color: 'var(--ink-faint)' }}>
+              <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.12em] sm:gap-2 sm:text-xs" style={{ color: 'var(--ink-faint)' }}>
                 {calendarWeekDays.map((day) => <div key={day}>{day}</div>)}
               </div>
               <div className="mt-3 grid grid-cols-7 gap-1.5 sm:gap-2">
@@ -274,7 +274,7 @@ export default function AdminHorarios() {
                       onClick={() => handleCalendarBlockToggle(day)}
                       title={isBlockedDay ? 'Día bloqueado manualmente' : isInRange ? 'Fecha incluida en un rango bloqueado' : 'Fecha disponible'}
                       aria-label={`${format(day, "d 'de' MMMM", { locale: es })}: ${isBlockedDay ? 'bloqueado' : isInRange ? 'dentro de rango bloqueado' : 'disponible'}`}
-                      className="admin-calendar-day aspect-square min-h-[64px] rounded-2xl border p-2 text-left transition sm:min-h-[76px] sm:p-2.5"
+                      className="admin-calendar-day h-[68px] rounded-2xl border p-2 text-left transition sm:h-[78px] sm:p-2.5 md:h-[88px]"
                       style={isBlockedDay
                         ? { background: 'rgba(251, 146, 60, 0.20)', borderColor: isSelectedDate ? '#EA580C' : '#FB923C', color: '#9A3412', boxShadow: isSelectedDate ? '0 0 0 2px rgba(234,88,12,0.18), 0 12px 24px rgba(251,146,60,0.16)' : '0 12px 24px rgba(251,146,60,0.16)' }
                         : isInRange
@@ -296,7 +296,7 @@ export default function AdminHorarios() {
               </div>
             </div>
 
-            <div className="space-y-3 text-xs xl:pl-2">
+            <div className="space-y-3 text-xs">
               <div className="rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] p-4 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
                 El modo activo ahora es <strong style={{ color: 'var(--brand-dark)' }}>{calendarBlockMode === 'day' ? 'bloqueo por día' : calendarBlockMode === 'week' ? 'bloqueo por semana' : 'bloqueo por mes'}</strong>. Haz clic sobre cualquier fecha del calendario para aplicar o quitar ese tipo de bloqueo.
               </div>
