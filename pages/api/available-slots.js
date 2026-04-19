@@ -139,8 +139,8 @@ export default async function handler(req) {
             if (horario) {
                 const dateStr = currentDate.toISODate(); // YYYY-MM-DD
                 
-                // Allow dynamic duration from url if passed, else fallback
-                const requestedDuration = parseInt(url.searchParams.get('duration') || String(DURACION_TURNO), 10);
+                // Allow dynamic duration from url if passed, else fallback to average service logic (120)
+                const requestedDuration = parseInt(url.searchParams.get('duration') || '120', 10);
 
                 const generatedSlots = generateTimeSlots({
                     date: dateStr,
