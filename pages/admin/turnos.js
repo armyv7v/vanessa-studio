@@ -32,6 +32,7 @@ const AVAILABILITY_COLORS = {
 };
 
 const HORARIOS_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
+const TURNOS_BUILD_VERSION = 'turnos-selected-duration-fix-v1';
 
 export default function AdminTurnos() {
   const router = useRouter();
@@ -330,7 +331,7 @@ export default function AdminTurnos() {
         <title>Admin Turnos | Vanessa Studio</title>
       </Head>
 
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-6xl" data-turnos-build={TURNOS_BUILD_VERSION}>
         <div className="admin-highlight-card mb-5 rounded-3xl p-5 sm:p-6">
           <div className="mb-5 flex flex-col items-center justify-between gap-4 md:flex-row">
             <div>
