@@ -705,7 +705,7 @@ export default function AdminTurnos() {
                               color: '#166534',
                             }}
                           >
-                            {SERVICE_DURATION_MIN} min
+                            {selectedDuration} min
                           </span>
                         </div>
                         <button
