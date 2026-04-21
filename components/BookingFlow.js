@@ -14,6 +14,9 @@ const services = [...servicesData].sort((a, b) => a.duration - b.duration);
 const stepLabels = ['Servicio', 'Fecha', 'Hora', 'Datos'];
 const emptyClient = { name: '', email: '', phone: '' };
 const stepIcons = [PolishBottleIcon, CalendarIcon, SparkleIcon, LaunchIcon];
+const SUCCESS_RESET_DELAY_MS = 8000;
+const CONFETTI_PIECES = 600;
+const CONFETTI_DURATION_MS = 8000;
 
 async function listSlotsViaApi({ date, serviceId }) {
   const params = new URLSearchParams({ date, serviceId: String(serviceId) });
@@ -374,7 +377,7 @@ export default function BookingFlow({ config }) {
 
       setTimeout(() => {
         resetFlow();
-      }, 3000);
+      }, SUCCESS_RESET_DELAY_MS);
     } catch (error) {
       setBookingStatus({ error: true, message: String(error?.message || error) });
     }
@@ -579,8 +582,8 @@ export default function BookingFlow({ config }) {
                 width={windowSize.width}
                 height={windowSize.height}
                 recycle={false}
-                numberOfPieces={500}
-                tweenDuration={10000}
+                numberOfPieces={CONFETTI_PIECES}
+                tweenDuration={CONFETTI_DURATION_MS}
               />
             ) : null}
             <BookingConfirmation
