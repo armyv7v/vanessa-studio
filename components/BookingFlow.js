@@ -18,9 +18,11 @@ const stepIcons = [PolishBottleIcon, CalendarIcon, SparkleIcon, LaunchIcon];
 async function listSlotsViaApi({ date, serviceId }) {
   const params = new URLSearchParams({ date, serviceId: String(serviceId) });
   const directSlotsUrl = process.env.NEXT_PUBLIC_API_WORKER_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/api';
-  const isProductionHost = typeof window !== 'undefined' && window.location.hostname.includes('pages.dev');
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const useHostedBackend = !isLocalHost && Boolean(process.env.NEXT_PUBLIC_API_WORKER_URL);
 
-  const response = isProductionHost
+  const response = useHostedBackend
     ? await fetch(`${directSlotsUrl}?date=${encodeURIComponent(date)}`)
     : await fetch(`/api/slots?${params.toString()}`);
 
@@ -224,10 +226,12 @@ export default function BookingFlow({ config }) {
 
     async function fetchDisabledDays() {
       const directHorariosUrl = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
-      const isProductionHost = typeof window !== 'undefined' && window.location.hostname.includes('pages.dev');
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+      const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+      const useHostedBackend = !isLocalHost && Boolean(process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL);
 
       try {
-        const response = isProductionHost
+        const response = useHostedBackend
           ? await fetch(directHorariosUrl)
           : await fetch('/api/gs-check?action=getConfig');
         const data = await response.json().catch(() => null);
