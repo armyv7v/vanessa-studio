@@ -12,20 +12,20 @@ const DEFAULT_CONFIG = {
 };
 
 function jsonRes(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return { body, status };
 }
 
-export default async function handler(req) {
-  if (req.method !== 'GET') return jsonRes({ error: 'Method Not Allowed' }, 405);
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    const result = jsonRes({ error: 'Method Not Allowed' }, 405);
+    return res.status(result.status).json(result.body);
+  }
 
-  const { searchParams } = new URL(req.url);
-  const action = searchParams.get('action');
+  const action = Array.isArray(req.query.action) ? req.query.action[0] : req.query.action;
 
   if (action !== 'getConfig') {
-    return jsonRes({ message: 'gs-check operativo', ...DEFAULT_CONFIG });
+    const result = jsonRes({ message: 'gs-check operativo', ...DEFAULT_CONFIG });
+    return res.status(result.status).json(result.body);
   }
 
   // action === 'getConfig': obtener días deshabilitados desde Netlify backend
@@ -39,13 +39,15 @@ export default async function handler(req) {
 
     const data = await response.json();
 
-    return jsonRes({
+    const result = jsonRes({
       ok: true,
       disabledDays: Array.isArray(data?.disabledDays) ? data.disabledDays : [],
       workingHours: data?.horarioAtencion || DEFAULT_CONFIG.workingHours,
     });
+    return res.status(result.status).json(result.body);
   } catch {
     // Fallback silencioso: nunca 500, siempre 200 con config local
-    return jsonRes(DEFAULT_CONFIG);
+    const result = jsonRes(DEFAULT_CONFIG);
+    return res.status(result.status).json(result.body);
   }
 }

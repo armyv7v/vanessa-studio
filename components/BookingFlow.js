@@ -228,7 +228,7 @@ export default function BookingFlow({ config }) {
       const directHorariosUrl = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
       const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
       const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
-      const useHostedBackend = !isLocalHost && Boolean(process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL);
+      const useHostedBackend = hostname.includes('pages.dev') && !isLocalHost && Boolean(process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL);
 
       try {
         const response = useHostedBackend
