@@ -385,17 +385,16 @@ export default function BookingFlow({ config }) {
 
   return (
     <div className="space-y-8">
-      <StepIndicator step={step} />
-
+      <StepIndicator step={step} />      
       {step === 1 ? (
-        <section aria-labelledby="booking-services-heading">
+        <section aria-labelledby="booking-services-heading" className="step-fade-in">
           <SectionHeader
             id="booking-services-heading"
             title="Selecciona tu servicio"
             description="Elige el estilo que quieres lucir. Cada opción muestra el tiempo estimado para que reserves con claridad y sin sorpresas."
           />
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {services.map((service, index) => (
               <button
                 key={service.id}
@@ -414,31 +413,30 @@ export default function BookingFlow({ config }) {
                   </span>
                 </div>
 
-                <h3 className="mb-4 min-h-[84px] text-xl font-semibold leading-8 transition-colors" style={{ color: 'var(--ink-medium)' }}>
+                <h3 className="mb-3 text-xl font-semibold leading-8 transition-colors group-hover:text-[var(--brand-dark)]" style={{ color: 'var(--ink-medium)' }}>
                   {service.name}
                 </h3>
 
-                <p className="service-summary-block mb-5 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
+                <p className="mb-5 text-sm leading-6" style={{ color: 'var(--ink-muted)', minHeight: '4.5rem' }}>
                   {service.summary}
                 </p>
 
-                <div className="mb-5 flex flex-wrap items-center gap-2" style={{ color: 'var(--brand-light)' }}>
+                <div className="mb-5 flex flex-wrap items-center gap-2">
                   {service.highlights?.map((highlight) => (
-                    <span key={highlight} className="service-mini-chip">
-                      <SparkleIcon className="h-3.5 w-3.5" />
+                    <span key={highlight} className="inline-flex items-center gap-1 rounded-full border border-pink-100/80 bg-pink-50/50 px-2.5 py-1 text-[11px] font-bold text-pink-600 transition-all shadow-[0_4px_10px_rgba(225,27,116,0.04)] hover:scale-105">
+                      <SparkleIcon className="h-3 w-3 text-pink-500" />
                       {highlight}
                     </span>
                   ))}
                 </div>
 
-                <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#f3d9e4] pt-4">
-                  <span className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--gold-dark)' }}>
+                <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#f3d9e4]/60 pt-4">
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--gold-dark)' }}>
                     <GemIcon className="h-4 w-4" />
                     Resultado premium
                   </span>
-                  <span className="inline-flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--brand)' }}>
-                  Elegir servicio
-                  <LaunchIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  <span className="inline-flex items-center gap-1 text-sm font-bold tracking-wide transition-colors duration-200 group-hover:text-[var(--brand-dark)]" style={{ color: 'var(--brand)' }}>
+                    Reservar Cita →
                   </span>
                 </div>
               </button>
@@ -448,14 +446,14 @@ export default function BookingFlow({ config }) {
       ) : null}
 
       {step === 2 ? (
-        <section aria-labelledby="booking-date-heading">
+        <section aria-labelledby="booking-date-heading" className="step-fade-in">
           <SectionHeader
             id="booking-date-heading"
             title="Elige una fecha"
             description={`Estás reservando ${selectedServiceData?.name || 'tu servicio'}. Te mostramos solo fechas hábiles para que encuentres rápido el mejor espacio para ti.`}
           />
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {visibleDays.map((day) => {
               const dayKey = format(day, 'yyyy-MM-dd');
               const today = new Date();
@@ -472,18 +470,18 @@ export default function BookingFlow({ config }) {
                   disabled={false}
                   aria-pressed={isSelected}
                   aria-label={`${isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}, ${format(day, 'd')} de ${format(day, 'MMMM', { locale: es })}`}
-                  className="date-card premium-card gloss-card gradient-outline p-4 text-left transition duration-200 focus:outline-none focus:ring-2"
+                  className="date-card premium-card gloss-card gradient-outline rounded-3xl p-4 text-center transition-all duration-300 focus:outline-none focus:ring-2 hover:-translate-y-1 active:scale-[0.98]"
                   style={isSelected
-                     ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 26px 50px rgba(225,27,116,0.28)', transform: 'scale(1.03)' }
-                     : { color: 'var(--ink-medium)' }}
+                     ? { background: 'linear-gradient(135deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 20px 40px rgba(225,27,116,0.22)' }
+                     : { background: 'linear-gradient(180deg, #ffffff 0%, rgba(254, 240, 248, 0.5) 100%)', color: 'var(--ink-medium)', borderColor: 'rgba(242, 200, 212, 0.4)' }}
                 >
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : 'var(--brand-light)' }}>
-                      {isToday ? 'Hoy' : format(day, 'EEE', { locale: es })}
-                    </p>
-                   <p className="mt-3 text-3xl font-semibold">{format(day, 'd')}</p>
-                   <p className="mt-1 text-sm" style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : 'var(--ink-muted)' }}>
-                     {format(day, 'MMMM', { locale: es })}
-                   </p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] leading-none" style={{ color: isSelected ? 'rgba(255,255,255,0.9)' : 'var(--brand)' }}>
+                    {isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}
+                  </p>
+                  <p className="my-2.5 text-4xl font-extrabold tracking-tight leading-none">{format(day, 'd')}</p>
+                  <p className="text-[11px] font-bold tracking-wide uppercase leading-none" style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : 'var(--ink-muted)' }}>
+                    {format(day, 'MMM', { locale: es })}
+                  </p>
                 </button>
               );
             })}
@@ -507,7 +505,7 @@ export default function BookingFlow({ config }) {
       ) : null}
 
       {step === 3 ? (
-        <section aria-labelledby="booking-time-heading" aria-busy={loadingSlots}>
+        <section aria-labelledby="booking-time-heading" aria-busy={loadingSlots} className="step-fade-in">
           <SectionHeader
             id="booking-time-heading"
             title="Selecciona un horario"
@@ -529,30 +527,65 @@ export default function BookingFlow({ config }) {
             />
           ) : null}
 
-          {!loadingSlots && availableSlots.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {availableSlots.map((slot) => {
-                const isSelected = selectedTime === slot;
+          {!loadingSlots && availableSlots.length > 0 ? (() => {
+            const morningSlots = [];
+            const afternoonSlots = [];
+            const eveningSlots = [];
 
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => handleTimeSelect(slot)}
-                    aria-pressed={isSelected}
-                    aria-label={`Seleccionar horario ${slot}`}
-                    className="time-slot-card premium-card gloss-card gradient-outline px-4 py-4 text-center text-base font-semibold transition duration-200 focus:outline-none focus:ring-2"
-                    style={isSelected
-                      ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 22px 42px rgba(225,27,116,0.28)', transform: 'scale(1.03)' }
-                      : { color: 'var(--ink-medium)' }
-                    }
-                  >
-                    {slot}
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
+            availableSlots.forEach((slot) => {
+              const [hourStr] = slot.split(':');
+              const hour = parseInt(hourStr, 10);
+              if (hour < 13) {
+                morningSlots.push(slot);
+              } else if (hour < 18) {
+                afternoonSlots.push(slot);
+              } else {
+                eveningSlots.push(slot);
+              }
+            });
+
+            const renderSlotGroup = (title, icon, slots) => {
+              if (slots.length === 0) return null;
+              return (
+                <div className="space-y-4 rounded-[26px] border border-[#F2C8D4]/40 bg-white/40 p-5 backdrop-blur-sm shadow-sm transition-all duration-300">
+                  <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--brand-dark)' }}>
+                    <span className="text-lg">{icon}</span>
+                    {title}
+                    <span className="text-xs font-normal lowercase text-[var(--ink-faint)]">({slots.length} disponibles)</span>
+                  </h4>
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                    {slots.map((slot) => {
+                      const isSelected = selectedTime === slot;
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => handleTimeSelect(slot)}
+                          aria-pressed={isSelected}
+                          aria-label={`Seleccionar horario ${slot}`}
+                          className="time-slot-card premium-card gloss-card gradient-outline rounded-2xl py-3 text-center text-sm font-semibold transition-all duration-300 focus:outline-none focus:ring-2 hover:-translate-y-0.5 active:scale-[0.98]"
+                          style={isSelected
+                            ? { background: 'linear-gradient(135deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 12px 28px rgba(225,27,116,0.22)' }
+                            : { background: 'white', color: 'var(--ink-medium)', borderColor: 'rgba(242, 200, 212, 0.4)' }
+                          }
+                        >
+                          {slot}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            };
+
+            return (
+              <div className="space-y-6">
+                {renderSlotGroup('Mañana', '🌅', morningSlots)}
+                {renderSlotGroup('Tarde', '☀️', afternoonSlots)}
+                {renderSlotGroup('Noche / Extra', '🌙', eveningSlots)}
+              </div>
+            );
+          })() : null}
 
           {!loadingSlots && !availableSlots.length ? (
             <EmptyStateCard
@@ -597,26 +630,39 @@ export default function BookingFlow({ config }) {
             />
           </>
         ) : (
-          <section className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]" aria-labelledby="booking-client-heading">
-            <aside className="premium-card gloss-card gradient-outline p-6 sm:p-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em]" style={{ color: 'var(--brand)' }}>Resumen</p>
-              <h3 className="mt-3 font-display text-4xl font-semibold leading-none" style={{ color: 'var(--brand-darker)' }}>
-                Tu cita{isExtra ? ' extra cupo' : ''}
-              </h3>
-              <p className="mt-3 text-sm leading-7" style={{ color: 'var(--ink-muted)' }}>
-                Revisa los datos antes de confirmar. Este resumen mantiene visible la información crítica durante todo el cierre.
-              </p>
+          <section className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr] step-fade-in" aria-labelledby="booking-client-heading">
+            <aside className="premium-card gloss-card gradient-outline p-6 sm:p-8 flex flex-col justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em]" style={{ color: 'var(--brand)' }}>Resumen</p>
+                <h3 className="mt-3 font-display text-4xl font-semibold leading-none" style={{ color: 'var(--brand-darker)' }}>
+                  Tu cita{isExtra ? ' extra cupo' : ''}
+                </h3>
+                <p className="mt-3 text-sm leading-7" style={{ color: 'var(--ink-muted)' }}>
+                  Revisa los datos antes de confirmar. Este resumen mantiene visible la información crítica durante todo el cierre.
+                </p>
 
-              <div className="beauty-note mt-6">
-                Una reserva clara transmite confianza. Aquí confirmas todo antes del toque final.
-              </div>
+                <div className="beauty-note mt-6">
+                  Una reserva clara transmite confianza. Aquí confirmas todo antes del toque final.
+                </div>
 
-              <div className="mt-8 space-y-4 rounded-[24px] p-5" style={{ border: '1px solid var(--gold-lighter)', background: 'linear-gradient(180deg, var(--gold-lightest) 0%, rgba(255,255,255,0.90) 100%)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.80)' }}>
-                <SummaryRow label="Servicio" value={selectedServiceData?.name || '-'} />
-                <SummaryRow label="Duración" value={selectedServiceData ? `${selectedServiceData.duration} min` : '-'} />
-                <SummaryRow label="Fecha" value={formatLongDate(selectedDate) || '-'} />
-                <SummaryRow label="Hora" value={selectedTime || '-'} />
-                {isExtra ? <SummaryRow label="Recargo" value="$5.000" /> : null}
+                <div className="mt-8 space-y-4 rounded-[24px] p-6 shadow-sm" style={{ border: '1px solid var(--gold-light)', background: 'linear-gradient(180deg, rgba(251, 244, 227, 0.4) 0%, rgba(255, 255, 255, 0.9) 100%)', boxShadow: '0 8px 24px rgba(197, 160, 89, 0.08)' }}>
+                  <div className="border-b border-[#EDD9A3]/40 pb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--gold-dark)' }}>Ticket de Reserva</p>
+                  </div>
+                  <div className="space-y-3.5">
+                    <SummaryRow label="Servicio" value={selectedServiceData?.name || '-'} />
+                    <SummaryRow label="Duración" value={selectedServiceData ? `${selectedServiceData.duration} min` : '-'} />
+                    <SummaryRow label="Fecha" value={formatLongDate(selectedDate) || '-'} />
+                    <SummaryRow label="Hora" value={selectedTime || '-'} />
+                    {isExtra ? <SummaryRow label="Recargo" value="$5.000" /> : null}
+                  </div>
+                  <div className="border-t border-dashed border-[#EDD9A3]/50 pt-4 mt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold" style={{ color: 'var(--ink-muted)' }}>Monto Abono</span>
+                      <span className="text-lg font-bold" style={{ color: 'var(--brand-dark)' }}>$10.000</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div
@@ -653,7 +699,7 @@ export default function BookingFlow({ config }) {
                     autoComplete="name"
                     value={clientInfo.name}
                     onChange={(event) => handleClientInfoChange('name', event.target.value)}
-                    className="premium-input"
+                    className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                     placeholder="Tu nombre completo"
                   />
                 </div>
@@ -669,7 +715,7 @@ export default function BookingFlow({ config }) {
                     value={clientInfo.email}
                     onChange={(event) => handleClientInfoChange('email', event.target.value)}
                     onBlur={handleEmailBlur}
-                      className="premium-input pr-12"
+                      className="premium-input pr-12 transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                       placeholder="tu@email.com"
                     />
                     {isFetchingClient ? (
@@ -689,7 +735,7 @@ export default function BookingFlow({ config }) {
                     autoComplete="tel"
                     value={clientInfo.phone}
                     onChange={(event) => handleClientInfoChange('phone', event.target.value)}
-                    className="premium-input"
+                    className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                     placeholder="+56 9 1234 5678"
                   />
                 </div>

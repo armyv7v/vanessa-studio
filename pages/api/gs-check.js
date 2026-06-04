@@ -8,6 +8,8 @@ const NETLIFY_HORARIOS = 'https://vanessastudioback.netlify.app/.netlify/functio
 const DEFAULT_CONFIG = {
   ok: true,
   disabledDays: [],
+  disabledDates: [],
+  blackoutRanges: [],
   workingHours: { start: '10:00', end: '21:00' },
 };
 
@@ -42,6 +44,8 @@ export default async function handler(req, res) {
     const result = jsonRes({
       ok: true,
       disabledDays: Array.isArray(data?.disabledDays) ? data.disabledDays : [],
+      disabledDates: Array.isArray(data?.disabledDates) ? data.disabledDates : [],
+      blackoutRanges: Array.isArray(data?.blackoutRanges) ? data.blackoutRanges : [],
       workingHours: data?.horarioAtencion || DEFAULT_CONFIG.workingHours,
     });
     return res.status(result.status).json(result.body);

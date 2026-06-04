@@ -14,6 +14,8 @@ const DEFAULT_CONFIG = {
     domingo: ['09:00', '22:00'],
   },
   disabledDays: [],
+  disabledDates: [],
+  blackoutRanges: [],
 };
 
 function getBackendBaseUrl() {
@@ -43,6 +45,8 @@ function normalizeConfig(config) {
   return {
     horarioAtencion: config?.horarioAtencion || DEFAULT_CONFIG.horarioAtencion,
     disabledDays: Array.isArray(config?.disabledDays) ? config.disabledDays : [],
+    disabledDates: Array.isArray(config?.disabledDates) ? config.disabledDates : [],
+    blackoutRanges: Array.isArray(config?.blackoutRanges) ? config.blackoutRanges : [],
   };
 }
 
