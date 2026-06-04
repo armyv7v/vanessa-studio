@@ -10,6 +10,51 @@ import { isAllowedBusinessDay } from '../lib/calendarConfig';
 import { services as servicesData } from '../lib/services';
 import { generateTimeSlots } from '../lib/slots';
 
+const MorningIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="morning-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#C5A059" />
+        <stop offset="100%" stopColor="#F04A94" />
+      </linearGradient>
+    </defs>
+    <path d="M12 15C14.2091 15 16 13.2091 16 11C16 8.79086 14.2091 7 12 7C9.79086 7 8 8.79086 8 11C8 13.2091 9.79086 15 12 15Z" stroke="url(#morning-grad)" strokeWidth="1.6" />
+    <path d="M12 15C14.2091 15 16 13.2091 16 11C16 8.79086 14.2091 7 12 7C9.79086 7 8 8.79086 8 11C8 13.2091 9.79086 15 12 15Z" fill="url(#morning-grad)" opacity="0.08" />
+    <path d="M4 16H20" stroke="url(#morning-grad)" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M12 3V5" stroke="url(#morning-grad)" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M6.34315 5.34315L7.75736 6.75736" stroke="url(#morning-grad)" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M17.6569 5.34315L16.2426 6.75736" stroke="url(#morning-grad)" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);
+
+const AfternoonIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="afternoon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#C5A059" />
+        <stop offset="100%" stopColor="#E11B74" />
+      </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="5" stroke="url(#afternoon-grad)" strokeWidth="1.6" />
+    <circle cx="12" cy="12" r="5" fill="url(#afternoon-grad)" opacity="0.08" />
+    <path d="M12 3V5M12 19V21M3 12H5M19 12H21M5.63604 5.63604L7.05025 7.05025M16.9497 16.9497L18.364 18.364M5.63604 18.364L7.05025 16.9497M16.9497 7.05025L18.364 5.63604" stroke="url(#afternoon-grad)" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);
+
+const EveningIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="evening-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#EDD9A3" />
+        <stop offset="100%" stopColor="#C5A059" />
+      </linearGradient>
+    </defs>
+    <path d="M12 3C10.0302 6.00288 10.3701 9.94821 12.8988 12.477C15.4276 15.0057 19.3729 15.3456 22.3758 13.3758C21.1396 17.2023 17.5815 20 13.3333 20C7.81048 20 3.33331 15.5228 3.33331 10C3.33331 5.75184 6.13101 2.19374 9.95753 0.957534C10.7411 1.7411 11.4552 2.45516 12 3Z" stroke="url(#evening-grad)" strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M12 3C10.0302 6.00288 10.3701 9.94821 12.8988 12.477C15.4276 15.0057 19.3729 15.3456 22.3758 13.3758C21.1396 17.2023 17.5815 20 13.3333 20C7.81048 20 3.33331 15.5228 3.33331 10C3.33331 5.75184 6.13101 2.19374 9.95753 0.957534C10.7411 1.7411 11.4552 2.45516 12 3Z" fill="url(#evening-grad)" opacity="0.08" />
+    <path d="M19 4C19 4.82843 18.3284 5.5 17.5 5.5C18.3284 5.5 19 6.17157 19 7C19 6.17157 19.6716 5.5 20.5 5.5C19.6716 5.5 19 4.82843 19 4Z" fill="url(#evening-grad)" />
+  </svg>
+);
+
 const services = [...servicesData].sort((a, b) => a.duration - b.duration);
 const stepLabels = ['Servicio', 'Fecha', 'Hora', 'Datos'];
 const emptyClient = { name: '', email: '', phone: '' };
@@ -549,7 +594,7 @@ export default function BookingFlow({ config }) {
               return (
                 <div className="space-y-4 rounded-[26px] border border-[#F2C8D4]/40 bg-white/40 p-5 backdrop-blur-sm shadow-sm transition-all duration-300">
                   <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--brand-dark)' }}>
-                    <span className="text-lg">{icon}</span>
+                    <span className="flex h-5 w-5 items-center justify-center shrink-0">{icon}</span>
                     {title}
                     <span className="text-xs font-normal lowercase text-[var(--ink-faint)]">({slots.length} disponibles)</span>
                   </h4>
@@ -580,9 +625,9 @@ export default function BookingFlow({ config }) {
 
             return (
               <div className="space-y-6">
-                {renderSlotGroup('Mañana', '🌅', morningSlots)}
-                {renderSlotGroup('Tarde', '☀️', afternoonSlots)}
-                {renderSlotGroup('Noche / Extra', '🌙', eveningSlots)}
+                {renderSlotGroup('Mañana', <MorningIcon />, morningSlots)}
+                {renderSlotGroup('Tarde', <AfternoonIcon />, afternoonSlots)}
+                {renderSlotGroup('Noche / Extra', <EveningIcon />, eveningSlots)}
               </div>
             );
           })() : null}
