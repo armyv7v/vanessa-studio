@@ -92,32 +92,32 @@ function getServiceById(serviceId) {
 
 function StepIndicator({ step }) {
   return (
-    <div className="premium-card gloss-card gradient-outline p-5 sm:p-6" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(254,232,244,0.90) 100%)' }} aria-label="Progreso de la reserva">
-      <ol className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+    <div className="border-b border-[#F2C8D4]/25 pb-5 mb-8" aria-label="Progreso de la reserva">
+      <ol className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8">
         {stepLabels.map((label, index) => {
           const stepNumber = index + 1;
           const isActive = step >= stepNumber;
           const isCurrent = step === stepNumber;
-          const StepIcon = stepIcons[index];
 
           return (
-            <li key={label} className="stepper-item flex items-center gap-3" aria-current={step === stepNumber ? 'step' : undefined}>
+            <li key={label} className="flex items-center gap-2" aria-current={isCurrent ? 'step' : undefined}>
               <div
-                className="stepper-orb flex h-12 w-12 items-center justify-center rounded-full border text-sm font-semibold transition-all"
-                style={isActive
-                  ? { background: 'linear-gradient(180deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 12px 30px rgba(225,27,116,0.28)', transform: 'scale(1.10)' }
-                  : { borderColor: 'var(--gold-lighter)', background: 'rgba(255,255,255,0.90)', color: 'var(--ink-faint)' }
-                }
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-all duration-300 ${
+                  isCurrent
+                    ? 'bg-[var(--brand)] text-white shadow-[0_4px_12px_rgba(225,27,116,0.25)] scale-105'
+                    : isActive
+                      ? 'bg-[var(--brand-lightest)] text-[var(--brand)] border border-[#F2C8D4]/60'
+                      : 'bg-white/40 border border-slate-200 text-slate-400'
+                }`}
               >
-                <div className="flex flex-col items-center leading-none">
-                  <span className="text-[10px] font-bold">{stepNumber}</span>
-                  <StepIcon className="mt-1 h-3.5 w-3.5" />
-                </div>
+                {stepNumber}
               </div>
-              <div className="stepper-copy min-w-[74px]">
-                <p className="text-[11px] uppercase tracking-[0.24em]" style={{ color: 'var(--brand-light)' }}>Paso {stepNumber}</p>
-                <p className="text-sm font-semibold" style={{ color: isCurrent ? 'var(--brand-darker)' : isActive ? 'var(--ink-medium)' : 'var(--ink-faint)' }}>{label}</p>
-              </div>
+              <span className={`text-xs font-semibold tracking-wider uppercase ${isCurrent ? 'text-[var(--brand-darker)] font-bold' : 'text-[var(--ink-faint)]'}`}>
+                {label}
+              </span>
+              {index < stepLabels.length - 1 && (
+                <span className="text-[#EDD9A3]/50 hidden sm:inline ml-2">/</span>
+              )}
             </li>
           );
         })}
@@ -128,15 +128,15 @@ function StepIndicator({ step }) {
 
 function SectionHeader({ id, title, description }) {
   return (
-    <header className="mb-8 space-y-2 text-center">
-      <div className="flex justify-center">
-        <span className="section-kicker"><SparkleIcon className="h-3.5 w-3.5" /> Reserva guiada</span>
-      </div>
-      <div className="flex justify-center" style={{ color: 'var(--gold)' }}>
-        <SwirlDivider className="motif-divider h-6 w-24" />
-      </div>
-      <h2 id={id} className="font-display text-4xl font-semibold leading-none sm:text-5xl" style={{ color: 'var(--brand-darker)' }}>{title}</h2>
-      {description ? <p className="mx-auto max-w-2xl text-sm leading-7 sm:text-base" style={{ color: 'var(--ink-muted)' }}>{description}</p> : null}
+    <header className="mb-8 text-center space-y-2">
+      <h2 id={id} className="font-display text-2xl sm:text-3xl font-semibold text-[var(--brand-darker)] tracking-tight">
+        {title}
+      </h2>
+      {description ? (
+        <p className="mx-auto max-w-xl text-xs sm:text-sm text-[var(--ink-muted)] leading-relaxed">
+          {description}
+        </p>
+      ) : null}
     </header>
   );
 }
@@ -446,42 +446,34 @@ export default function BookingFlow({ config }) {
                 type="button"
                 onClick={() => handleServiceSelect(service.id)}
                 aria-label={`Seleccionar ${service.name}, duración ${service.duration} minutos`}
-                className="group premium-card gloss-card gradient-outline shine-sweep service-glow service-card-reveal flex h-full flex-col overflow-hidden p-6 text-left transition duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2"
-                style={{ '--tw-ring-color': 'rgba(225,27,116,0.25)', animationDelay: `${index * 80}ms` }}
+                className="group flex h-full flex-col rounded-2xl border border-[#F2C8D4]/30 bg-white/80 p-6 text-left transition duration-200 hover:border-[#F2C8D4]/60 hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/35"
+                style={{ animationDelay: `${index * 80}ms` }}
               >
-                <div className="mb-6 flex items-start justify-between gap-4">
-                  <span className="service-icon-orb inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]" style={{ background: 'linear-gradient(180deg, var(--brand-lightest) 0%, rgba(248,161,195,0.50) 100%)', color: 'var(--brand)' }}>
-                    <PolishBottleIcon className="h-5 w-5" />
-                  </span>
-                  <span className="service-duration-pill rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]" style={{ background: 'var(--gold-lightest)', color: 'var(--gold-dark)' }}>
+                <div className="mb-4 flex items-center justify-between gap-4 w-full">
+                  <h3 className="text-lg font-bold leading-tight text-[var(--brand-darker)] transition-colors group-hover:text-[var(--brand-dark)]">
+                    {service.name}
+                  </h3>
+                  <span className="shrink-0 rounded-full bg-[var(--brand-lightest)] px-2.5 py-0.5 text-xs font-semibold text-[var(--brand-dark)]">
                     {service.duration} min
                   </span>
                 </div>
 
-                <h3 className="mb-3 text-xl font-semibold leading-8 transition-colors group-hover:text-[var(--brand-dark)]" style={{ color: 'var(--ink-medium)' }}>
-                  {service.name}
-                </h3>
-
-                <p className="mb-5 text-sm leading-6" style={{ color: 'var(--ink-muted)', minHeight: '4.5rem' }}>
+                <p className="mb-4 text-xs leading-relaxed text-[var(--ink-muted)] flex-grow">
                   {service.summary}
                 </p>
 
-                <div className="mb-5 flex flex-wrap items-center gap-2">
+                <div className="mb-5 flex flex-wrap gap-x-3 gap-y-1">
                   {service.highlights?.map((highlight) => (
-                    <span key={highlight} className="inline-flex items-center gap-1 rounded-full border border-pink-100/80 bg-pink-50/50 px-2.5 py-1 text-[11px] font-bold text-pink-600 transition-all shadow-[0_4px_10px_rgba(225,27,116,0.04)] hover:scale-105">
-                      <SparkleIcon className="h-3 w-3 text-pink-500" />
-                      {highlight}
+                    <span key={highlight} className="text-xs font-medium text-[var(--brand)]">
+                      • {highlight}
                     </span>
                   ))}
                 </div>
 
-                <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#f3d9e4]/60 pt-4">
-                  <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--gold-dark)' }}>
-                    <GemIcon className="h-4 w-4" />
-                    Resultado premium
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-sm font-bold tracking-wide transition-colors duration-200 group-hover:text-[var(--brand-dark)]" style={{ color: 'var(--brand)' }}>
-                    Reservar Cita →
+                <div className="mt-auto border-t border-[#f3d9e4]/30 pt-3 flex w-full items-center justify-between text-xs text-[var(--gold-dark)]">
+                  <span className="font-semibold">Vanessa Premium</span>
+                  <span className="font-bold text-[var(--brand)] group-hover:text-[var(--brand-dark)]">
+                    Reservar →
                   </span>
                 </div>
               </button>
@@ -515,19 +507,21 @@ export default function BookingFlow({ config }) {
                   disabled={false}
                   aria-pressed={isSelected}
                   aria-label={`${isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}, ${format(day, 'd')} de ${format(day, 'MMMM', { locale: es })}`}
-                  className="date-card premium-card gloss-card gradient-outline rounded-3xl p-4 text-center transition-all duration-300 focus:outline-none focus:ring-2 hover:-translate-y-1 active:scale-[0.98]"
-                  style={isSelected
-                     ? { background: 'linear-gradient(135deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 20px 40px rgba(225,27,116,0.22)' }
-                     : { background: 'linear-gradient(180deg, #ffffff 0%, rgba(254, 240, 248, 0.5) 100%)', color: 'var(--ink-medium)', borderColor: 'rgba(242, 200, 212, 0.4)' }}
+                  className={`rounded-2xl p-4 text-center transition-all duration-200 border focus:outline-none focus:ring-2 active:scale-[0.97] ${
+                    isSelected
+                      ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-[0_8px_20px_rgba(225,27,116,0.18)]'
+                      : 'bg-white/80 border-[#F2C8D4]/30 text-[var(--ink-medium)] hover:bg-white hover:border-[#F2C8D4]/60'
+                  }`}
                 >
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] leading-none" style={{ color: isSelected ? 'rgba(255,255,255,0.9)' : 'var(--brand)' }}>
+                  <p className={`text-[10px] font-bold uppercase tracking-[0.2em] leading-none ${isSelected ? 'text-white/90' : 'text-[var(--brand)]'}`}>
                     {isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}
                   </p>
-                  <p className="my-2.5 text-4xl font-extrabold tracking-tight leading-none">{format(day, 'd')}</p>
-                  <p className="text-[11px] font-bold tracking-wide uppercase leading-none" style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : 'var(--ink-muted)' }}>
+                  <p className="my-2 text-3xl font-bold tracking-tight leading-none">{format(day, 'd')}</p>
+                  <p className={`text-[11px] font-semibold tracking-wide uppercase leading-none ${isSelected ? 'text-white/75' : 'text-[var(--ink-muted)]'}`}>
                     {format(day, 'MMM', { locale: es })}
                   </p>
                 </button>
+
               );
             })}
           </div>
@@ -608,11 +602,11 @@ export default function BookingFlow({ config }) {
                           onClick={() => handleTimeSelect(slot)}
                           aria-pressed={isSelected}
                           aria-label={`Seleccionar horario ${slot}`}
-                          className="time-slot-card premium-card gloss-card gradient-outline rounded-2xl py-3 text-center text-sm font-semibold transition-all duration-300 focus:outline-none focus:ring-2 hover:-translate-y-0.5 active:scale-[0.98]"
-                          style={isSelected
-                            ? { background: 'linear-gradient(135deg, #F04A94 0%, #E11B74 100%)', borderColor: 'var(--brand)', color: '#fff', boxShadow: '0 12px 28px rgba(225,27,116,0.22)' }
-                            : { background: 'white', color: 'var(--ink-medium)', borderColor: 'rgba(242, 200, 212, 0.4)' }
-                          }
+                          className={`rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 border focus:outline-none focus:ring-2 active:scale-[0.97] ${
+                            isSelected
+                              ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-[0_4px_12px_rgba(225,27,116,0.18)]'
+                              : 'bg-white border-[#F2C8D4]/30 text-[var(--ink-medium)] hover:border-[#F2C8D4]/60 hover:bg-white'
+                          }`}
                         >
                           {slot}
                         </button>
@@ -675,64 +669,54 @@ export default function BookingFlow({ config }) {
             />
           </>
         ) : (
-          <section className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr] step-fade-in" aria-labelledby="booking-client-heading">
-            <aside className="premium-card gloss-card gradient-outline p-6 sm:p-8 flex flex-col justify-between">
+          <section className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] step-fade-in" aria-labelledby="booking-client-heading">
+            <aside className="flex flex-col justify-between space-y-6">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em]" style={{ color: 'var(--brand)' }}>Resumen</p>
-                <h3 className="mt-3 font-display text-4xl font-semibold leading-none" style={{ color: 'var(--brand-darker)' }}>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--brand)' }}>Resumen</p>
+                <h3 className="mt-2 font-display text-2xl font-semibold leading-tight text-[var(--brand-darker)]">
                   Tu cita{isExtra ? ' extra cupo' : ''}
                 </h3>
-                <p className="mt-3 text-sm leading-7" style={{ color: 'var(--ink-muted)' }}>
-                  Revisa los datos antes de confirmar. Este resumen mantiene visible la información crítica durante todo el cierre.
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                  Revisa los datos antes de confirmar.
                 </p>
 
-                <div className="beauty-note mt-6">
-                  Una reserva clara transmite confianza. Aquí confirmas todo antes del toque final.
-                </div>
-
-                <div className="mt-8 space-y-4 rounded-[24px] p-6 shadow-sm" style={{ border: '1px solid var(--gold-light)', background: 'linear-gradient(180deg, rgba(251, 244, 227, 0.4) 0%, rgba(255, 255, 255, 0.9) 100%)', boxShadow: '0 8px 24px rgba(197, 160, 89, 0.08)' }}>
-                  <div className="border-b border-[#EDD9A3]/40 pb-3">
+                <div className="mt-6 space-y-4 rounded-2xl p-6 border border-[#EDD9A3]/50 bg-white/50 shadow-sm">
+                  <div className="border-b border-[#EDD9A3]/30 pb-2">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--gold-dark)' }}>Ticket de Reserva</p>
                   </div>
-                  <div className="space-y-3.5">
+                  <div className="space-y-3">
                     <SummaryRow label="Servicio" value={selectedServiceData?.name || '-'} />
                     <SummaryRow label="Duración" value={selectedServiceData ? `${selectedServiceData.duration} min` : '-'} />
                     <SummaryRow label="Fecha" value={formatLongDate(selectedDate) || '-'} />
                     <SummaryRow label="Hora" value={selectedTime || '-'} />
                     {isExtra ? <SummaryRow label="Recargo" value="$5.000" /> : null}
                   </div>
-                  <div className="border-t border-dashed border-[#EDD9A3]/50 pt-4 mt-2">
+                  <div className="border-t border-dashed border-[#EDD9A3]/55 pt-3 mt-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-semibold" style={{ color: 'var(--ink-muted)' }}>Monto Abono</span>
-                      <span className="text-lg font-bold" style={{ color: 'var(--brand-dark)' }}>$10.000</span>
+                      <span className="text-base font-bold text-[var(--brand-dark)]">$10.000</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div
-                className="mt-5 rounded-[24px] border px-5 py-4 text-sm leading-6"
-                style={{
-                  borderColor: 'rgba(214, 51, 132, 0.18)',
-                  background: 'rgba(255, 240, 246, 0.9)',
-                  color: 'var(--ink-medium)',
-                }}
-              >
+              <div className="rounded-2xl border border-[#F2C8D4]/30 bg-[var(--brand-lightest)] px-5 py-4 text-xs leading-relaxed text-[var(--ink-muted)]">
                 <p>
                   Para asegurar tu hora, debes enviar un abono de <strong>$10.000</strong>.
                 </p>
-                <p className="mt-2">
-                  Si el pago no se confirma dentro de las proximas <strong>24 horas</strong>, la hora se liberara automaticamente.
+                <p className="mt-1.5">
+                  Si el pago no se confirma dentro de las próximas <strong>24 horas</strong>, la hora se liberará automáticamente.
                 </p>
               </div>
             </aside>
 
-             <div className="premium-card gloss-card gradient-outline p-6 sm:p-8">
+            <div className="border-t lg:border-t-0 lg:border-l border-[#F2C8D4]/20 pt-6 lg:pt-0 lg:pl-8">
               <SectionHeader
                 id="booking-client-heading"
                 title="Completa tus datos"
-                description="Usamos tu correo para confirmar la reserva y, si ya tenemos tus datos, hacemos el proceso mucho más rápido para ti." 
+                description="Ingresa tu correo para confirmar la reserva." 
               />
+
 
               <form onSubmit={handleSubmitBooking} className="space-y-5">
                 <div>
