@@ -91,7 +91,7 @@ export default function AdminLogin() {
 
           {/* Login card */}
           <div
-            className="premium-shell gloss-panel gradient-outline"
+            className="premium-shell gloss-panel gradient-outline step-fade-in"
             style={{ borderRadius: '28px' }}
           >
             <form className="space-y-5" onSubmit={handleSubmit}>
@@ -109,7 +109,7 @@ export default function AdminLogin() {
                   type="password"
                   required
                   autoComplete="current-password"
-                  className="premium-input"
+                  className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -120,9 +120,9 @@ export default function AdminLogin() {
                 <div
                   className="rounded-2xl border px-4 py-3 text-sm font-medium"
                   style={{
-                    background: '#FFF0F0',
-                    borderColor: '#FFCDD2',
-                    color: '#B71C1C',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    borderColor: 'rgba(239, 68, 68, 0.18)',
+                    color: '#C53030',
                   }}
                   role="alert"
                 >

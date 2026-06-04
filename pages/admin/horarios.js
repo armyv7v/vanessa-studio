@@ -21,6 +21,7 @@ export default function AdminHorarios() {
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [calendarBlockMode, setCalendarBlockMode] = useState('day');
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -60,20 +61,21 @@ export default function AdminHorarios() {
   const handleSave = async () => {
     try {
       setError(null);
+      setSuccessMsg('');
 
-        const res = await fetch(HORARIOS_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ horarioAtencion: horarios, disabledDays, disabledDates, blackoutRanges }),
-        });
+      const res = await fetch(HORARIOS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ horarioAtencion: horarios, disabledDays, disabledDates, blackoutRanges }),
+      });
 
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || 'Error al guardar horarios');
 
-      alert('Horarios guardados correctamente');
+      setSuccessMsg('Horarios guardados correctamente');
+      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (e) {
       setError(e.message);
-      alert(e.message);
     }
   };
 
@@ -191,6 +193,11 @@ export default function AdminHorarios() {
       description="Configura horarios de atención y bloquea sábados o domingos específicos del mes para controlar la disponibilidad visible en la reserva."
     >
       <div className="mx-auto max-w-6xl space-y-6">
+        {successMsg ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-800 animate-pulse">
+            {successMsg}
+          </div>
+        ) : null}
         <div className="admin-highlight-card rounded-3xl p-5 sm:p-6">
           <p className="admin-section-kicker">Operación del calendario</p>
           <h2 className="mt-3 text-xl font-bold" style={{ color: 'var(--ink-medium)' }}>Ajusta disponibilidad real del estudio</h2>
@@ -285,10 +292,10 @@ export default function AdminHorarios() {
                 const isInRange = isDateInsideRange(dateKey);
                 const isSelectedDate = selectedCalendarDate === dateKey;
                 const dayTone = isBlockedDay
-                  ? { bg: 'rgba(251, 146, 60, 0.20)', border: '#FB923C', text: '#9A3412', label: 'Bloqueado' }
+                  ? { bg: 'rgba(225, 27, 116, 0.08)', border: 'rgba(225, 27, 116, 0.18)', text: 'var(--brand-dark)', label: 'Bloqueado' }
                   : isInRange
-                    ? { bg: 'rgba(254, 215, 170, 0.38)', border: '#FDBA74', text: '#9A3412', label: 'En rango' }
-                    : { bg: 'rgba(200, 240, 215, 0.70)', border: '#86EFAC', text: '#166534', label: 'Disponible' };
+                    ? { bg: 'rgba(197, 160, 89, 0.08)', border: 'rgba(197, 160, 89, 0.18)', text: 'var(--gold-dark)', label: 'En rango' }
+                    : { bg: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.18)', text: '#065f46', label: 'Disponible' };
 
                 return (
                   <button
@@ -370,9 +377,9 @@ export default function AdminHorarios() {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs">
-            <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(251, 146, 60, 0.20)', borderColor: '#FB923C' }} /> Naranja: bloqueado</div>
-            <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(254, 215, 170, 0.38)', borderColor: '#FDBA74' }} /> Ámbar: dentro de rango bloqueado</div>
-            <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(200, 240, 215, 0.70)', borderColor: '#86EFAC' }} /> Verde: disponible</div>
+            <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(225, 27, 116, 0.08)', borderColor: 'rgba(225, 27, 116, 0.18)' }} /> Fuchsia: Bloqueado manualmente</div>
+            <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(197, 160, 89, 0.08)', borderColor: 'rgba(197, 160, 89, 0.18)' }} /> Dorado: Dentro de rango bloqueado</div>
+            <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.18)' }} /> Esmeralda: Disponible para citas</div>
           </div>
         </div>
 

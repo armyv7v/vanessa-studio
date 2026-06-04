@@ -53,7 +53,7 @@ export default function HorarioEditor({ dia, rango, horarios, setHorarios }) {
                             type="time"
                             value={rango[0] || '09:00'}
                             onChange={(e) => handleChange(0, e.target.value)}
-                            className="rounded-xl border border-[#f2c8d4] bg-white px-3 py-2 focus:outline-none focus:ring-2"
+                            className="rounded-xl border border-[#f2c8d4] bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#E11B74]/20 focus:border-[var(--brand)] transition-all duration-300 focus:shadow-[0_0_15px_rgba(225,27,116,0.12)]"
                             style={{ color: 'var(--ink-medium)' }}
                         />
                     </div>
@@ -63,7 +63,7 @@ export default function HorarioEditor({ dia, rango, horarios, setHorarios }) {
                             type="time"
                             value={rango[1] || '18:00'}
                             onChange={(e) => handleChange(1, e.target.value)}
-                            className="rounded-xl border border-[#f2c8d4] bg-white px-3 py-2 focus:outline-none focus:ring-2"
+                            className="rounded-xl border border-[#f2c8d4] bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#E11B74]/20 focus:border-[var(--brand)] transition-all duration-300 focus:shadow-[0_0_15px_rgba(225,27,116,0.12)]"
                             style={{ color: 'var(--ink-medium)' }}
                         />
                     </div>

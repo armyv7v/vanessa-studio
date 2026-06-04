@@ -26,9 +26,9 @@ const UNIQUE_DURATIONS = [...new Set(services.map(s => s.duration))].sort((a, b)
 const MIN_DURATION = UNIQUE_DURATIONS[0]; // 90 min (esmaltado)
 
 const AVAILABILITY_COLORS = {
-  blocked: { bg: 'rgba(251, 146, 60, 0.20)', border: '#FB923C' },
-  available: { bg: 'rgba(200, 240, 215, 0.80)', border: '#86EFAC' },
-  occupied: { bg: 'rgba(254, 202, 202, 0.70)', border: '#FCA5A5' },
+  blocked: { bg: 'rgba(225, 27, 116, 0.08)', border: 'rgba(225, 27, 116, 0.18)', text: 'var(--brand-dark)' },
+  available: { bg: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.18)', text: '#065f46' },
+  occupied: { bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.18)', text: '#991b1b' },
 };
 
 const HORARIOS_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
@@ -405,7 +405,7 @@ export default function AdminTurnos() {
                     style={
                       viewMode === mode
                         ? {
-                            background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
+                            background: 'linear-gradient(135deg, #F04A94 0%, #E11B74 100%)',
                             color: '#fff',
                             boxShadow: '0 6px 14px rgba(225,27,116,0.20)',
                           }
@@ -789,7 +789,7 @@ export default function AdminTurnos() {
                     <select
                       value={bookingForm.serviceId}
                       onChange={(e) => setBookingForm((previous) => ({ ...previous, serviceId: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
+                      className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                     >
                       {services.map((service) => (
                         <option key={service.id} value={service.id}>
@@ -805,7 +805,7 @@ export default function AdminTurnos() {
                       type="text"
                       value={bookingForm.name}
                       onChange={(e) => setBookingForm((previous) => ({ ...previous, name: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
+                      className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                       placeholder="Nombre de la clienta"
                       required
                     />
@@ -817,7 +817,7 @@ export default function AdminTurnos() {
                       type="email"
                       value={bookingForm.email}
                       onChange={(e) => setBookingForm((previous) => ({ ...previous, email: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
+                      className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                       placeholder="correo@cliente.com"
                       required
                     />
@@ -829,7 +829,7 @@ export default function AdminTurnos() {
                       type="tel"
                       value={bookingForm.phone}
                       onChange={(e) => setBookingForm((previous) => ({ ...previous, phone: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
+                      className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                       placeholder="Opcional"
                     />
                   </div>

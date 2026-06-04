@@ -38,10 +38,10 @@ export default function AdminShell({ title, description, children }) {
             key={item.href}
             href={item.href}
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-300 ${
               isActive
-                ? 'text-white shadow-[0_14px_28px_rgba(225,27,116,0.22)]'
-                : 'hover:bg-[#FDE8F2]'
+                ? 'text-white shadow-[0_14px_28px_rgba(225,27,116,0.22)] scale-[1.02]'
+                : 'hover:bg-[#FDE8F2] hover:text-[var(--brand-dark)]'
             }`}
             style={
               isActive
@@ -103,12 +103,8 @@ export default function AdminShell({ title, description, children }) {
       <button
         type="button"
         onClick={handleLogout}
-        className="mt-8 w-full rounded-2xl px-4 py-3 text-sm font-semibold transition hover:-translate-y-px"
-        style={{
-          border: '1px solid var(--gold-lighter)',
-          background: 'var(--gold-lightest)',
-          color: 'var(--gold-dark)',
-        }}
+        className="mt-8 w-full premium-button-secondary transition-all duration-300 hover:-translate-y-px hover:scale-[1.01]"
+        style={{ borderRadius: '16px' }}
       >
         Cerrar sesión
       </button>
@@ -185,19 +181,15 @@ export default function AdminShell({ title, description, children }) {
           <button
             type="button"
             onClick={handleLogout}
-            className="mt-8 w-full rounded-2xl px-4 py-3 text-sm font-semibold transition"
-            style={{
-              border: '1px solid var(--gold-lighter)',
-              background: 'var(--gold-lightest)',
-              color: 'var(--gold-dark)',
-            }}
+            className="mt-8 w-full premium-button-secondary transition-all duration-300"
+            style={{ borderRadius: '16px' }}
           >
             Cerrar sesión
           </button>
         </aside>
 
         {/* Main Content */}
-        <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-8">
+        <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-8 step-fade-in" key={router.pathname}>
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
               {/* Hamburger — mobile only */}
