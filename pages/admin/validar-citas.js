@@ -1,9 +1,28 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect, useMemo } from 'react';
-import { addDays, endOfDay, endOfWeek, format, startOfDay, startOfWeek } from 'date-fns';
+import { addDays, endOfDay, endOfWeek, format, startOfDay, startOfWeek, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import {
+  Smartphone,
+  Check,
+  RotateCcw,
+  MessageSquare,
+  Calendar,
+  DollarSign,
+  Clock,
+  Lock,
+  RefreshCw,
+  AlertCircle,
+  Search,
+  CheckCircle2,
+  Trash2,
+  CalendarDays,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import AdminShell from '../../components/AdminShell';
-import { hasAdminToken } from '../../lib/adminAuth';
+import { hasAdminToken, checkDeviceAndAutoLogin, getDeviceToken } from '../../lib/adminAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_WORKER_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 
@@ -34,9 +53,12 @@ export default function ValidarCitas() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
-  const [filter, setFilter] = useState('today');
+  const [filter, setFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
+  const [showActionRequired, setShowActionRequired] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isDeviceVerified, setIsDeviceVerified] = useState(false);
   const [reservations, setReservations] = useState([]);
   const [error, setError] = useState('');
   const [adminPin, setAdminPin] = useState('');
@@ -47,15 +69,24 @@ export default function ValidarCitas() {
 
   const dateRange = useMemo(() => getFilterRange(filter), [filter]);
 
+  // Chequear autenticación tradicional y de dispositivo
   useEffect(() => {
-    if (!hasAdminToken()) {
-      router.push('/admin/login');
-      setLoading(false);
-      return;
-    }
+    async function checkAuth() {
+      if (!hasAdminToken()) {
+        const autoLoggedIn = await checkDeviceAndAutoLogin();
+        if (!autoLoggedIn) {
+          router.push('/admin/login');
+          setLoading(false);
+          return;
+        }
+      }
 
-    setIsAuthenticated(true);
-    setLoading(false);
+      setIsAuthenticated(true);
+      const token = getDeviceToken();
+      setIsDeviceVerified(!!token);
+      setLoading(false);
+    }
+    checkAuth();
   }, [router]);
 
   const refreshReservations = async () => {
@@ -88,6 +119,7 @@ export default function ValidarCitas() {
     refreshReservations();
   }, [dateRange.end, dateRange.start, isAuthenticated]);
 
+  // Resumen de estadísticas
   const paymentSummary = useMemo(() => {
     return reservations.reduce((acc, reservation) => {
       const status = reservation.isExpired ? 'EXPIRADA' : (reservation.paymentStatus || 'SIN_ESTADO');
@@ -99,17 +131,61 @@ export default function ValidarCitas() {
     }, { total: 0, pending: 0, confirmed: 0, expired: 0 });
   }, [reservations]);
 
+  // Filtrado y búsqueda de reservas
   const visibleReservations = useMemo(() => {
-    if (paymentFilter === 'all') return reservations;
-    return reservations.filter((reservation) => {
-      const status = reservation.isExpired ? 'EXPIRADA' : reservation.paymentStatus;
-      return status === paymentFilter;
-    });
-  }, [paymentFilter, reservations]);
+    let result = reservations;
 
+    // Filtro por Estado de Pago
+    if (paymentFilter !== 'all') {
+      result = result.filter((reservation) => {
+        const status = reservation.isExpired ? 'EXPIRADA' : reservation.paymentStatus;
+        return status === paymentFilter;
+      });
+    }
+
+    // Filtro "Acción Requerida" (Pendientes de pago o Expiradas sin resolver)
+    if (showActionRequired) {
+      result = result.filter((reservation) => {
+        const status = reservation.isExpired ? 'EXPIRADA' : reservation.paymentStatus;
+        return status === 'PENDIENTE_PAGO' || status === 'EXPIRADA';
+      });
+    }
+
+    // Filtro de Búsqueda de Texto
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter((res) => {
+        return (
+          res.name?.toLowerCase().includes(query) ||
+          res.email?.toLowerCase().includes(query) ||
+          res.phone?.toLowerCase().includes(query) ||
+          res.code?.toLowerCase().includes(query) ||
+          res.service?.toLowerCase().includes(query)
+        );
+      });
+    }
+
+    return result;
+  }, [paymentFilter, showActionRequired, searchQuery, reservations]);
+
+  // Agrupamiento por fecha para optimizar espacio
+  const groupedReservations = useMemo(() => {
+    const groups = {};
+    visibleReservations.forEach((reservation) => {
+      const dateKey = reservation.dateLabel || 'Sin Fecha';
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(reservation);
+    });
+    return groups;
+  }, [visibleReservations]);
+
+  // Manejadores de API
   const handleConfirmPayment = async (reservationCode) => {
-    if (!adminPin || adminPin.length < 4) {
-      setError('Ingresa el PIN de administrador para confirmar el pago.');
+    const token = getDeviceToken();
+    if (!token && (!adminPin || adminPin.length < 4)) {
+      setError('Ingresá el PIN de administrador para confirmar el pago.');
       return;
     }
 
@@ -121,7 +197,7 @@ export default function ValidarCitas() {
       const res = await fetch(`${API_BASE}/confirm-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: reservationCode, adminPin }),
+        body: JSON.stringify({ code: reservationCode, adminPin, deviceToken: token }),
       });
 
       const data = await res.json().catch(() => null);
@@ -141,7 +217,9 @@ export default function ValidarCitas() {
             }
           : reservation
       )));
-      setSuccessMessage('Pago confirmado correctamente.');
+      setSuccessMessage(data?.message || 'Pago confirmado correctamente.');
+      // Limpiar el PIN de entrada para seguridad
+      setAdminPin('');
     } catch (paymentError) {
       setError(paymentError.message || 'No se pudo confirmar el pago.');
     } finally {
@@ -150,8 +228,9 @@ export default function ValidarCitas() {
   };
 
   const handleSweepExpiredPayments = async () => {
-    if (!adminPin || adminPin.length < 4) {
-      setError('Ingresa el PIN de administrador para liberar reservas vencidas.');
+    const token = getDeviceToken();
+    if (!token && (!adminPin || adminPin.length < 4)) {
+      setError('Ingresá el PIN de administrador para liberar reservas vencidas.');
       return;
     }
 
@@ -163,26 +242,28 @@ export default function ValidarCitas() {
       const res = await fetch(`${API_BASE}/expire-pending-payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminPin }),
+        body: JSON.stringify({ adminPin, deviceToken: token }),
       });
 
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data?.error || 'No se pudo ejecutar la liberacion de vencidas.');
+        throw new Error(data?.error || 'No se pudo ejecutar la liberación de vencidas.');
       }
 
       await refreshReservations();
-      setSuccessMessage(data?.message || 'Liberacion de vencidas ejecutada correctamente.');
+      setSuccessMessage(data?.message || 'Liberación de vencidas ejecutada correctamente.');
+      setAdminPin('');
     } catch (sweepError) {
-      setError(sweepError.message || 'No se pudo ejecutar la liberacion de vencidas.');
+      setError(sweepError.message || 'No se pudo ejecutar la liberación de vencidas.');
     } finally {
       setSweepingPayments(false);
     }
   };
 
   const handleValidate = async (reservationCode) => {
-    if (!adminPin || adminPin.length < 4) {
-      setError('Ingresa el PIN de administrador para validar manualmente.');
+    const token = getDeviceToken();
+    if (!token && (!adminPin || adminPin.length < 4)) {
+      setError('Ingresá el PIN de administrador para validar manualmente.');
       return;
     }
 
@@ -194,7 +275,7 @@ export default function ValidarCitas() {
       const res = await fetch(`${API_BASE}/validate-attendance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: reservationCode, adminPin }),
+        body: JSON.stringify({ code: reservationCode, adminPin, deviceToken: token }),
       });
 
       const data = await res.json().catch(() => null);
@@ -211,7 +292,8 @@ export default function ValidarCitas() {
             }
           : reservation
       )));
-      setSuccessMessage('Asistencia validada correctamente.');
+      setSuccessMessage('Asistencia validada correctamente y tarjeta de fidelidad actualizada.');
+      setAdminPin('');
     } catch (validationError) {
       setError(validationError.message || 'No se pudo validar la cita.');
     } finally {
@@ -224,7 +306,7 @@ export default function ValidarCitas() {
       <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <div className="text-center">
           <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-b-transparent" style={{ borderColor: 'var(--brand) transparent var(--brand) var(--brand)' }} />
-          <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>Cargando...</p>
+          <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>Verificando dispositivo...</p>
         </div>
       </div>
     );
@@ -233,215 +315,463 @@ export default function ValidarCitas() {
   if (!isAuthenticated) return null;
 
   return (
-      <AdminShell
-        title="Validar citas"
-        description="Gestiona el pago del abono y luego valida asistencia. Las reservas nuevas nacen pendientes de pago y el backend libera automaticamente las que vencen sin confirmacion."
-      >
+    <AdminShell
+      title="Validar citas y abonos"
+      description="Liberá turnos confirmando el abono recibido por transferencia, o validá asistencia cuando las clientas lleguen al estudio."
+    >
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="admin-highlight-card rounded-3xl border border-white/70 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="admin-section-kicker">Validación editorial</p>
-              <div className="mb-4 grid gap-3 sm:grid-cols-4">
-                <div className="rounded-2xl border border-pink-100 bg-pink-50 px-4 py-3 text-sm text-slate-700">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-pink-600">Total</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{paymentSummary.total}</p>
-                </div>
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-slate-700">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-700">Pendientes</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{paymentSummary.pending}</p>
-                </div>
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-slate-700">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">Confirmadas</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{paymentSummary.confirmed}</p>
-                </div>
-                <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-slate-700">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-rose-700">Expiradas</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{paymentSummary.expired}</p>
-                </div>
+        
+        {/* Alerts */}
+        {error && (
+          <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 shadow-sm animate-fadeIn">
+            <AlertCircle className="h-5 w-5 shrink-0 text-rose-500" />
+            <p className="font-medium">{error}</p>
+          </div>
+        )}
+        {successMessage && (
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 shadow-sm animate-fadeIn">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+            <p className="font-medium">{successMessage}</p>
+          </div>
+        )}
+
+        {/* Dashboard Grid */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          
+          {/* Main Controls Section (Left/Top 2 Cols) */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Search and Filters Card */}
+            <div className="admin-highlight-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm space-y-4">
+              
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, email, teléfono, código..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white/50 pl-11 pr-4 py-3 text-sm text-slate-800 outline-none transition focus:border-pink-400 focus:bg-white focus:ring-2 focus:ring-pink-100"
+                />
               </div>
-              <div className="mb-4 flex flex-wrap gap-3">
-                {[
-                  { id: 'today', label: 'Hoy' },
-                  { id: 'week', label: 'Esta semana' },
-                  { id: 'all', label: 'Todas' },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setFilter(tab.id)}
-                    className="rounded-full px-4 py-2 text-sm font-semibold transition"
-                    style={
-                      filter === tab.id
-                        ? {
-                            background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
-                            color: '#fff',
-                            boxShadow: '0 8px 18px rgba(225,27,116,0.20)',
-                          }
-                        : {
-                            background: 'var(--bg-blush)',
-                            color: 'var(--ink-muted)',
-                            border: '1px solid var(--gold-lighter)',
-                          }
-                    }
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+
+              {/* Range & Filters Row */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                {/* Date range filters */}
+                <div className="flex items-center gap-2">
+                  {[
+                    { id: 'today', label: 'Hoy' },
+                    { id: 'week', label: 'Esta Semana' },
+                    { id: 'all', label: 'Ver Todo (60 días)' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setFilter(tab.id)}
+                      className="rounded-full px-4 py-2 text-xs font-bold transition-all"
+                      style={
+                        filter === tab.id
+                          ? {
+                              background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
+                              color: '#fff',
+                              boxShadow: '0 4px 10px rgba(225,27,116,0.18)',
+                            }
+                          : {
+                              background: 'var(--bg-blush)',
+                              color: 'var(--ink-muted)',
+                              border: '1px solid var(--gold-lighter)',
+                            }
+                      }
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Show Required Actions Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowActionRequired(!showActionRequired)}
+                  className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition border"
+                  style={
+                    showActionRequired
+                      ? {
+                          borderColor: 'var(--brand)',
+                          background: 'var(--brand-lightest)',
+                          color: 'var(--brand)',
+                        }
+                      : {
+                          borderColor: '#cbd5e1',
+                          background: '#f8fafc',
+                          color: '#64748b',
+                        }
+                  }
+                >
+                  <Clock className="h-4 w-4" />
+                  {showActionRequired ? 'Filtro: Acción Requerida' : 'Mostrar Completadas'}
+                </button>
               </div>
-              <p className="text-sm text-gray-500">
-                Mostrando citas desde {format(dateRange.start, "d 'de' MMMM", { locale: es })} hasta {format(dateRange.end, "d 'de' MMMM", { locale: es })}.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {[
-                  { id: 'all', label: 'Todos los pagos' },
-                  { id: 'PENDIENTE_PAGO', label: 'Pendientes' },
-                  { id: 'PAGO_CONFIRMADO', label: 'Confirmados' },
-                  { id: 'EXPIRADA', label: 'Expirados' },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setPaymentFilter(tab.id)}
-                    className="rounded-full px-4 py-2 text-sm font-semibold transition"
-                    style={
-                      paymentFilter === tab.id
-                        ? {
-                            background: '#111827',
-                            color: '#fff',
-                          }
-                        : {
-                            background: '#f8fafc',
-                            color: '#475569',
-                            border: '1px solid #e2e8f0',
-                          }
-                    }
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+
+              {/* Detailed Payment Filters (only if action required is off) */}
+              {!showActionRequired && (
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+                  {[
+                    { id: 'all', label: 'Todos los pagos' },
+                    { id: 'PENDIENTE_PAGO', label: 'Pendientes' },
+                    { id: 'PAGO_CONFIRMADO', label: 'Confirmados' },
+                    { id: 'EXPIRADA', label: 'Expiradas/Liberadas' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setPaymentFilter(tab.id)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                        paymentFilter === tab.id
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="w-full max-w-xs">
-              <label htmlFor="admin-pin" className="mb-2 block text-sm font-semibold text-slate-700">PIN de administrador</label>
-              <input
-                id="admin-pin"
-                type="password"
-                inputMode="numeric"
-                maxLength="4"
-                value={adminPin}
-                onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="2308"
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-center text-lg tracking-[0.35em] text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
-              />
-              <button
-                type="button"
-                onClick={handleSweepExpiredPayments}
-                disabled={sweepingPayments}
-                className="mt-3 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sweepingPayments ? 'Liberando vencidas...' : 'Liberar vencidas ahora'}
-              </button>
+            {/* Citations List Panel */}
+            <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm">
+              <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800">Turnos Registrados</h2>
+                  <p className="text-xs text-slate-500">
+                    Mostrando citas desde {format(dateRange.start, "d 'de' MMMM", { locale: es })} hasta {format(dateRange.end, "d 'de' MMMM", { locale: es })}
+                  </p>
+                </div>
+                {listLoading ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-pink-600">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Actualizando...
+                  </span>
+                ) : (
+                  <span className="text-xs font-bold text-slate-500 rounded-full bg-slate-100 px-2.5 py-1">
+                    {visibleReservations.length} {visibleReservations.length === 1 ? 'cita' : 'citas'}
+                  </span>
+                )}
+              </div>
+
+              {listLoading && reservations.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-pink-600" />
+                  <p className="text-sm text-slate-500">Cargando base de datos...</p>
+                </div>
+              ) : visibleReservations.length === 0 ? (
+                <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
+                  <CalendarDays className="mx-auto h-10 w-10 text-slate-300 mb-3" />
+                  <h3 className="text-sm font-bold text-slate-700">Sin citas para mostrar</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                    {showActionRequired 
+                      ? 'No hay citas con acciones pendientes de abono o asistencia en este rango de tiempo.'
+                      : 'No se encontraron citas que coincidan con los filtros o la búsqueda actual.'}
+                  </p>
+                  {showActionRequired && (
+                    <button
+                      onClick={() => setShowActionRequired(false)}
+                      className="mt-4 text-xs font-bold text-pink-600 hover:text-pink-700 hover:underline"
+                    >
+                      Ver historial de citas confirmadas y completadas
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {Object.entries(groupedReservations).map(([dateLabel, dateReservations]) => (
+                    <div key={dateLabel} className="space-y-3">
+                      
+                      {/* Section Date Header */}
+                      <div className="flex items-center gap-3 py-1">
+                        <h3 className="font-display text-base font-semibold text-slate-800 capitalize">
+                          {dateLabel}
+                        </h3>
+                        <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
+                      </div>
+
+                      {/* Items */}
+                      <div className="space-y-3">
+                        {dateReservations.map((reservation) => {
+                          const status = reservation.isExpired ? 'EXPIRADA' : reservation.paymentStatus;
+                          
+                          // WhatsApp Message Helper
+                          const waPhone = reservation.phone ? reservation.phone.replace(/\D/g, '') : '';
+                          const waMessage = `Hola ${reservation.name}, te escribo de Vanessa Nails Studio con respecto a tu cita del día ${reservation.dateLabel} a las ${reservation.timeLabel}...`;
+                          const waUrl = waPhone ? `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}` : null;
+
+                          return (
+                            <div
+                              key={reservation.code}
+                              className="admin-list-card rounded-2xl border border-slate-100 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm"
+                            >
+                              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                
+                                {/* Info Layout */}
+                                <div className="flex items-start gap-4 min-w-0">
+                                  {/* Big Time Block */}
+                                  <div className="shrink-0 flex flex-col items-center justify-center rounded-2xl bg-white border border-slate-100 px-3.5 py-2.5 shadow-sm text-center min-w-[70px]">
+                                    <Clock className="h-4 w-4 text-pink-600 mb-1" />
+                                    <span className="text-base font-bold text-slate-900 leading-none">
+                                      {reservation.timeLabel}
+                                    </span>
+                                  </div>
+
+                                  {/* Details */}
+                                  <div className="min-w-0 space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      {/* Status Badge */}
+                                      {status === 'PENDIENTE_PAGO' && (
+                                        <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                          Pendiente Abono
+                                        </span>
+                                      )}
+                                      {status === 'PAGO_CONFIRMADO' && (
+                                        <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                          Abono Confirmado
+                                        </span>
+                                      )}
+                                      {status === 'EXPIRADA' && (
+                                        <span className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                                          Cita Expirada (Sin Pago)
+                                        </span>
+                                      )}
+                                      {status === 'CANCELADA' && (
+                                        <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                                          Cancelada
+                                        </span>
+                                      )}
+
+                                      {/* Attendance Badge */}
+                                      {reservation.attended ? (
+                                        <span className="rounded-full bg-emerald-100/70 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
+                                          Asistió
+                                        </span>
+                                      ) : reservation.paymentStatus === 'PAGO_CONFIRMADO' ? (
+                                        <span className="rounded-full bg-pink-50 border border-pink-100 text-pink-700 px-2 py-0.5 text-[10px] font-bold">
+                                          Espera Asistencia
+                                        </span>
+                                      ) : null}
+                                    </div>
+
+                                    <h4 className="text-base font-bold text-slate-800 truncate">
+                                      {reservation.name}
+                                    </h4>
+                                    <p className="text-xs font-semibold text-slate-600">
+                                      {reservation.service}
+                                    </p>
+                                    
+                                    <div className="text-[11px] text-slate-500 space-y-0.5 leading-tight">
+                                      <p>{reservation.email}</p>
+                                      <p>{reservation.phone || 'Sin teléfono registrado'}</p>
+                                      <p className="font-mono text-[10px] text-slate-400">Código: {reservation.code}</p>
+                                      {status === 'PENDIENTE_PAGO' && reservation.paymentExpiresAt && (
+                                        <p className="text-amber-600 font-medium">
+                                          Vence pago: {format(new Date(reservation.paymentExpiresAt), 'dd/MM HH:mm')}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Actions Layout */}
+                                <div className="flex flex-wrap items-center gap-2 shrink-0 sm:flex-col sm:items-stretch sm:min-w-[170px]">
+                                  
+                                  {/* Confirm Button */}
+                                  {status === 'PENDIENTE_PAGO' && (
+                                    <button
+                                      type="button"
+                                      disabled={confirmingPaymentCode === reservation.code}
+                                      onClick={() => handleConfirmPayment(reservation.code)}
+                                      className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2.5 shadow-sm transition disabled:opacity-50"
+                                    >
+                                      {confirmingPaymentCode === reservation.code ? (
+                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Check className="h-3.5 w-3.5" />
+                                      )}
+                                      Confirmar Pago
+                                    </button>
+                                  )}
+
+                                  {/* Reactivate Expired Button */}
+                                  {status === 'EXPIRADA' && (
+                                    <button
+                                      type="button"
+                                      disabled={confirmingPaymentCode === reservation.code}
+                                      onClick={() => handleConfirmPayment(reservation.code)}
+                                      className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-4 py-2.5 shadow-sm transition disabled:opacity-50"
+                                    >
+                                      {confirmingPaymentCode === reservation.code ? (
+                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <RotateCcw className="h-3.5 w-3.5" />
+                                      )}
+                                      Reactivar y Confirmar
+                                    </button>
+                                  )}
+
+                                  {/* Validate Attendance Button */}
+                                  {status === 'PAGO_CONFIRMADO' && !reservation.attended && (
+                                    <button
+                                      type="button"
+                                      disabled={submittingCode === reservation.code}
+                                      onClick={() => handleValidate(reservation.code)}
+                                      className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-semibold text-xs px-4 py-2.5 shadow-sm transition disabled:opacity-50"
+                                    >
+                                      {submittingCode === reservation.code ? (
+                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                      )}
+                                      Validar Asistencia
+                                    </button>
+                                  )}
+
+                                  {/* Direct Contact & Calendar Icons */}
+                                  <div className="flex gap-2 w-full justify-end sm:justify-start">
+                                    {reservation.htmlLink && (
+                                      <a
+                                        href={reservation.htmlLink}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        title="Ver en Google Calendar"
+                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition shadow-sm shrink-0"
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </a>
+                                    )}
+                                    {waUrl && (
+                                      <a
+                                        href={waUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        title="Chatear por WhatsApp"
+                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100 transition shadow-sm shrink-0"
+                                      >
+                                        <MessageSquare className="h-4 w-4" />
+                                      </a>
+                                    )}
+                                  </div>
+
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {error ? <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">{error}</div> : null}
-          {successMessage ? <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{successMessage}</div> : null}
-        </div>
+          {/* Sidebar Area (Right 1 Col) */}
+          <div className="space-y-6">
+            
+            {/* Device Token Auths (Zero PIN Status) */}
+            <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <Smartphone className="h-4.5 w-4.5 text-pink-600" />
+                Seguridad & Dispositivo
+              </h3>
 
-        <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-gray-800">Listado manual de citas</h2>
-             {listLoading ? <span className="text-sm text-gray-500">Actualizando...</span> : <span className="text-sm text-gray-500">{visibleReservations.length} citas</span>}
-           </div>
-
-          {listLoading ? (
-            <div className="py-10 text-center text-gray-500">Cargando citas...</div>
-          ) : visibleReservations.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
-              No hay citas para este rango.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {visibleReservations.map((reservation) => {
-                const paymentBadge = reservation.paymentStatus === 'EXPIRADA' || reservation.isExpired
-                  ? 'Reserva liberada'
-                  : reservation.paymentStatus === 'PAGO_CONFIRMADO'
-                    ? 'Pago confirmado'
-                    : 'Pendiente de pago';
-                const paymentBadgeClass = reservation.paymentStatus === 'EXPIRADA' || reservation.isExpired
-                  ? 'bg-rose-100 text-rose-700'
-                  : reservation.paymentStatus === 'PAGO_CONFIRMADO'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-amber-100 text-amber-700';
-
-                return (
-                <div key={reservation.code} className="admin-list-card rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-pink-100 px-3 py-1 text-xs font-semibold text-pink-700">{reservation.dateLabel}</span>
-                        <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">{reservation.timeLabel}</span>
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${paymentBadgeClass}`}>
-                          {paymentBadge}
-                        </span>
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${reservation.attended ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {reservation.attended ? 'Asistencia validada' : 'Pendiente'}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-900">{reservation.name}</h3>
-                      <p className="text-sm font-medium text-slate-700">{reservation.service}</p>
-                      <div className="text-sm text-slate-500">
-                        <p>{reservation.email}</p>
-                        <p>{reservation.phone || 'Sin teléfono'}</p>
-                        <p className="font-mono text-xs text-slate-400">Código: {reservation.code}</p>
-                        {reservation.paymentExpiresAt ? <p>Vence pago: {format(new Date(reservation.paymentExpiresAt), 'dd/MM/yyyy HH:mm')}</p> : null}
-                        {reservation.paymentConfirmedAt ? <p>Pago confirmado: {format(new Date(reservation.paymentConfirmedAt), 'dd/MM/yyyy HH:mm')}</p> : null}
-                        {reservation.releasedAt ? <p>Liberada: {format(new Date(reservation.releasedAt), 'dd/MM/yyyy HH:mm')}</p> : null}
-                      </div>
-                    </div>
-
-                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[220px]">
-                      {reservation.htmlLink ? (
-                        <a
-                          href={reservation.htmlLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-white"
-                        >
-                          Ver en calendario
-                        </a>
-                      ) : null}
-                      <button
-                        type="button"
-                        disabled={reservation.paymentStatus !== 'PENDIENTE_PAGO' || reservation.isExpired || confirmingPaymentCode === reservation.code}
-                        onClick={() => handleConfirmPayment(reservation.code)}
-                        className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {reservation.paymentStatus === 'PAGO_CONFIRMADO'
-                          ? 'Pago ya confirmado'
-                          : confirmingPaymentCode === reservation.code
-                            ? 'Confirmando pago...'
-                            : reservation.paymentStatus === 'EXPIRADA' || reservation.isExpired
-                              ? 'Reserva liberada'
-                              : 'Confirmar pago'}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={reservation.attended || submittingCode === reservation.code || reservation.paymentStatus !== 'PAGO_CONFIRMADO'}
-                        onClick={() => handleValidate(reservation.code)}
-                        className="rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                        style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
-                      >
-                        {reservation.attended ? 'Ya validada' : reservation.paymentStatus !== 'PAGO_CONFIRMADO' ? 'Confirma pago primero' : submittingCode === reservation.code ? 'Validando...' : 'Validar asistencia'}
-                      </button>
-                    </div>
+              {isDeviceVerified ? (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-xs space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-800 font-bold">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    Dispositivo Autorizado
                   </div>
+                  <p className="text-slate-600 leading-normal">
+                    Este celular/computadora está validado. Confirmá pagos o asistencia a <strong>un toque</strong>, sin escribir el PIN.
+                  </p>
                 </div>
-                );
-              })}
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs space-y-3">
+                  <div className="flex items-center gap-2 text-slate-700 font-bold">
+                    <Lock className="h-4 w-4 text-slate-500" />
+                    Ingreso por PIN Requerido
+                  </div>
+                  <p className="text-slate-600 leading-normal">
+                    Este dispositivo no está registrado. Ingresá el PIN de 4 dígitos abajo para autorizar operaciones:
+                  </p>
+                  
+                  <input
+                    id="admin-pin"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength="4"
+                    value={adminPin}
+                    onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="PIN"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-center text-base tracking-[0.3em] font-mono text-slate-900 outline-none transition focus:border-pink-400 bg-white"
+                  />
+                  
+                  <p className="text-[10px] text-slate-400">
+                    💡 Tip: Si iniciás sesión con la contraseña en el Login tradicional, este dispositivo se autorizará automáticamente.
+                  </p>
+                </div>
+              )}
+
+              {/* Sweep Expired bookings */}
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleSweepExpiredPayments}
+                  disabled={sweepingPayments}
+                  className="w-full rounded-xl border border-pink-200 bg-pink-50/30 px-4 py-2.5 text-xs font-bold text-pink-700 transition hover:bg-pink-50 hover:text-pink-800 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sweepingPayments ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  {sweepingPayments ? 'Liberando vencidas...' : 'Liberar Vencidas Manual'}
+                </button>
+                <p className="text-[10px] text-slate-400 mt-2 text-center leading-normal">
+                  El sistema limpia las citas automáticamente cada 15 minutos. Usá este botón si querés forzar la limpieza ahora.
+                </p>
+              </div>
             </div>
-          )}
+
+            {/* Summary statistics */}
+            <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">
+                Resumen de Citas (Rango)
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
+                  <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Total</p>
+                  <p className="mt-1 text-xl font-extrabold text-slate-800">{paymentSummary.total}</p>
+                </div>
+                
+                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3">
+                  <p className="text-amber-700 font-bold uppercase tracking-wider text-[9px]">Pendientes</p>
+                  <p className="mt-1 text-xl font-extrabold text-amber-800">{paymentSummary.pending}</p>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3">
+                  <p className="text-emerald-700 font-bold uppercase tracking-wider text-[9px]">Confirmadas</p>
+                  <p className="mt-1 text-xl font-extrabold text-emerald-800">{paymentSummary.confirmed}</p>
+                </div>
+
+                <div className="rounded-2xl border border-rose-100 bg-rose-50 px-3 py-3">
+                  <p className="text-rose-700 font-bold uppercase tracking-wider text-[9px]">Expiradas</p>
+                  <p className="mt-1 text-xl font-extrabold text-rose-800">{paymentSummary.expired}</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
         </div>
+
       </div>
     </AdminShell>
   );

@@ -1,16 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { setAdminToken } from '../../lib/adminAuth';
+import { setAdminToken, calculateHash, checkDeviceAndAutoLogin } from '../../lib/adminAuth';
 import { AdminShieldIcon } from '../../components/BrandMotifs';
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD_FALLBACK;
+const ADMIN_PASSWORD =
+  process.env.NEXT_PUBLIC_ADMIN_PASSWORD_FALLBACK ||
+  process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    async function tryAutoLogin() {
+      const loggedIn = await checkDeviceAndAutoLogin();
+      if (loggedIn) {
+        router.push('/admin/validar-citas');
+      }
+    }
+    tryAutoLogin();
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,12 +31,14 @@ export default function AdminLogin() {
 
     try {
       if (!ADMIN_PASSWORD) {
-        throw new Error('ADMIN password no configurado en producción.');
+        throw new Error('Acceso admin no configurado en producción.');
       }
 
       if (password.trim() === ADMIN_PASSWORD.trim()) {
         setAdminToken();
-        router.push('/admin/horarios');
+        const hash = await calculateHash(password.trim());
+        localStorage.setItem('admin_device_token', hash);
+        router.push('/admin/validar-citas');
       } else {
         setError('Contraseña incorrecta');
       }
@@ -53,7 +67,6 @@ export default function AdminLogin() {
         }}
       >
         <div className="w-full max-w-md space-y-8">
-
           {/* Brand header */}
           <div className="text-center">
             <div

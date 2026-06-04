@@ -26,9 +26,13 @@ export default function AdminHorarios() {
     const checkAuth = async () => {
       try {
         if (!hasAdminToken()) {
-          router.push('/admin/login');
-          setLoading(false);
-          return;
+          const { checkDeviceAndAutoLogin } = await import('../../lib/adminAuth');
+          const autoLoggedIn = await checkDeviceAndAutoLogin();
+          if (!autoLoggedIn) {
+            router.push('/admin/login');
+            setLoading(false);
+            return;
+          }
         }
 
         setIsAuthenticated(true);

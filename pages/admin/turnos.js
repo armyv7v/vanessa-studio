@@ -66,13 +66,17 @@ export default function AdminTurnos() {
 
   // Auth
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       if (!hasAdminToken()) {
-        router.push('/admin/login');
-        setLoading(false);
-        return;
+        const { checkDeviceAndAutoLogin } = await import('../../lib/adminAuth');
+        const autoLoggedIn = await checkDeviceAndAutoLogin();
+        if (!autoLoggedIn) {
+          router.push('/admin/login');
+          setLoading(false);
+          return;
+        }
       }
-      setIsAuthenticated(hasAdminToken());
+      setIsAuthenticated(true);
       setLoading(false);
     };
     checkAuth();
