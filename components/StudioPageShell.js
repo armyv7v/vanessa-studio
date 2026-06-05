@@ -73,9 +73,10 @@ export default function StudioPageShell({
         </header>
 
         {/* Clean content panel wrapper */}
-        <section className="premium-shell gloss-panel gradient-outline step-fade-in shadow-md">
+        <section className="premium-shell gloss-panel gradient-outline step-fade-in shadow-md !p-5 sm:!p-6 lg:!p-7">
           {children}
         </section>
+
 
         <footer className="pt-4 text-center text-xs text-[var(--ink-faint)]">
           <p>© {new Date().getFullYear()} Vanessa Nails Studio. Todos los derechos reservados.</p>

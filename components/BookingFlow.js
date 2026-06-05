@@ -92,19 +92,19 @@ function getServiceById(serviceId) {
 
 function StepIndicator({ step }) {
   return (
-    <div className="border-b border-[#F2C8D4]/25 pb-5 mb-8" aria-label="Progreso de la reserva">
-      <ol className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8">
+    <div className="border-b border-[#F2C8D4]/15 pb-3 mb-5" aria-label="Progreso de la reserva">
+      <ol className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6">
         {stepLabels.map((label, index) => {
           const stepNumber = index + 1;
           const isActive = step >= stepNumber;
           const isCurrent = step === stepNumber;
 
           return (
-            <li key={label} className="flex items-center gap-2" aria-current={isCurrent ? 'step' : undefined}>
+            <li key={label} className="flex items-center gap-1.5" aria-current={isCurrent ? 'step' : undefined}>
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-all duration-300 ${
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold transition-all duration-300 ${
                   isCurrent
-                    ? 'bg-[var(--brand)] text-white shadow-[0_4px_12px_rgba(225,27,116,0.25)] scale-105'
+                    ? 'bg-[var(--brand)] text-white shadow-[0_3px_8px_rgba(225,27,116,0.25)] scale-105'
                     : isActive
                       ? 'bg-[var(--brand-lightest)] text-[var(--brand)] border border-[#F2C8D4]/60'
                       : 'bg-white/40 border border-slate-200 text-slate-400'
@@ -112,11 +112,11 @@ function StepIndicator({ step }) {
               >
                 {stepNumber}
               </div>
-              <span className={`text-xs font-semibold tracking-wider uppercase ${isCurrent ? 'text-[var(--brand-darker)] font-bold' : 'text-[var(--ink-faint)]'}`}>
+              <span className={`text-[10px] font-semibold tracking-wider uppercase ${isCurrent ? 'text-[var(--brand-darker)] font-bold' : 'text-[var(--ink-faint)]'}`}>
                 {label}
               </span>
               {index < stepLabels.length - 1 && (
-                <span className="text-[#EDD9A3]/50 hidden sm:inline ml-2">/</span>
+                <span className="text-[#EDD9A3]/40 hidden sm:inline ml-1.5">/</span>
               )}
             </li>
           );
@@ -128,12 +128,12 @@ function StepIndicator({ step }) {
 
 function SectionHeader({ id, title, description }) {
   return (
-    <header className="mb-8 text-center space-y-2">
-      <h2 id={id} className="font-display text-2xl sm:text-3xl font-semibold text-[var(--brand-darker)] tracking-tight">
+    <header className="mb-5 text-center space-y-1">
+      <h2 id={id} className="font-display text-xl sm:text-2xl font-semibold text-[var(--brand-darker)] tracking-tight">
         {title}
       </h2>
       {description ? (
-        <p className="mx-auto max-w-xl text-xs sm:text-sm text-[var(--ink-muted)] leading-relaxed">
+        <p className="mx-auto max-w-lg text-[11px] sm:text-xs text-[var(--ink-muted)] leading-relaxed">
           {description}
         </p>
       ) : null}
@@ -429,7 +429,7 @@ export default function BookingFlow({ config }) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <StepIndicator step={step} />      
       {step === 1 ? (
         <section aria-labelledby="booking-services-heading" className="step-fade-in">
@@ -439,38 +439,38 @@ export default function BookingFlow({ config }) {
             description="Elige el estilo que quieres lucir. Cada opción muestra el tiempo estimado para que reserves con claridad y sin sorpresas."
           />
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {services.map((service, index) => (
               <button
                 key={service.id}
                 type="button"
                 onClick={() => handleServiceSelect(service.id)}
                 aria-label={`Seleccionar ${service.name}, duración ${service.duration} minutos`}
-                className="group flex h-full flex-col rounded-2xl border border-[#F2C8D4]/30 bg-white/80 p-6 text-left transition duration-200 hover:border-[#F2C8D4]/60 hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/35"
+                className="group flex h-full flex-col rounded-xl border border-[#F2C8D4]/30 bg-white/80 p-4 sm:p-5 text-left transition duration-200 hover:border-[#F2C8D4]/60 hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/35"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <div className="mb-4 flex items-center justify-between gap-4 w-full">
-                  <h3 className="text-lg font-bold leading-tight text-[var(--brand-darker)] transition-colors group-hover:text-[var(--brand-dark)]">
+                <div className="mb-2.5 flex items-center justify-between gap-4 w-full">
+                  <h3 className="text-base font-bold leading-tight text-[var(--brand-darker)] transition-colors group-hover:text-[var(--brand-dark)]">
                     {service.name}
                   </h3>
-                  <span className="shrink-0 rounded-full bg-[var(--brand-lightest)] px-2.5 py-0.5 text-xs font-semibold text-[var(--brand-dark)]">
+                  <span className="shrink-0 rounded-full bg-[var(--brand-lightest)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-dark)]">
                     {service.duration} min
                   </span>
                 </div>
 
-                <p className="mb-4 text-xs leading-relaxed text-[var(--ink-muted)] flex-grow">
+                <p className="mb-3 text-[11px] leading-relaxed text-[var(--ink-muted)] flex-grow">
                   {service.summary}
                 </p>
 
-                <div className="mb-5 flex flex-wrap gap-x-3 gap-y-1">
+                <div className="mb-4 flex flex-wrap gap-x-2.5 gap-y-1">
                   {service.highlights?.map((highlight) => (
-                    <span key={highlight} className="text-xs font-medium text-[var(--brand)]">
+                    <span key={highlight} className="text-[10px] font-medium text-[var(--brand)]">
                       • {highlight}
                     </span>
                   ))}
                 </div>
 
-                <div className="mt-auto border-t border-[#f3d9e4]/30 pt-3 flex w-full items-center justify-between text-xs text-[var(--gold-dark)]">
+                <div className="mt-auto border-t border-[#f3d9e4]/30 pt-2 flex w-full items-center justify-between text-[11px] text-[var(--gold-dark)]">
                   <span className="font-semibold">Vanessa Premium</span>
                   <span className="font-bold text-[var(--brand)] group-hover:text-[var(--brand-dark)]">
                     Reservar →
@@ -490,7 +490,7 @@ export default function BookingFlow({ config }) {
             description={`Estás reservando ${selectedServiceData?.name || 'tu servicio'}. Te mostramos solo fechas hábiles para que encuentres rápido el mejor espacio para ti.`}
           />
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
             {visibleDays.map((day) => {
               const dayKey = format(day, 'yyyy-MM-dd');
               const today = new Date();
@@ -507,17 +507,17 @@ export default function BookingFlow({ config }) {
                   disabled={false}
                   aria-pressed={isSelected}
                   aria-label={`${isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}, ${format(day, 'd')} de ${format(day, 'MMMM', { locale: es })}`}
-                  className={`rounded-2xl p-4 text-center transition-all duration-200 border focus:outline-none focus:ring-2 active:scale-[0.97] ${
+                  className={`rounded-xl p-2.5 sm:p-3 text-center transition-all duration-200 border focus:outline-none focus:ring-2 active:scale-[0.97] ${
                     isSelected
-                      ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-[0_8px_20px_rgba(225,27,116,0.18)]'
+                      ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-[0_6px_14px_rgba(225,27,116,0.18)]'
                       : 'bg-white/80 border-[#F2C8D4]/30 text-[var(--ink-medium)] hover:bg-white hover:border-[#F2C8D4]/60'
                   }`}
                 >
-                  <p className={`text-[10px] font-bold uppercase tracking-[0.2em] leading-none ${isSelected ? 'text-white/90' : 'text-[var(--brand)]'}`}>
+                  <p className={`text-[9px] font-bold uppercase tracking-[0.2em] leading-none ${isSelected ? 'text-white/90' : 'text-[var(--brand)]'}`}>
                     {isToday ? 'Hoy' : format(day, 'EEEE', { locale: es })}
                   </p>
-                  <p className="my-2 text-3xl font-bold tracking-tight leading-none">{format(day, 'd')}</p>
-                  <p className={`text-[11px] font-semibold tracking-wide uppercase leading-none ${isSelected ? 'text-white/75' : 'text-[var(--ink-muted)]'}`}>
+                  <p className="my-1 text-2xl font-bold tracking-tight leading-none">{format(day, 'd')}</p>
+                  <p className={`text-[10px] font-semibold tracking-wide uppercase leading-none ${isSelected ? 'text-white/75' : 'text-[var(--ink-muted)]'}`}>
                     {format(day, 'MMM', { locale: es })}
                   </p>
                 </button>
@@ -527,7 +527,7 @@ export default function BookingFlow({ config }) {
           </div>
 
           {!visibleDays.length ? (
-            <div className="mt-6">
+            <div className="mt-4">
               <EmptyStateCard
                 title="No hay fechas hábiles en este rango"
                 description="Los bloqueos activos o la configuración actual dejaron sin fechas visibles. Ajusta el calendario desde el panel admin o prueba otro rango." 
@@ -535,8 +535,8 @@ export default function BookingFlow({ config }) {
             </div>
           ) : null}
 
-          <div className="mt-8 flex justify-center">
-             <button type="button" onClick={() => setStep(1)} className="premium-button-secondary">
+          <div className="mt-5 flex justify-center">
+             <button type="button" onClick={() => setStep(1)} className="premium-button-secondary py-2 px-5 text-xs">
                Volver a servicios
              </button>
           </div>
@@ -586,13 +586,13 @@ export default function BookingFlow({ config }) {
             const renderSlotGroup = (title, icon, slots) => {
               if (slots.length === 0) return null;
               return (
-                <div className="space-y-4 rounded-[26px] border border-[#F2C8D4]/40 bg-white/40 p-5 backdrop-blur-sm shadow-sm transition-all duration-300">
-                  <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--brand-dark)' }}>
-                    <span className="flex h-5 w-5 items-center justify-center shrink-0">{icon}</span>
+                <div className="space-y-3 rounded-2xl border border-[#F2C8D4]/30 bg-white/40 p-4 backdrop-blur-sm shadow-sm transition-all duration-300">
+                  <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--brand-dark)' }}>
+                    <span className="flex h-4 w-4 items-center justify-center shrink-0">{icon}</span>
                     {title}
-                    <span className="text-xs font-normal lowercase text-[var(--ink-faint)]">({slots.length} disponibles)</span>
+                    <span className="text-[10px] font-normal lowercase text-[var(--ink-faint)]">({slots.length} disponibles)</span>
                   </h4>
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
                     {slots.map((slot) => {
                       const isSelected = selectedTime === slot;
                       return (
@@ -602,9 +602,9 @@ export default function BookingFlow({ config }) {
                           onClick={() => handleTimeSelect(slot)}
                           aria-pressed={isSelected}
                           aria-label={`Seleccionar horario ${slot}`}
-                          className={`rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 border focus:outline-none focus:ring-2 active:scale-[0.97] ${
+                          className={`rounded-xl py-2 text-center text-xs font-semibold transition-all duration-200 border focus:outline-none focus:ring-2 active:scale-[0.97] ${
                             isSelected
-                              ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-[0_4px_12px_rgba(225,27,116,0.18)]'
+                              ? 'bg-[var(--brand)] border-[var(--brand)] text-white shadow-[0_4px_10px_rgba(225,27,116,0.18)]'
                               : 'bg-white border-[#F2C8D4]/30 text-[var(--ink-medium)] hover:border-[#F2C8D4]/60 hover:bg-white'
                           }`}
                         >
@@ -618,7 +618,7 @@ export default function BookingFlow({ config }) {
             };
 
             return (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {renderSlotGroup('Mañana', <MorningIcon />, morningSlots)}
                 {renderSlotGroup('Tarde', <AfternoonIcon />, afternoonSlots)}
                 {renderSlotGroup('Noche / Extra', <EveningIcon />, eveningSlots)}
@@ -633,12 +633,12 @@ export default function BookingFlow({ config }) {
             />
           ) : null}
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
-            <button type="button" onClick={() => setStep(2)} className="premium-button-secondary">
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-between">
+            <button type="button" onClick={() => setStep(2)} className="premium-button-secondary py-2 px-5 text-xs">
               Volver a fechas
             </button>
             {selectedTime ? (
-              <button type="button" onClick={() => setStep(4)} className="premium-button">
+              <button type="button" onClick={() => setStep(4)} className="premium-button py-2 px-5 text-xs">
                 Continuar con mis datos
               </button>
             ) : null}
@@ -669,38 +669,38 @@ export default function BookingFlow({ config }) {
             />
           </>
         ) : (
-          <section className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] step-fade-in" aria-labelledby="booking-client-heading">
-            <aside className="flex flex-col justify-between space-y-6">
+          <section className="grid gap-4 sm:gap-6 lg:grid-cols-[0.92fr_1.08fr] step-fade-in" aria-labelledby="booking-client-heading">
+            <aside className="flex flex-col justify-between space-y-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--brand)' }}>Resumen</p>
-                <h3 className="mt-2 font-display text-2xl font-semibold leading-tight text-[var(--brand-darker)]">
+                <h3 className="mt-1 font-display text-xl font-semibold leading-tight text-[var(--brand-darker)]">
                   Tu cita{isExtra ? ' extra cupo' : ''}
                 </h3>
-                <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
                   Revisa los datos antes de confirmar.
                 </p>
 
-                <div className="mt-6 space-y-4 rounded-2xl p-6 border border-[#EDD9A3]/50 bg-white/50 shadow-sm">
-                  <div className="border-b border-[#EDD9A3]/30 pb-2">
+                <div className="mt-4 space-y-3 rounded-2xl p-4 border border-[#EDD9A3]/50 bg-white/50 shadow-sm">
+                  <div className="border-b border-[#EDD9A3]/30 pb-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--gold-dark)' }}>Ticket de Reserva</p>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     <SummaryRow label="Servicio" value={selectedServiceData?.name || '-'} />
                     <SummaryRow label="Duración" value={selectedServiceData ? `${selectedServiceData.duration} min` : '-'} />
                     <SummaryRow label="Fecha" value={formatLongDate(selectedDate) || '-'} />
                     <SummaryRow label="Hora" value={selectedTime || '-'} />
                     {isExtra ? <SummaryRow label="Recargo" value="$5.000" /> : null}
                   </div>
-                  <div className="border-t border-dashed border-[#EDD9A3]/55 pt-3 mt-2">
+                  <div className="border-t border-dashed border-[#EDD9A3]/55 pt-2.5 mt-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-semibold" style={{ color: 'var(--ink-muted)' }}>Monto Abono</span>
-                      <span className="text-base font-bold text-[var(--brand-dark)]">$10.000</span>
+                      <span className="text-sm font-bold text-[var(--brand-dark)]">$10.000</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#F2C8D4]/30 bg-[var(--brand-lightest)] px-5 py-4 text-xs leading-relaxed text-[var(--ink-muted)]">
+              <div className="rounded-2xl border border-[#F2C8D4]/30 bg-[var(--brand-lightest)] px-4 py-3 text-xs leading-relaxed text-[var(--ink-muted)]">
                 <p>
                   Para asegurar tu hora, debes enviar un abono de <strong>$10.000</strong>.
                 </p>
@@ -710,17 +710,16 @@ export default function BookingFlow({ config }) {
               </div>
             </aside>
 
-            <div className="border-t lg:border-t-0 lg:border-l border-[#F2C8D4]/20 pt-6 lg:pt-0 lg:pl-8">
+            <div className="border-t lg:border-t-0 lg:border-l border-[#F2C8D4]/20 pt-4 lg:pt-0 lg:pl-6">
               <SectionHeader
                 id="booking-client-heading"
                 title="Completa tus datos"
                 description="Ingresa tu correo para confirmar la reserva." 
               />
 
-
-              <form onSubmit={handleSubmitBooking} className="space-y-5">
+              <form onSubmit={handleSubmitBooking} className="space-y-3.5">
                 <div>
-                  <label htmlFor="client-name" className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-muted)' }}>Nombre completo *</label>
+                  <label htmlFor="client-name" className="mb-1.5 block text-xs font-semibold" style={{ color: 'var(--ink-muted)' }}>Nombre completo *</label>
                   <input
                     id="client-name"
                     type="text"
@@ -728,13 +727,13 @@ export default function BookingFlow({ config }) {
                     autoComplete="name"
                     value={clientInfo.name}
                     onChange={(event) => handleClientInfoChange('name', event.target.value)}
-                    className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
+                    className="premium-input !py-2.5 transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                     placeholder="Tu nombre completo"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="client-email" className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-muted)' }}>Email *</label>
+                  <label htmlFor="client-email" className="mb-1.5 block text-xs font-semibold" style={{ color: 'var(--ink-muted)' }}>Email *</label>
                   <div className="relative">
                     <input
                     id="client-email"
@@ -744,7 +743,7 @@ export default function BookingFlow({ config }) {
                     value={clientInfo.email}
                     onChange={(event) => handleClientInfoChange('email', event.target.value)}
                     onBlur={handleEmailBlur}
-                      className="premium-input pr-12 transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
+                      className="premium-input !py-2.5 pr-12 transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                       placeholder="tu@email.com"
                     />
                     {isFetchingClient ? (
@@ -756,7 +755,7 @@ export default function BookingFlow({ config }) {
                 </div>
 
                 <div>
-                  <label htmlFor="client-phone" className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-muted)' }}>Teléfono *</label>
+                  <label htmlFor="client-phone" className="mb-1.5 block text-xs font-semibold" style={{ color: 'var(--ink-muted)' }}>Teléfono *</label>
                   <input
                     id="client-phone"
                     type="tel"
@@ -764,18 +763,18 @@ export default function BookingFlow({ config }) {
                     autoComplete="tel"
                     value={clientInfo.phone}
                     onChange={(event) => handleClientInfoChange('phone', event.target.value)}
-                    className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
+                    className="premium-input !py-2.5 transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
                     placeholder="+56 9 1234 5678"
                   />
                 </div>
 
                 <StatusBanner bookingStatus={bookingStatus} />
 
-                <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:justify-between">
-                  <button type="button" onClick={() => setStep(3)} className="premium-button-secondary">
+                <div className="flex flex-col gap-2 pt-2.5 sm:flex-row sm:justify-between">
+                  <button type="button" onClick={() => setStep(3)} className="premium-button-secondary py-2 px-5 text-xs">
                     Volver a horarios
                   </button>
-                  <button type="submit" disabled={bookingStatus?.loading} className="premium-button disabled:cursor-not-allowed disabled:opacity-60">
+                  <button type="submit" disabled={bookingStatus?.loading} className="premium-button py-2 px-5 text-xs disabled:cursor-not-allowed disabled:opacity-60">
                     {bookingStatus?.loading ? 'Confirmando...' : 'Confirmar cita'}
                   </button>
                 </div>
