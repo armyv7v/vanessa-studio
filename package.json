@@ -8,11 +8,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:cf": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion",
-    "preview:cf": "opennextjs-cloudflare preview --dangerouslyUseUnsupportedNextVersion",
-    "deploy:cf": "opennextjs-cloudflare deploy --dangerouslyUseUnsupportedNextVersion",
-    "upload:cf": "opennextjs-cloudflare upload --dangerouslyUseUnsupportedNextVersion",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "gs:login": "npx @google/clasp login",
     "gs:whoami": "npx @google/clasp login --status",
     "gs:push": "cd scripts/google-script && npx @google/clasp push"
@@ -30,17 +25,14 @@
   },
   "devDependencies": {
     "@google/clasp": "^3.3.0",
-    "@opennextjs/cloudflare": "latest",
     "@types/node": "^18.11.18",
     "@types/react": "18.3.3",
     "autoprefixer": "^10.4.21",
-    "esbuild": "^0.25.3",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.5",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.3",
-    "wrangler": "latest"
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=18"

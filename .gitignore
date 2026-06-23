@@ -12,13 +12,20 @@ pnpm-debug.log*
 /.vercel
 /.cache
 
-# Dependencias de Vercel
-.vercel
-
 # Variables de entorno locales (NUNCA subirlas al repo!)
 .env
 .env.local
 .env.*.local
+
+# Cloudflare / OpenNext (legacy — defensivo)
+.dev.vars
+.wrangler/
+.cf-deploy/
+open-next.config.*
+
+# Windows artefactos
+nul
+npx
 
 # Archivos del editor
 .vscode/
@@ -28,4 +35,3 @@ Thumbs.db
 
 # Repo backend separado dentro del workspace local
 vanessa-studio-backend/
-.env*.local
