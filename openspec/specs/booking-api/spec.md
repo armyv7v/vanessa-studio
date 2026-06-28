@@ -1,115 +1,112 @@
 # Spec: Booking API
 
 > Rutas API del frontend Next.js (`/api/*`) y su mapeo a integraciones.
-> **Estado: AS-IS.** Última revisión: 2026-06-22.
-> ⚠️ 8 de 9 rutas **no tienen auth, CORS ni rate-limit**. Ver `changes/harden-api-routes`.
+> **Estado: AS-IS.** Ultima revision: 2026-06-28.
 
 ## Overview
 
-Las rutas `/api/*` del frontend son **mayoritariamente proxies delgados** que reenvían a Apps Script (GAS) o al backend Netlify, con fallbacks hardcoded. Excepción: `available-slots.js` que calcula slots localmente, y `horarios.js` que es la única con un gate de auth (cookie presence).
-
-**Enrutamiento backend (3 estrategias distintas — deuda):**
-1. `lib/api.js:101` `shouldUseHostedBackend()` → usa `NEXT_PUBLIC_API_WORKER_URL` si existe y no es localhost.
-2. `BookingFlow.js:70-72` → `useHostedBackend = !isLocalHost && API_WORKER_URL`.
-3. `BookingFlow.js:279` → `hostname.includes('pages.com')` para el endpoint de horarios.
+Las rutas `/api/*` del frontend son proxies hacia Apps Script (GAS), Netlify Functions o calculos locales. El hardening inicial ya protege las rutas admin principales y agrega rate limit/validacion a los endpoints mas sensibles, pero todavia queda deuda en CORS, Netlify backend y consolidacion de rutas legacy.
 
 ## Requirements
 
-### Requirement 1: `POST /api/book` — reserva pública
-Endpoint principal de creación de reservas.
+### Requirement 1: `POST /api/book` — reserva publica
+Endpoint principal de creacion de reservas.
 
-- **Scenario 1.1:** WHEN llega un POST con `{serviceId, serviceName, durationMin, date, start, extraCupo, client}` THEN valida: email regex, campos requeridos, duración finita, fecha ISO parseable (`pages/api/book.js:3-4,52-66`).
-- **Scenario 1.2:** WHEN `NEXT_PUBLIC_API_WORKER_URL` está seteada THEN reenvía todo el body al Worker (líneas 23-35).
-- **Scenario 1.3:** ELSE reenvía el payload enriquecido a la Apps Script Web App (`NEXT_PUBLIC_GAS_WEBHOOK_URL` || `GAS_WEBAPP_URL`).
-- **Scenario 1.4:** La respuesta incluye `{validationCode, paymentExpiresAt}`.
-- **Scenario 1.5:** **Sin auth.** Cualquiera puede POSTear.
+- **Scenario 1.1:** WHEN llega un POST THEN aplica rate limit in-memory de 5 POSTs/IP/hora.
+- **Scenario 1.2:** WHEN el limite se excede THEN responde `429` con `Retry-After`, `X-RateLimit-Limit` y `X-RateLimit-Remaining`.
+- **Scenario 1.3:** WHEN llega `{serviceId, serviceName, durationMin, date, start, extraCupo, client}` THEN valida campos requeridos, email, duracion finita y fecha/hora parseable.
+- **Scenario 1.4:** WHEN `NEXT_PUBLIC_API_WORKER_URL` esta seteada THEN reenvia el body al backend configurado.
+- **Scenario 1.5:** ELSE reenvia el payload enriquecido a Apps Script (`NEXT_PUBLIC_GAS_WEBHOOK_URL` || `GAS_WEBAPP_URL`).
+- **Scenario 1.6:** Sigue siendo publico; no requiere sesion admin.
 
 ### Requirement 2: `POST /api/admin/cita` — reserva admin
 Variante admin de booking con flag `adminCreated: true`.
 
-- **Scenario 2.1:** Mismo comportamiento que `/api/book` pero agrega `adminCreated: true` y reenvía a GAS.
-- **Scenario 2.2:** ⚠️ **Auth STUBBED OUT** — existe `checkAdminAuth` (`pages/api/admin/cita.js:17-28`) pero está **comentada** (líneas 39-42). Actualmente **wide open**.
+- **Scenario 2.1:** WHEN el request trae `Origin` no permitido THEN responde `403`.
+- **Scenario 2.2:** WHEN falta o es invalida la cookie `admin_session` THEN responde `401`.
+- **Scenario 2.3:** WHEN la sesion admin es valida THEN aplica rate limit in-memory de 5 POSTs/IP/hora.
+- **Scenario 2.4:** WHEN el limite se excede THEN responde `429`.
+- **Scenario 2.5:** WHEN el payload es valido THEN reenvia a GAS con `adminCreated: true`.
 
-### Requirement 3: `GET /api/slots` — slots ocupados de un día
-Devuelve intervalos *busy* para que el frontend calcule disponibles.
+### Requirement 3: `GET /api/slots` — slots ocupados de un dia
+Devuelve intervalos `busy` para que el frontend calcule disponibles.
 
-- **Scenario 3.1:** WHEN llega `?date=YYYY-MM-DD` THEN hace fetch a `https://vanessastudioback.netlify.app/.netlify/functions/api?date=` (URL **hardcodeada**, `pages/api/slots.js:4`).
+- **Scenario 3.1:** WHEN llega `?date=YYYY-MM-DD` THEN hace fetch al backend Netlify.
 - **Scenario 3.2:** Responde con `{busy: [...]}`.
-- **Scenario 3.3:** WHEN el fetch falla THEN responde `{busy: [], degraded: true}` (silencioso).
-- **Scenario 3.4:** **Sin auth.**
+- **Scenario 3.3:** WHEN el fetch falla THEN responde `{busy: [], degraded: true}`.
+- **Scenario 3.4:** Sigue sin auth.
 
 ### Requirement 4: `GET /api/available-slots` — slots disponibles por rango
 Computa slots disponibles localmente para un rango de fechas.
 
-- **Scenario 4.1:** WHEN llega `?startDate=&endDate=` THEN pide busy al backend Netlify y luego ejecuta el cálculo de slots **en esta ruta** (`pages/api/available-slots.js`).
-- **Scenario 4.2:** Usa business hours **hardcodeadas 09:00–22:00 todos los días** (líneas 6-16) — entran en conflicto con `calendarConfig.js` y con la config de Netlify.
-- **Scenario 4.3:** Aplica test de solapamiento `isSlotBusy`.
-- **Scenario 4.4:** Responde `{available: [...]}`.
-- **Scenario 4.5:** **Sin auth.**
+- **Scenario 4.1:** WHEN llega `?startDate=&endDate=` THEN pide busy al backend Netlify y calcula slots localmente.
+- **Scenario 4.2:** Usa business hours hardcodeadas; pendiente de `unify-slot-and-hours-logic`.
+- **Scenario 4.3:** Responde `{available: [...]}`.
 
 ### Requirement 5: `GET /api/client` — lookup de cliente
 Autocompletado de cliente por email.
 
-- **Scenario 5.1:** WHEN llega `?email=` THEN reenvía a GAS `?action=getClient&email=`.
-- **Scenario 5.2:** **Sin auth.**
+- **Scenario 5.1:** WHEN llega `?email=` THEN reenvia a GAS `?action=getClient&email=`.
+- **Scenario 5.2:** Sigue sin auth; pendiente de revisar exposicion de datos.
 
 ### Requirement 6: `GET /api/gs-check` — health check + config
-Endpoint dual: health check o fetch de configuración.
+Endpoint dual: health check o fetch de configuracion.
 
 - **Scenario 6.1:** WHEN `?action=getConfig` THEN proxiea a Netlify `/.netlify/functions/horarios`.
 - **Scenario 6.2:** ELSE retorna un `DEFAULT_CONFIG` hardcodeado.
-- **Scenario 6.3:** **Sin auth.**
+- **Scenario 6.3:** Sigue sin auth; pendiente de consolidar con `/api/horarios`.
 
 ### Requirement 7: `GET/POST /api/horarios` — proxy horarios admin
-**Única ruta con auth** (aunque sea solo presencia de cookie).
+Proxy protegido para configuracion de horarios.
 
-- **Scenario 7.1:** WHEN no existe cookie `admin_token` THEN responde **401** (`pages/api/horarios.js:54-55`).
-- **Scenario 7.2:** Es proxie al backend Netlify `/.netlify/functions/horarios` (o `NEXT_PUBLIC_BACKEND_BASE_URL`).
-- **Scenario 7.3:** La cookie se valida por **presencia únicamente**, no por firma — forgeable.
+- **Scenario 7.1:** WHEN el request trae `Origin` no permitido THEN responde `403`.
+- **Scenario 7.2:** WHEN no existe cookie `admin_session` valida THEN responde `401`.
+- **Scenario 7.3:** WHEN la sesion es valida THEN proxiea al backend Netlify `/.netlify/functions/horarios`.
+- **Scenario 7.4:** WHEN GET falla contra backend remoto THEN responde fallback local degradado.
 
-### Requirement 8: `POST /api/subscribe-push` — suscripción web-push
-Guarda una suscripción de notificaciones push.
+### Requirement 7.5: CORS admin local
+Las rutas `/api/admin/*` y `/api/horarios` usan allowlist de origen.
 
-- **Scenario 8.1:** WHEN llega `{subscription, email}` THEN reenvía `{action: 'saveSubscription', subscription, email}` a GAS.
-- **Scenario 8.2:** ⚠️ **Sin validación** del objeto `subscription` — se reenvía ciegamente.
-- **Scenario 8.3:** **Sin auth.**
+- **Scenario 7.5.1:** WHEN `OPTIONS` llega desde un origen permitido THEN responde `204` con headers CORS.
+- **Scenario 7.5.2:** WHEN `OPTIONS` llega desde un origen no permitido THEN responde `403`.
+- **Scenario 7.5.3:** Los origenes permitidos por defecto son `https://vanessa-studio.vercel.app`, `http://localhost:3000` y `http://127.0.0.1:3000`; se puede ampliar con `ADMIN_ALLOWED_ORIGINS`.
 
-### Requirement 9: `GET /api/test-config` — debug de secrets
-Endpoint de diagnóstico que expone presencia/ausencia de secrets de Google.
+### Requirement 8: `POST /api/subscribe-push` — suscripcion web-push
+Guarda una suscripcion de notificaciones push.
 
-- **Scenario 9.1:** WHEN `NODE_ENV === 'production'` THEN responde **403** (`pages/api/test-config.js:8-9`).
-- **Scenario 9.2:** ELSE retorna un objeto con `GOOGLE_SHEET_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` enmascarados (presencia/longitud).
-- **Scenario 9.3:** ⚠️ Esas 3 variables **nunca se usan** en ningún llamado real a Google APIs en este repo — son vestigiales.
+- **Scenario 8.1:** WHEN llega un POST THEN valida que `subscription.endpoint` sea URL `https:`.
+- **Scenario 8.2:** Valida que `subscription.keys.auth` y `subscription.keys.p256dh` existan y tengan longitud razonable.
+- **Scenario 8.3:** WHEN `email` viene presente THEN valida formato de email.
+- **Scenario 8.4:** WHEN la entrada es invalida THEN responde `400`.
+- **Scenario 8.5:** WHEN la entrada es valida THEN reenvia `{action: 'saveSubscription', subscription, email}` a GAS.
 
-## Mapeo a integraciones (resumen)
+### Requirement 9: `/api/test-config` removido
+El endpoint HTTP de diagnostico de secrets fue eliminado.
+
+- **Scenario 9.1:** WHEN se llama `/api/test-config` THEN Next.js debe responder `404`.
+- **Scenario 9.2:** Si se necesita diagnostico de entorno, debe implementarse como script CLI no expuesto por HTTP.
+
+## Mapeo a integraciones
 
 | Ruta | Destino real | Servicio |
 |---|---|---|
-| `POST /api/book` | Worker (si seteado) o GAS `doPost` | Cloudflare / Apps Script |
-| `POST /api/admin/cita` | GAS `doPost` (admin flag) | Apps Script |
+| `POST /api/book` | Backend configurado o GAS `doPost` | Netlify/legacy Worker/GAS |
+| `POST /api/admin/cita` | GAS `doPost` con `adminCreated` | Apps Script |
 | `GET /api/slots` | Netlify `api` function | Netlify |
-| `GET /api/available-slots` | computa localmente + Netlify busy | (local) + Netlify |
+| `GET /api/available-slots` | calculo local + Netlify busy | Local + Netlify |
 | `GET /api/client` | GAS `?action=getClient` | Apps Script |
 | `GET /api/gs-check` | Netlify `horarios` o default | Netlify |
 | `GET/POST /api/horarios` | Netlify `horarios` | Netlify |
 | `POST /api/subscribe-push` | GAS `?action=saveSubscription` | Apps Script |
-| `GET /api/test-config` | (ninguno) | local |
 
-## Referencias de código
+## Deuda conocida
 
-- `pages/api/book.js:16,23-35,52-66`
-- `pages/api/admin/cita.js:17-28,39-42` (auth comentada)
-- `pages/api/slots.js:4` (URL hardcodeada)
-- `pages/api/available-slots.js:6-16,85` (hours hardcodeadas)
-- `pages/api/horarios.js:53-55` (única auth real)
-- `pages/api/test-config.js:7-9`
-- `lib/api.js:101` (estrategia de enrutamiento)
-
-## Deuda conocida (ver `changes/`)
-
-- 8/9 rutas sin auth, CORS ni rate-limit → `changes/harden-api-routes`
-- `/api/admin/cita.js` auth comentada → `changes/harden-admin-auth`, `harden-api-routes`
-- URL Netlify hardcodeada en fallbacks → `changes/consolidate-env-vars`
-- 3 estrategias de enrutamiento backend → `changes/consolidate-env-vars`
-- `available-slots.js` con hours hardcodeadas que contradicen otras configs → `changes/unify-slot-and-hours-logic`
-- `test-config.js` expone diagnósticos de secrets → `changes/harden-api-routes`
+- Las rutas admin locales (`/api/admin/*`, `/api/horarios`) ya usan CORS por allowlist dinamica; falta decidir si rutas publicas deben restringirse igual.
+- Backend Netlify: las mutaciones admin ya no aceptan `deviceToken`, `ADMIN_VALIDATION_PIN` es obligatorio y las respuestas 401 ya no devuelven `debug` sensible.
+- Backend Netlify: booking POST valida nombre, email, telefono, servicio, fecha, hora y duracion antes de crear Calendar/Sheet.
+- Backend Netlify: validacion/confirmacion de citas valida `code` con el formato real actual (`8 hex` o fallback `VAL-...`) antes de buscar en Sheets.
+- Backend Netlify: `api.js` y `horarios.js` usan CORS por allowlist dinamica; origenes no permitidos reciben `403`.
+- Webhooks/funciones de mensajeria (`whatsapp-webhook.js`, `send-whatsapp-reminder.js`) conservan CORS separado para no romper integraciones externas; requieren revision especifica aparte.
+- `/api/available-slots` mantiene horarios hardcodeados.
+- `/api/client` y `/api/gs-check` siguen publicos.
+- Persisten varias estrategias de enrutamiento backend.

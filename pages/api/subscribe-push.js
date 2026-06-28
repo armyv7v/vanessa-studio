@@ -1,28 +1,50 @@
-// pages/api/subscribe-push.js
+import { isEmailValid, isValidPushSubscription } from '../../lib/apiValidation';
 
-
-const jsonRes = (data, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-
-export default async function handler(req) {
-  if (req.method !== 'POST') return jsonRes({ error: 'Method Not Allowed' }, 405);
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
   const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL || process.env.GAS_WEBAPP_URL;
-  if (!GAS_URL) return jsonRes({ error: 'La URL del webhook no esta configurada.' }, 500);
+  if (!GAS_URL) return res.status(500).json({ error: 'La URL del webhook no esta configurada.' });
+
+  let body;
+  try {
+    body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+  } catch {
+    return res.status(400).json({ error: 'Body JSON invalido.' });
+  }
+
+  const { subscription, email } = body;
+
+  if (!isValidPushSubscription(subscription)) {
+    return res.status(400).json({ error: 'Suscripcion push invalida.' });
+  }
+
+  if (email != null && email !== '' && !isEmailValid(email)) {
+    return res.status(400).json({ error: 'Email invalido.' });
+  }
+
+  const payload = {
+    action: 'saveSubscription',
+    subscription,
+    email: typeof email === 'string' ? email.trim() : '',
+  };
 
   try {
-    const { subscription, email } = await req.json();
-
-    const payload = { action: 'saveSubscription', subscription, email };
-
-    await fetch(GAS_URL, {
+    const response = await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    return jsonRes({ success: true }, 201);
-  } catch (error) {
-    return jsonRes({ error: 'Error al guardar la suscripcion.' }, 500);
+    if (!response.ok) {
+      return res.status(502).json({ error: 'No se pudo guardar la suscripcion push.' });
+    }
+
+    return res.status(201).json({ success: true });
+  } catch {
+    return res.status(502).json({ error: 'No se pudo guardar la suscripcion push.' });
   }
 }

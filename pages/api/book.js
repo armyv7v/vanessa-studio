@@ -1,8 +1,6 @@
 import { DateTime } from 'luxon';
-
-function isEmailValid(email) {
-  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+import { isEmailValid } from '../../lib/apiValidation';
+import { applyRateLimit, setRateLimitHeaders } from '../../lib/rateLimit';
 
 function normalizeTzOffset(value) {
   if (typeof value !== 'string') return null;
@@ -16,6 +14,12 @@ function normalizeTzOffset(value) {
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+
+    const rateLimit = applyRateLimit(req, { keyPrefix: 'book', limit: 5 });
+    setRateLimitHeaders(res, rateLimit);
+    if (!rateLimit.allowed) {
+      return res.status(429).json({ error: 'Demasiados intentos de reserva. Intenta nuevamente mas tarde.' });
+    }
 
     const BACKEND_API = process.env.NEXT_PUBLIC_API_WORKER_URL || '';
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});

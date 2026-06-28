@@ -1,7 +1,7 @@
 # Spec: Deployment Architecture
 
 > Topología de deploy, modelo de datos y relación entre los 3 backends.
-> **Estado: AS-IS.** Última revisión: 2026-06-22.
+> **Estado: AS-IS.** Última revisión: 2026-06-28.
 > **Deploy target oficial: Vercel** (`vanessa-studio.vercel.app`).
 
 ## Overview
@@ -55,6 +55,7 @@ App Next.js 14 Pages Router deployada en Vercel.
 - **Scenario 1.2:** Build via `next build` (`npm run build`).
 - **Scenario 1.3:** Runtime: Node >= 18 (declarado), real ~20/22.
 - **Scenario 1.4:** Variables públicas via `NEXT_PUBLIC_*` inyectadas en bundle.
+- **Scenario 1.5:** El frontend desactiva `x-powered-by` y agrega headers base de endurecimiento (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-DNS-Prefetch-Control`, `X-Permitted-Cross-Domain-Policies`; `Strict-Transport-Security` solo en producción).
 
 ### Requirement 2: Backend (Netlify) — fuente de verdad
 Repo anidado `vanessa-studio-backend/` deployado independientemente.
@@ -112,6 +113,7 @@ El repo contiene restos de **2 migraciones fallidas a Cloudflare**.
 ## Referencias de código
 
 - `.vercel/project.json` — projectId Vercel
+- `next.config.js` — redirects y security headers del frontend
 - `package.json:11-15,33,43` — scripts y deps Cloudflare
 - `pages/api/slots.js:4` — URL Netlify hardcodeada
 - `scripts/google-script/src/Code.gs:8-17` — constants commiteados

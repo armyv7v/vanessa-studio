@@ -28,8 +28,8 @@
 - [ ] Commit: `refactor(api): unify GAS URL into NEXT_PUBLIC_GAS_WEBHOOK_URL`
 
 ## 5. Eliminar vars vestigiales
-- [ ] `git rm pages/api/test-config.js` (si no se hizo en `harden-api-routes`)
-- [ ] Eliminar references a `GOOGLE_SHEET_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` (solo estaban en `test-config.js`)
+- [x] Eliminar `pages/api/test-config.js` (hecho en `harden-api-routes`)
+- [x] Eliminar referencias runtime a `GOOGLE_SHEET_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` al remover `test-config.js`
 - [ ] En Vercel: eliminar `GOOGLE_SHEET_ID`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`
 - [ ] Commit: `chore(env): remove vestigial Google service-account variables`
 

@@ -3,60 +3,69 @@
 ## Frontend (`/api/*`)
 
 ### 1. Rate limiting en booking
-- [ ] Elegir estrategia: in-memory token bucket (simple, no extra deps) o Upstash Redis (distribuido)
-- [ ] Implementar en `/api/book.js` y `/api/admin/cita.js`: 5 POSTs/IP/hora → 429 si excede
-- [ ] Headers de respuesta: `X-RateLimit-Remaining`, `Retry-After`
+- [x] Elegir estrategia: in-memory token bucket inicial (simple, sin dependencias extra).
+- [x] Implementar en `/api/book.js` y `/api/admin/cita.js`: 5 POSTs/IP/hora -> 429 si excede.
+- [x] Headers de respuesta: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After`.
+- [ ] Evaluar Upstash Redis si el trafico o abuso real supera una sola instancia serverless.
 
-### 2. Validación de `subscribe-push`
-- [ ] En `pages/api/subscribe-push.js`: validar que `subscription.endpoint` es URL, que `subscription.keys.auth` y `subscription.keys.p256dh` existen y tienen longitud razonable
-- [ ] Rechazar con 400 si no valida
+### 2. Validacion de `subscribe-push`
+- [x] En `pages/api/subscribe-push.js`: validar que `subscription.endpoint` es URL.
+- [x] Validar que `subscription.keys.auth` y `subscription.keys.p256dh` existen y tienen longitud razonable.
+- [x] Validar email opcional si se envia.
+- [x] Rechazar con 400 si no valida.
 
 ### 3. Eliminar `test-config.js`
-- [ ] `git rm pages/api/test-config.js`
-- [ ] Si se necesita diagnóstico de env, crear `scripts/check-env.js` (CLI, no expuesto vía HTTP)
+- [x] Eliminar `pages/api/test-config.js`.
+- [ ] Si se necesita diagnostico de env, crear `scripts/check-env.js` (CLI, no expuesto via HTTP).
 
 ### 4. CORS estricto
-- [ ] Crear helper `lib/cors.js` con allowlist: `https://vanessa-studio.vercel.app`, `http://localhost:3000`
-- [ ] Aplicar a rutas admin (`/api/admin/*`, `/api/horarios`)
-- [ ] Rutas públicas (`/api/book`, `/api/slots`, etc.) pueden mantener `*` o restringir también
+- [x] Crear helper `lib/cors.js` con allowlist: `https://vanessa-studio.vercel.app`, `http://localhost:3000`, `http://127.0.0.1:3000`, `FRONTEND_URL`, `NEXT_PUBLIC_SITE_URL`, `VERCEL_URL` y `ADMIN_ALLOWED_ORIGINS`.
+- [x] Aplicar a rutas admin (`/api/admin/*`, `/api/horarios`).
+- [ ] Rutas publicas (`/api/book`, `/api/slots`, etc.) pueden mantener CORS por defecto o restringirse segun necesidad real.
 
 ## Backend Netlify
 
 ### 5. PIN sin default
-- [ ] En `api.js` (3 lugares: 799, 882, 1009): cambiar `process.env.ADMIN_VALIDATION_PIN || '2308'` por `process.env.ADMIN_VALIDATION_PIN` + `throw new Error('ADMIN_VALIDATION_PIN not set')` si falta
-- [ ] Asegurar que `ADMIN_VALIDATION_PIN` esté seteada en Netlify (con el valor rotado de `harden-secrets-and-gitignore`)
+- [x] En `api.js`: cambiar `ADMIN_VALIDATION_PIN || 2308` por `ADMIN_VALIDATION_PIN` obligatorio + error si falta.
+- [ ] Asegurar que `ADMIN_VALIDATION_PIN` este seteada en Netlify antes de deploy.
 
 ### 6. Quitar `debug` de respuestas auth fallida
-- [ ] Buscar todas las respuestas 401/403 que incluyen un objeto `debug` (alrededor de `api.js:808-819`)
-- [ ] Reemplazar por `{error: 'Unauthorized'}` sin metadata
-- [ ] Mantener logs server-side (console.log con nivel debug) para diagnóstico
+- [x] Buscar respuestas 401 de mutaciones admin que incluian `debug`.
+- [x] Reemplazar por `{error: 'Unauthorized'}` sin metadata.
+- [x] Eliminar diagnostico sensible de device token; mantener logs no sensibles existentes.
 
 ### 7. CORS restrictivo en Netlify
-- [ ] Auditar `FRONTEND_URL` en Netlify env (debe ser `https://vanessa-studio.vercel.app`)
-- [ ] Reemplazar `Access-Control-Allow-Origin: *` por `Access-Control-Allow-Origin: <FRONTEND_URL>` en todas las functions
-- [ ] Para el webhook de Twilio (`whatsapp-webhook.js`): mantener `*` (Twilio lo requiere)
+- [ ] Auditar/definir `FRONTEND_URL` en Netlify env antes de deploy.
+- [x] Reemplazar `Access-Control-Allow-Origin: *` por allowlist dinamica en `api.js` y `horarios.js`.
+- [x] Mantener `*` fuera de este slice para `whatsapp-webhook.js` y `send-whatsapp-reminder.js` por integraciones externas; revisar seguridad especifica aparte.
 
-### 8. Validación de input en `api.js`
-- [ ] En el handler de booking POST: validar email regex, longitud de nombre (2-100), teléfono (8-15 dígitos), serviceId conocido
-- [ ] En `validate-attendance`: validar que `code` tiene formato md5 (32 hex chars)
-- [ ] Sanitizar todos los inputs antes de escribir al Sheet
+### 8. Validacion de input en `api.js`
+- [x] En booking POST: validar email, longitud de nombre, telefono, servicio, fecha, hora y duracion.
+- [x] En `validate-attendance` y `confirm-payment`: validar `code` con formato real actual (8 hex o fallback `VAL-...`).
+- [x] Normalizar inputs antes de escribir al Sheet: nombre/email/telefono/servicio/fecha/hora/duracion.
 
 ## Apps Script
 
 ### 9. Restringir acceso GAS
-- [ ] Editar `scripts/google-script/src/appsscript.json`:
-  - `executeAs`: `USER_DEPLOYING` (no `ANYONE_ANONYMOUS`)
-  - `access`: `DOMAIN` o `MYSELF` (evaluar qué rompe — el frontend necesita llamarlo)
-- [ ] Coordinar con `formalize-backend-submodule` — si se depreca GAS para booking, esto pierde urgencia
-- [ ] `npm run gs:push`
+- [ ] Evaluar `scripts/google-script/src/appsscript.json` antes de cambiar acceso; el frontend/backend todavia puede depender del Web App anonimo.
+- [ ] Coordinar con `formalize-backend-submodule` y deprecacion de GAS para booking.
+- [ ] `npm run gs:push` solo con confirmacion explicita.
 
-## 10. Pruebas
-- [ ] Spam de 10 POSTs a `/api/book` desde misma IP → el 6to recibe 429
-- [ ] POST a `/api/subscribe-push` con `subscription` inválido → 400
-- [ ] Llamar a `/api/test-config` → 404 (ruta removida)
-- [ ] Auth fallida en backend → respuesta sin `debug`
-- [ ] `FRONTEND_URL` correcto permite CORS; otro origen es bloqueado
+## 10. Dependencias y auditoria
+- [x] Ejecutar `npm audit --audit-level=moderate`.
+- [x] Actualizar `next` y `eslint-config-next` de `14.2.5` a `14.2.35` para quitar vulnerabilidades criticas sin saltar a una major breaking.
+- [x] Ejecutar `npm audit fix` no-breaking para reducir vulnerabilidades transitivas.
+- [ ] Resolver vulnerabilidades altas restantes que requieren cambios breaking (`next@16`, `eslint-config-next@16`) en un slice separado.
 
-## 11. Documentación
-- [ ] Documentar rate limits en `openspec/specs/booking-api/spec.md` (actualizar AS-IS → nuevo comportamiento)
-- [ ] Commit: `feat(security): rate limiting, input validation, CORS hardening, debug leak fix`
+## 11. Pruebas
+- [x] Spam de POSTs a `/api/book` desde misma IP -> el 6to recibe 429 (`next dev`, HTTP local).
+- [x] POST a `/api/subscribe-push` con `subscription` invalido -> 400 (`next dev`, HTTP local).
+- [x] Llamar a `/api/test-config` -> 404 (`next dev`, HTTP local).
+- [ ] Auth fallida en backend Netlify -> respuesta sin `debug` (pendiente deploy: el Netlify productivo actual todavia responde body legacy con `debug`).
+- [x] Frontend local: origen permitido devuelve preflight 204 y origen prohibido 403 en `/api/admin/login`.
+- [ ] Netlify: `FRONTEND_URL`/origen permitido permite CORS; otro origen es bloqueado (pendiente deploy: el Netlify productivo actual todavia responde `Access-Control-Allow-Origin: *`).
+- [x] `npm run build`.
+
+## 12. Documentacion
+- [x] Documentar rate limits y cambios de endpoints en `openspec/specs/booking-api/spec.md`.
+- [ ] Commit sugerido: `feat(security): rate limiting, input validation, CORS hardening, debug leak fix`
