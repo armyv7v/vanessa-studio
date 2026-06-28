@@ -1,8 +1,8 @@
 import { DateTime } from 'luxon';
-
-function isEmailValid(email) {
-  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+import { isEmailValid } from '../../../lib/apiValidation';
+import { verifyAdminRequest } from '../../../lib/adminSession';
+import { enforceAllowedOrigin, handleCorsPreflight, setCorsHeaders } from '../../../lib/cors';
+import { applyRateLimit, setRateLimitHeaders } from '../../../lib/rateLimit';
 
 function normalizeTzOffset(value) {
   if (typeof value !== 'string') return null;
@@ -13,42 +13,36 @@ function normalizeTzOffset(value) {
   return `${match[1]}${match[2]}:${match[3]}`;
 }
 
-// Simple auth check - puedes personalizarlo con tokens/contraseñas
-function checkAdminAuth(req) {
-  const adminToken = process.env.NEXT_PUBLIC_ADMIN_TOKEN;
-  if (!adminToken) {
-    // Si no hay token configurado, rechaza todos los requests
-    return false;
-  }
-
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-  
-  return token === adminToken;
-}
-
-
-
-const jsonRes = (data, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-
-export default async function handler(req) {
+export default async function handler(req, res) {
   try {
-    if (req.method !== 'POST') return jsonRes({ error: 'Method Not Allowed' }, 405);
+    if (handleCorsPreflight(req, res, { methods: 'POST, OPTIONS' })) return;
+    setCorsHeaders(req, res, { methods: 'POST, OPTIONS' });
 
-    // Validar autenticación (comentado por ahora - descomenta cuando agregues token)
-    // if (!checkAdminAuth(req)) {
-    //   return res.status(401).json({ error: 'Unauthorized - Token requerido' });
-    // }
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST');
+      return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
+    if (!enforceAllowedOrigin(req, res)) return;
+
+    if (!(await verifyAdminRequest(req))) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const rateLimit = applyRateLimit(req, { keyPrefix: 'admin-cita', limit: 5 });
+    setRateLimitHeaders(res, rateLimit);
+    if (!rateLimit.allowed) {
+      return res.status(429).json({ error: 'Demasiados intentos de creacion de cita. Intenta nuevamente mas tarde.' });
+    }
 
     const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL || process.env.GAS_WEBAPP_URL;
     const CALENDAR = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID || '';
     const TZ = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
     const TZ_OFFSET_ENV = process.env.NEXT_PUBLIC_TZ_OFFSET;
 
-    if (!GAS_URL) return jsonRes({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL o GAS_WEBAPP_URL' }, 500);
+    if (!GAS_URL) return res.status(500).json({ error: 'Falta NEXT_PUBLIC_GAS_WEBHOOK_URL o GAS_WEBAPP_URL' });
 
-    const body = await req.json();
+    const body = req.body || {};
 
     const {
       serviceId,
@@ -69,10 +63,10 @@ export default async function handler(req) {
     };
 
     if (!serviceId || !date || !start || !normalizedClient.name || !normalizedClient.email)
-      return jsonRes({ error: 'Datos incompletos' }, 400);
+      return res.status(400).json({ error: 'Datos incompletos' });
 
     if (!isEmailValid(normalizedClient.email))
-      return jsonRes({ error: 'Email invalido' }, 400);
+      return res.status(400).json({ error: 'Email invalido' });
 
     const resolvedDurationMin = durationOverrideMin != null
       ? Number(durationOverrideMin)
@@ -81,12 +75,12 @@ export default async function handler(req) {
         : undefined;
 
     if (!Number.isFinite(resolvedDurationMin))
-      return jsonRes({ error: 'Duracion invalida' }, 400);
+      return res.status(400).json({ error: 'Duracion invalida' });
 
     const timezone = typeof TZ === 'string' && TZ ? TZ : 'UTC';
     const startDateTime = DateTime.fromISO(`${date}T${start}`, { zone: timezone });
     
-    if (!startDateTime.isValid) return jsonRes({ error: 'Fecha u hora invalida' }, 400);
+    if (!startDateTime.isValid) return res.status(400).json({ error: 'Fecha u hora invalida' });
 
     const endDateTime = startDateTime.plus({ minutes: resolvedDurationMin });
     const tzOffset = normalizeTzOffset(TZ_OFFSET_ENV) ?? startDateTime.toFormat('ZZ');
@@ -129,12 +123,12 @@ export default async function handler(req) {
     if (!r.ok || data?.success === false) {
       const statusFromData = Number(data?.statusCode);
       const status = Number.isFinite(statusFromData) && statusFromData >= 400 ? statusFromData : (r.ok ? 500 : r.status);
-      return jsonRes({ error: data?.error || 'GAS error', data }, status);
+      return res.status(status).json({ error: data?.error || 'GAS error', data });
     }
 
-    return jsonRes({ success: true, data, message: 'Cita creada exitosamente' });
+    return res.status(200).json({ success: true, data, message: 'Cita creada exitosamente' });
 
   } catch (err) {
-    return jsonRes({ error: String(err) }, 500);
+    return res.status(500).json({ error: String(err) });
   }
 }

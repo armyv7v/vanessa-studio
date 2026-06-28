@@ -23,8 +23,8 @@ export default function AdminShell({ title, description, children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const router = useRouter();
 
-  const handleLogout = () => {
-    clearAdminToken();
+  const handleLogout = async () => {
+    await clearAdminToken();
     router.push('/admin/login');
   };
 

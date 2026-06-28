@@ -7,7 +7,7 @@ import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
 import { ArrowLeftIcon, ArrowRightIcon } from '../../components/BrandMotifs';
 
-const HORARIOS_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
+const HORARIOS_ENDPOINT = '/api/horarios';
 
 export default function AdminHorarios() {
   const router = useRouter();
@@ -26,14 +26,10 @@ export default function AdminHorarios() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        if (!hasAdminToken()) {
-          const { checkDeviceAndAutoLogin } = await import('../../lib/adminAuth');
-          const autoLoggedIn = await checkDeviceAndAutoLogin();
-          if (!autoLoggedIn) {
-            router.push('/admin/login');
-            setLoading(false);
-            return;
-          }
+        if (!(await hasAdminToken())) {
+          router.push('/admin/login');
+          setLoading(false);
+          return;
         }
 
         setIsAuthenticated(true);

@@ -1,9 +1,8 @@
 import { useRouter } from 'next/router';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { addDays, endOfDay, endOfWeek, format, startOfDay, startOfWeek, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-  Smartphone,
   Check,
   RotateCcw,
   MessageSquare,
@@ -22,7 +21,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import AdminShell from '../../components/AdminShell';
-import { hasAdminToken, checkDeviceAndAutoLogin, getDeviceToken } from '../../lib/adminAuth';
+import { hasAdminToken } from '../../lib/adminAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_WORKER_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 
@@ -58,7 +57,6 @@ export default function ValidarCitas() {
   const [showActionRequired, setShowActionRequired] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isDeviceVerified, setIsDeviceVerified] = useState(false);
   const [reservations, setReservations] = useState([]);
   const [error, setError] = useState('');
   const [adminPin, setAdminPin] = useState('');
@@ -69,27 +67,22 @@ export default function ValidarCitas() {
 
   const dateRange = useMemo(() => getFilterRange(filter), [filter]);
 
-  // Chequear autenticación tradicional y de dispositivo
+  // Chequear sesión admin vigente
   useEffect(() => {
     async function checkAuth() {
-      if (!hasAdminToken()) {
-        const autoLoggedIn = await checkDeviceAndAutoLogin();
-        if (!autoLoggedIn) {
-          router.push('/admin/login');
-          setLoading(false);
-          return;
-        }
+      if (!(await hasAdminToken())) {
+        router.push('/admin/login');
+        setLoading(false);
+        return;
       }
 
       setIsAuthenticated(true);
-      const token = getDeviceToken();
-      setIsDeviceVerified(!!token);
       setLoading(false);
     }
     checkAuth();
   }, [router]);
 
-  const refreshReservations = async () => {
+  const refreshReservations = useCallback(async () => {
     try {
       setListLoading(true);
       setError('');
@@ -112,12 +105,12 @@ export default function ValidarCitas() {
     } finally {
       setListLoading(false);
     }
-  };
+  }, [dateRange.end, dateRange.start]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     refreshReservations();
-  }, [dateRange.end, dateRange.start, isAuthenticated]);
+  }, [isAuthenticated, refreshReservations]);
 
   // Resumen de estadísticas
   const paymentSummary = useMemo(() => {
@@ -183,8 +176,7 @@ export default function ValidarCitas() {
 
   // Manejadores de API
   const handleConfirmPayment = async (reservationCode) => {
-    const token = getDeviceToken();
-    if (!token && (!adminPin || adminPin.length < 4)) {
+    if (!adminPin || adminPin.length < 4) {
       setError('Ingresá el PIN de administrador para confirmar el pago.');
       return;
     }
@@ -197,7 +189,7 @@ export default function ValidarCitas() {
       const res = await fetch(`${API_BASE}/confirm-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: reservationCode, adminPin, deviceToken: token }),
+        body: JSON.stringify({ code: reservationCode, adminPin }),
       });
 
       const data = await res.json().catch(() => null);
@@ -228,8 +220,7 @@ export default function ValidarCitas() {
   };
 
   const handleSweepExpiredPayments = async () => {
-    const token = getDeviceToken();
-    if (!token && (!adminPin || adminPin.length < 4)) {
+    if (!adminPin || adminPin.length < 4) {
       setError('Ingresá el PIN de administrador para liberar reservas vencidas.');
       return;
     }
@@ -242,7 +233,7 @@ export default function ValidarCitas() {
       const res = await fetch(`${API_BASE}/expire-pending-payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminPin, deviceToken: token }),
+        body: JSON.stringify({ adminPin }),
       });
 
       const data = await res.json().catch(() => null);
@@ -261,8 +252,7 @@ export default function ValidarCitas() {
   };
 
   const handleValidate = async (reservationCode) => {
-    const token = getDeviceToken();
-    if (!token && (!adminPin || adminPin.length < 4)) {
+    if (!adminPin || adminPin.length < 4) {
       setError('Ingresá el PIN de administrador para validar manualmente.');
       return;
     }
@@ -275,7 +265,7 @@ export default function ValidarCitas() {
       const res = await fetch(`${API_BASE}/validate-attendance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: reservationCode, adminPin, deviceToken: token }),
+        body: JSON.stringify({ code: reservationCode, adminPin }),
       });
 
       const data = await res.json().catch(() => null);
@@ -306,7 +296,7 @@ export default function ValidarCitas() {
       <div className="flex min-h-screen items-center justify-center bg-gray-100">
         <div className="text-center">
           <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-b-transparent" style={{ borderColor: 'var(--brand) transparent var(--brand) var(--brand)' }} />
-          <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>Verificando dispositivo...</p>
+          <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>Verificando sesión admin...</p>
         </div>
       </div>
     );
@@ -674,49 +664,37 @@ export default function ValidarCitas() {
           {/* Sidebar Area (Right 1 Col) */}
           <div className="space-y-6">
             
-            {/* Device Token Auths (Zero PIN Status) */}
+            {/* PIN authorization */}
             <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm">
               <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <Smartphone className="h-4.5 w-4.5 text-pink-600" />
-                Seguridad & Dispositivo
+                <Lock className="h-4.5 w-4.5 text-pink-600" />
+                Seguridad de operaciones
               </h3>
 
-              {isDeviceVerified ? (
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-800 font-bold">
-                    <Check className="h-4 w-4 text-emerald-600" />
-                    Dispositivo Autorizado
-                  </div>
-                  <p className="text-slate-600 leading-normal">
-                    Este celular/computadora está validado. Confirmá pagos o asistencia a <strong>un toque</strong>, sin escribir el PIN.
-                  </p>
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs space-y-3">
+                <div className="flex items-center gap-2 text-slate-700 font-bold">
+                  <Lock className="h-4 w-4 text-slate-500" />
+                  PIN requerido
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs space-y-3">
-                  <div className="flex items-center gap-2 text-slate-700 font-bold">
-                    <Lock className="h-4 w-4 text-slate-500" />
-                    Ingreso por PIN Requerido
-                  </div>
-                  <p className="text-slate-600 leading-normal">
-                    Este dispositivo no está registrado. Ingresá el PIN de 4 dígitos abajo para autorizar operaciones:
-                  </p>
-                  
-                  <input
-                    id="admin-pin"
-                    type="password"
-                    inputMode="numeric"
-                    maxLength="4"
-                    value={adminPin}
-                    onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, ''))}
-                    placeholder="PIN"
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-center text-base tracking-[0.3em] font-mono text-slate-900 outline-none transition focus:border-pink-400 bg-white"
-                  />
-                  
-                  <p className="text-[10px] text-slate-400">
-                    💡 Tip: Si iniciás sesión con la contraseña en el Login tradicional, este dispositivo se autorizará automáticamente.
-                  </p>
-                </div>
-              )}
+                <p className="text-slate-600 leading-normal">
+                  La sesion admin permite entrar al panel. Para confirmar pagos, validar asistencia o liberar reservas vencidas, ingresa el PIN de 4 digitos.
+                </p>
+
+                <input
+                  id="admin-pin"
+                  type="password"
+                  inputMode="numeric"
+                  maxLength="4"
+                  value={adminPin}
+                  onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="PIN"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-center text-base tracking-[0.3em] font-mono text-slate-900 outline-none transition focus:border-pink-400 bg-white"
+                />
+
+                <p className="text-[10px] text-slate-400">
+                  El device token fue eliminado del frontend: era comodo, pero no era una autorizacion segura para operaciones criticas.
+                </p>
+              </div>
 
               {/* Sweep Expired bookings */}
               <div className="mt-4 pt-4 border-t border-slate-100">

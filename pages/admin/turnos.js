@@ -31,7 +31,7 @@ const AVAILABILITY_COLORS = {
   occupied: { bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.18)', text: '#991b1b' },
 };
 
-const HORARIOS_ENDPOINT = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
+const HORARIOS_ENDPOINT = '/api/horarios';
 const TURNOS_BUILD_VERSION = 'turnos-selected-duration-fix-v1';
 
 export default function AdminTurnos() {
@@ -67,14 +67,10 @@ export default function AdminTurnos() {
   // Auth
   useEffect(() => {
     const checkAuth = async () => {
-      if (!hasAdminToken()) {
-        const { checkDeviceAndAutoLogin } = await import('../../lib/adminAuth');
-        const autoLoggedIn = await checkDeviceAndAutoLogin();
-        if (!autoLoggedIn) {
-          router.push('/admin/login');
-          setLoading(false);
-          return;
-        }
+      if (!(await hasAdminToken())) {
+        router.push('/admin/login');
+        setLoading(false);
+        return;
       }
       setIsAuthenticated(true);
       setLoading(false);

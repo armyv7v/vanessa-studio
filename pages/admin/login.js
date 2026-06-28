@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { setAdminToken, calculateHash, checkDeviceAndAutoLogin } from '../../lib/adminAuth';
+import { hasAdminToken, loginAdmin } from '../../lib/adminAuth';
 import { AdminShieldIcon } from '../../components/BrandMotifs';
 
-const ADMIN_PASSWORD =
-  process.env.NEXT_PUBLIC_ADMIN_PASSWORD_FALLBACK ||
-  process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
@@ -16,7 +13,7 @@ export default function AdminLogin() {
 
   useEffect(() => {
     async function tryAutoLogin() {
-      const loggedIn = await checkDeviceAndAutoLogin();
+      const loggedIn = await hasAdminToken();
       if (loggedIn) {
         router.push('/admin/validar-citas');
       }
@@ -30,18 +27,9 @@ export default function AdminLogin() {
     setError('');
 
     try {
-      if (!ADMIN_PASSWORD) {
-        throw new Error('Acceso admin no configurado en producción.');
-      }
-
-      if (password.trim() === ADMIN_PASSWORD.trim()) {
-        setAdminToken();
-        const hash = await calculateHash(password.trim());
-        localStorage.setItem('admin_device_token', hash);
-        router.push('/admin/validar-citas');
-      } else {
-        setError('Contraseña incorrecta');
-      }
+      await loginAdmin(password.trim());
+      const next = typeof router.query.next === 'string' ? router.query.next : '/admin/validar-citas';
+      router.push(next.startsWith('/admin') ? next : '/admin/validar-citas');
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión. Intenta nuevamente.');
     } finally {

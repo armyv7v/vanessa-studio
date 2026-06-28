@@ -1,7 +1,5 @@
-// pages/api/horarios.js
-// Proxea al backend de Netlify con fallback a configuración local si el backend no responde
-
-
+import { verifyAdminRequest } from '../../lib/adminSession';
+import { enforceAllowedOrigin, handleCorsPreflight, setCorsHeaders } from '../../lib/cors';
 
 const DEFAULT_CONFIG = {
   horarioAtencion: {
@@ -19,26 +17,9 @@ const DEFAULT_CONFIG = {
 };
 
 function getBackendBaseUrl() {
-  if (typeof process !== 'undefined' && process?.env?.NEXT_PUBLIC_BACKEND_BASE_URL) {
-    return process.env.NEXT_PUBLIC_BACKEND_BASE_URL;
-  }
-  return 'https://vanessastudioback.netlify.app/.netlify/functions';
-}
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-function getCookie(req, name) {
-  const cookieHeader = (typeof req?.headers?.get === 'function'
-    ? req.headers.get('cookie')
-    : req?.headers?.cookie) || '';
-  const cookies = cookieHeader.split(';').map((c) => c.trim());
-  const match = cookies.find((c) => c.startsWith(`${name}=`));
-  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+  return process.env.BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_BASE_URL ||
+    'https://vanessastudioback.netlify.app/.netlify/functions';
 }
 
 function normalizeConfig(config) {
@@ -50,28 +31,41 @@ function normalizeConfig(config) {
   };
 }
 
-export default async function handler(req) {
-  const token = getCookie(req, 'admin_token');
-  if (!token) return jsonResponse({ error: 'Unauthorized' }, 401);
+export default async function handler(req, res) {
+  if (handleCorsPreflight(req, res, { methods: 'GET, POST, OPTIONS' })) return;
+  setCorsHeaders(req, res, { methods: 'GET, POST, OPTIONS' });
+
+  if (!['GET', 'POST'].includes(req.method)) {
+    res.setHeader('Allow', 'GET, POST');
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  if (!enforceAllowedOrigin(req, res)) return;
+
+  if (!(await verifyAdminRequest(req))) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   const backendUrl = `${getBackendBaseUrl()}/horarios`;
 
   try {
-    const body = req.method === 'POST' ? await req.text() : undefined;
     const response = await fetch(backendUrl, {
       method: req.method,
       headers: { 'Content-Type': 'application/json' },
-      body,
+      body: req.method === 'POST' ? JSON.stringify(req.body || {}) : undefined,
     });
 
     const text = await response.text();
     let data;
-    try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
 
     if (!response.ok) {
-      // GET fallback: devolver config local sin crashear
       if (req.method === 'GET') {
-        return jsonResponse({
+        return res.status(200).json({
           ...normalizeConfig(DEFAULT_CONFIG),
           degraded: true,
           warning: 'No se pudo leer la configuración remota. Se devolvió la configuración local del frontend.',
@@ -79,26 +73,27 @@ export default async function handler(req) {
           backendError: data?.error || text || 'Backend unavailable',
         });
       }
-      return jsonResponse({
+
+      return res.status(response.status).json({
         error: data?.error || 'Failed to communicate with backend',
         details: text || null,
-      }, response.status);
+      });
     }
 
-    return jsonResponse(normalizeConfig(data));
+    return res.status(200).json(normalizeConfig(data));
   } catch (error) {
-    // GET fallback: nunca retorna 500 si el backend no responde
     if (req.method === 'GET') {
-      return jsonResponse({
+      return res.status(200).json({
         ...normalizeConfig(DEFAULT_CONFIG),
         degraded: true,
         warning: 'No se pudo leer la configuración remota. Se devolvió la configuración local del frontend.',
         backendError: error?.message || 'Unknown error',
       });
     }
-    return jsonResponse({
+
+    return res.status(500).json({
       error: 'Failed to communicate with backend',
       details: error?.message || 'Unknown error',
-    }, 500);
+    });
   }
 }
