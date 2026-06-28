@@ -7,6 +7,14 @@
 
 Las rutas `/api/*` del frontend son proxies hacia Apps Script (GAS), Netlify Functions o calculos locales. El hardening inicial ya protege las rutas admin principales y agrega rate limit/validacion a los endpoints mas sensibles, pero todavia queda deuda en CORS, Netlify backend y consolidacion de rutas legacy.
 
+### Routing convention
+
+- **Scenario 0.1:** La base pública preferida para Netlify es `NEXT_PUBLIC_BACKEND_BASE_URL`.
+- **Scenario 0.2:** Si `NEXT_PUBLIC_API_WORKER_URL` está definida, tiene prioridad para llamadas directas al endpoint `api`.
+- **Scenario 0.3:** Si `NEXT_PUBLIC_BACKEND_HORARIOS_URL` está definida, tiene prioridad para llamadas directas a `horarios`.
+- **Scenario 0.4:** Si no hay variables explícitas, el fallback documentado de Functions es `https://vanessastudioback.netlify.app/.netlify/functions`.
+- **Scenario 0.5:** Para GAS se usa `NEXT_PUBLIC_GAS_WEBHOOK_URL` y luego `GAS_WEBAPP_URL`.
+
 ## Requirements
 
 ### Requirement 1: `POST /api/book` — reserva publica
@@ -39,20 +47,20 @@ Devuelve intervalos `busy` para que el frontend calcule disponibles.
 ### Requirement 4: `GET /api/available-slots` — slots disponibles por rango
 Computa slots disponibles localmente para un rango de fechas.
 
-- **Scenario 4.1:** WHEN llega `?startDate=&endDate=` THEN pide busy al backend Netlify y calcula slots localmente.
+- **Scenario 4.1:** WHEN llega `?startDate=&endDate=` THEN pide busy al backend resuelto por helper compartido y calcula slots localmente.
 - **Scenario 4.2:** Usa business hours hardcodeadas; pendiente de `unify-slot-and-hours-logic`.
 - **Scenario 4.3:** Responde `{available: [...]}`.
 
 ### Requirement 5: `GET /api/client` — lookup de cliente
 Autocompletado de cliente por email.
 
-- **Scenario 5.1:** WHEN llega `?email=` THEN reenvia a GAS `?action=getClient&email=`.
+- **Scenario 5.1:** WHEN llega `?email=` THEN reenvia a GAS resuelto por helper (`NEXT_PUBLIC_GAS_WEBHOOK_URL` -> `GAS_WEBAPP_URL`) con `?action=getClient&email=`.
 - **Scenario 5.2:** Sigue sin auth; pendiente de revisar exposicion de datos.
 
 ### Requirement 6: `GET /api/gs-check` — health check + config
 Endpoint dual: health check o fetch de configuracion.
 
-- **Scenario 6.1:** WHEN `?action=getConfig` THEN proxiea a Netlify `/.netlify/functions/horarios`.
+- **Scenario 6.1:** WHEN `?action=getConfig` THEN proxiea a la URL de `horarios` resuelta por helper compartido.
 - **Scenario 6.2:** ELSE retorna un `DEFAULT_CONFIG` hardcodeado.
 - **Scenario 6.3:** Sigue sin auth; pendiente de consolidar con `/api/horarios`.
 
@@ -61,7 +69,7 @@ Proxy protegido para configuracion de horarios.
 
 - **Scenario 7.1:** WHEN el request trae `Origin` no permitido THEN responde `403`.
 - **Scenario 7.2:** WHEN no existe cookie `admin_session` valida THEN responde `401`.
-- **Scenario 7.3:** WHEN la sesion es valida THEN proxiea al backend Netlify `/.netlify/functions/horarios`.
+- **Scenario 7.3:** WHEN la sesion es valida THEN proxiea al backend `horarios` resuelto por helper compartido.
 - **Scenario 7.4:** WHEN GET falla contra backend remoto THEN responde fallback local degradado.
 
 ### Requirement 7.5: CORS admin local
@@ -109,4 +117,4 @@ El endpoint HTTP de diagnostico de secrets fue eliminado.
 - Webhooks/funciones de mensajeria (`whatsapp-webhook.js`, `send-whatsapp-reminder.js`) conservan CORS separado para no romper integraciones externas; requieren revision especifica aparte.
 - `/api/available-slots` mantiene horarios hardcodeados.
 - `/api/client` y `/api/gs-check` siguen publicos.
-- Persisten varias estrategias de enrutamiento backend.
+- Persisten varias estrategias de enrutamiento backend fuera de este slice, especialmente en funciones/jobs del repo Netlify y rutas legacy todavía no consolidadas.

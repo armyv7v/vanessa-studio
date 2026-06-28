@@ -1,4 +1,5 @@
 import { isEmailValid, isValidPushSubscription } from '../../lib/apiValidation';
+import { getGasWebhookUrl } from '../../lib/backendRouting';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -6,7 +7,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL || process.env.GAS_WEBAPP_URL;
+  const GAS_URL = getGasWebhookUrl();
   if (!GAS_URL) return res.status(500).json({ error: 'La URL del webhook no esta configurada.' });
 
   let body;

@@ -1,4 +1,5 @@
 import { verifyAdminRequest } from '../../lib/adminSession';
+import { getBackendHorariosUrl } from '../../lib/backendRouting';
 import { enforceAllowedOrigin, handleCorsPreflight, setCorsHeaders } from '../../lib/cors';
 
 const DEFAULT_CONFIG = {
@@ -15,12 +16,6 @@ const DEFAULT_CONFIG = {
   disabledDates: [],
   blackoutRanges: [],
 };
-
-function getBackendBaseUrl() {
-  return process.env.BACKEND_BASE_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_BASE_URL ||
-    'https://vanessastudioback.netlify.app/.netlify/functions';
-}
 
 function normalizeConfig(config) {
   return {
@@ -46,7 +41,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const backendUrl = `${getBackendBaseUrl()}/horarios`;
+  const backendUrl = getBackendHorariosUrl();
 
   try {
     const response = await fetch(backendUrl, {

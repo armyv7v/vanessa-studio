@@ -22,8 +22,9 @@ import {
 } from 'lucide-react';
 import AdminShell from '../../components/AdminShell';
 import { hasAdminToken } from '../../lib/adminAuth';
+import { getBackendApiUrl } from '../../lib/backendRouting';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_WORKER_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/api';
+const API_BASE = getBackendApiUrl();
 
 function getFilterRange(filter) {
   const today = new Date();

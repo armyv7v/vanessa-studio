@@ -1,7 +1,7 @@
 // pages/api/slots.js
 // Resiliente: si el backend falla, retorna { busy: [] } con 200 (muestra todos los horarios disponibles)
 
-const NETLIFY_API = 'https://vanessastudioback.netlify.app/.netlify/functions/api';
+import { getBackendApiUrl } from '../../lib/backendRouting';
 
 export default async function handler(req, res) {
   const { date } = req.query;
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const backendUrl = new URL(NETLIFY_API);
+    const backendUrl = new URL(getBackendApiUrl());
     backendUrl.searchParams.set('date', date);
 
     const response = await fetch(backendUrl.toString());

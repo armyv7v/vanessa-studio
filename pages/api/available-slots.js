@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
+import { getBackendApiUrl } from '../../lib/backendRouting';
 
-const BACKEND_URL = 'https://vanessastudioback.netlify.app/.netlify/functions/api';
 const TIMEZONE = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
 
 const horariosConfig = {
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const backendUrl = `${BACKEND_URL}?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+    const backendUrl = `${getBackendApiUrl()}?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
 
     let busySlots = [];
     try {

@@ -1,5 +1,6 @@
 // pages/api/client.js
 
+import { getGasWebhookUrl } from '../../lib/backendRouting';
 
 function jsonRes(data, status = 200) {
   return { data, status };
@@ -18,7 +19,7 @@ export default async function handler(req, res) {
     return res.status(result.status).json(result.data);
   }
 
-  const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL || process.env.GAS_WEBAPP_URL;
+  const GAS_URL = getGasWebhookUrl();
   if (!GAS_URL) {
     const result = jsonRes({ error: 'La URL del script de Google no esta configurada.' }, 500);
     return res.status(result.status).json(result.data);

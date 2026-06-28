@@ -56,11 +56,12 @@ App Next.js 14 Pages Router deployada en Vercel.
 - **Scenario 1.3:** Runtime: Node >= 18 (declarado), real ~20/22.
 - **Scenario 1.4:** Variables públicas via `NEXT_PUBLIC_*` inyectadas en bundle.
 - **Scenario 1.5:** El frontend desactiva `x-powered-by` y agrega headers base de endurecimiento (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-DNS-Prefetch-Control`, `X-Permitted-Cross-Domain-Policies`; `Strict-Transport-Security` solo en producción).
+- **Scenario 1.6:** La resolución de backend público usa helper compartido: prioriza `NEXT_PUBLIC_API_WORKER_URL` / `NEXT_PUBLIC_BACKEND_HORARIOS_URL`, luego `NEXT_PUBLIC_BACKEND_BASE_URL`, y finalmente fallback documentado a Netlify Functions.
 
 ### Requirement 2: Backend (Netlify) — fuente de verdad
 Repo anidado `vanessa-studio-backend/` deployado independientemente.
 
-- **Scenario 2.1:** URL: `https://vanessastudioback.netlify.app/.netlify/functions/...` (hardcodeada en fallbacks del frontend).
+- **Scenario 2.1:** URL canónica por defecto: `https://vanessastudioback.netlify.app/.netlify/functions/...` (fallback documentado; el frontend ahora la resuelve desde helper compartido).
 - **Scenario 2.2:** Functions: `api` (mega-function), `horarios`, `whatsapp-webhook`, `send-whatsapp-reminder`, `loyalty-reminders`, `expire-pending-payments`.
 - **Scenario 2.3:** Scheduled job: `expire-pending-payments` cada 15 min (`netlify.toml:8-9`).
 - **Scenario 2.4:** Auth Google: **OAuth user-based con refresh token** (no service account).

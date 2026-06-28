@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 import { isEmailValid } from '../../lib/apiValidation';
+import { getBackendApiUrl, getGasWebhookUrl } from '../../lib/backendRouting';
 import { applyRateLimit, setRateLimitHeaders } from '../../lib/rateLimit';
 
 function normalizeTzOffset(value) {
@@ -21,10 +22,10 @@ export default async function handler(req, res) {
       return res.status(429).json({ error: 'Demasiados intentos de reserva. Intenta nuevamente mas tarde.' });
     }
 
-    const BACKEND_API = process.env.NEXT_PUBLIC_API_WORKER_URL || '';
+    const BACKEND_API = getBackendApiUrl();
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
 
-    if (BACKEND_API) {
+    if (process.env.NEXT_PUBLIC_API_WORKER_URL) {
       const backendResponse = await fetch(BACKEND_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,7 +39,7 @@ export default async function handler(req, res) {
       return res.status(backendResponse.status).json(backendData);
     }
 
-    const GAS_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL || process.env.GAS_WEBAPP_URL;
+    const GAS_URL = getGasWebhookUrl();
     const CALENDAR = process.env.NEXT_PUBLIC_GCAL_CALENDAR_ID || '';
     const TZ = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
     const TZ_OFFSET_ENV = process.env.NEXT_PUBLIC_TZ_OFFSET;

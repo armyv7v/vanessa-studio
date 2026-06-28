@@ -1,9 +1,7 @@
 // pages/api/gs-check.js
 // Resiliente: nunca retorna 500. Siempre cae a DEFAULT_CONFIG si algo falla.
 
-
-
-const NETLIFY_HORARIOS = 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
+import { getBackendHorariosUrl } from '../../lib/backendRouting';
 
 const DEFAULT_CONFIG = {
   ok: true,
@@ -30,9 +28,8 @@ export default async function handler(req, res) {
     return res.status(result.status).json(result.body);
   }
 
-  // action === 'getConfig': obtener días deshabilitados desde Netlify backend
   try {
-    const response = await fetch(NETLIFY_HORARIOS, {
+    const response = await fetch(getBackendHorariosUrl(), {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -50,7 +47,6 @@ export default async function handler(req, res) {
     });
     return res.status(result.status).json(result.body);
   } catch {
-    // Fallback silencioso: nunca 500, siempre 200 con config local
     const result = jsonRes(DEFAULT_CONFIG);
     return res.status(result.status).json(result.body);
   }
