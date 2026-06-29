@@ -255,11 +255,6 @@ export default function ValidarCitas() {
       cancel: { code: reservationCode, adminPin },
     };
 
-    if (mode === 'cancel') {
-      const confirmed = window.confirm('Eliminar esta hora? Se liberara el cupo y se cancelara el evento de Calendar.');
-      if (!confirmed) return;
-    }
-
     try {
       setActionSubmitting(true);
       setError('');
@@ -854,7 +849,7 @@ export default function ValidarCitas() {
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={() => runReservationAction('cancel', reservation.code)}
+                                        onClick={() => openActionPanel('cancel', reservation)}
                                         disabled={actionSubmitting}
                                         className="rounded-lg border border-rose-100 bg-rose-50 px-2 py-2 text-[10px] font-black text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                                       >
@@ -866,11 +861,11 @@ export default function ValidarCitas() {
                                 </div>
                               </div>
 
-                              {actionPanel?.code === reservation.code && actionPanel.mode !== 'cancel' && (
+                              {actionPanel?.code === reservation.code && (
                                 <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                                   <div className="mb-3 flex items-center justify-between gap-3">
                                     <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-600">
-                                      {actionPanel.mode === 'reschedule' ? 'Reagendar cita' : 'Editar datos'}
+                                      {actionPanel.mode === 'reschedule' ? 'Reagendar cita' : actionPanel.mode === 'cancel' ? 'Eliminar hora' : 'Editar datos'}
                                     </p>
                                     <button
                                       type="button"
@@ -881,7 +876,22 @@ export default function ValidarCitas() {
                                     </button>
                                   </div>
 
-                                  {actionPanel.mode === 'reschedule' ? (
+                                  {actionPanel.mode === 'cancel' ? (
+                                    <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-950">
+                                      <div className="flex items-start gap-3">
+                                        <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+                                        <div>
+                                          <p className="font-black">Eliminar y liberar esta hora</p>
+                                          <p className="mt-1 text-xs font-semibold leading-5 text-rose-800">
+                                            Esto cancela el evento de Google Calendar y marca la reserva como CANCELADA en Sheets. No borra el historial, porque la auditoria importa.
+                                          </p>
+                                          <p className="mt-2 text-xs font-bold text-rose-700">
+                                            Requiere el PIN admin cargado en el panel de seguridad.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : actionPanel.mode === 'reschedule' ? (
                                     <div className="grid gap-3 sm:grid-cols-3">
                                       <label className="text-[11px] font-bold text-slate-600">
                                         Fecha
@@ -967,10 +977,20 @@ export default function ValidarCitas() {
                                       type="button"
                                       onClick={() => runReservationAction(actionPanel.mode, reservation.code)}
                                       disabled={actionSubmitting}
-                                      className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
+                                      className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white disabled:opacity-50 ${
+                                        actionPanel.mode === 'cancel'
+                                          ? 'bg-rose-600 hover:bg-rose-700'
+                                          : 'bg-slate-950 hover:bg-slate-800'
+                                      }`}
                                     >
-                                      {actionSubmitting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                                      Guardar cambios
+                                      {actionSubmitting ? (
+                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                      ) : actionPanel.mode === 'cancel' ? (
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <Save className="h-3.5 w-3.5" />
+                                      )}
+                                      {actionPanel.mode === 'cancel' ? 'Eliminar hora' : 'Guardar cambios'}
                                     </button>
                                   </div>
                                 </div>
