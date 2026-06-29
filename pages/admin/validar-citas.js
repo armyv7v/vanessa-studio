@@ -21,6 +21,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import AdminShell from '../../components/AdminShell';
+import AdminMetricIcon from '../../components/AdminMetricIcon';
 import { hasAdminToken } from '../../lib/adminAuth';
 import { getBackendApiUrl } from '../../lib/backendRouting';
 
@@ -379,17 +380,22 @@ export default function ValidarCitas() {
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: 'Citas visibles', value: visibleReservations.length, detail: `${paymentSummary.total} en el rango cargado` },
-              { label: 'Acciones criticas', value: operationsSummary.actionRequired, detail: 'Abonos, vencidas o asistencia' },
-              { label: 'Abonos confirmados', value: paymentSummary.confirmed, detail: `${paymentSummary.pending} pendientes de pago` },
-              { label: 'Flujo resuelto', value: `${operationsSummary.completionRate}%`, detail: `${operationsSummary.attendancePending} esperan asistencia` },
+              { label: 'Citas visibles', value: visibleReservations.length, detail: `${paymentSummary.total} en el rango cargado`, icon: 'calendar' },
+              { label: 'Acciones criticas', value: operationsSummary.actionRequired, detail: 'Abonos, vencidas o asistencia', icon: 'bolt' },
+              { label: 'Abonos confirmados', value: paymentSummary.confirmed, detail: `${paymentSummary.pending} pendientes de pago`, icon: 'wallet' },
+              { label: 'Flujo resuelto', value: `${operationsSummary.completionRate}%`, detail: `${operationsSummary.attendancePending} esperan asistencia`, icon: 'pulse' },
             ].map((metric) => (
               <div key={metric.label} className="admin-metric-card rounded-3xl p-4">
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-600">
-                  {metric.label}
-                </p>
-                <p className="mt-2 text-4xl font-black text-slate-950">{metric.value}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-600">{metric.detail}</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-600">
+                      {metric.label}
+                    </p>
+                    <p className="mt-2 text-4xl font-black text-slate-950">{metric.value}</p>
+                  </div>
+                  <AdminMetricIcon type={metric.icon} />
+                </div>
+                <p className="mt-3 text-xs font-semibold text-slate-600">{metric.detail}</p>
               </div>
             ))}
           </div>

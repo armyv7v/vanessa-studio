@@ -10,6 +10,7 @@ import {
 import { es } from 'date-fns/locale';
 import { bookAppointment, getAvailableSlots, getAvailableSlotsRange } from '../../lib/api';
 import AdminShell from '../../components/AdminShell';
+import AdminMetricIcon from '../../components/AdminMetricIcon';
 import { hasAdminToken } from '../../lib/adminAuth';
 import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon, CloseIcon, GemIcon, LaunchIcon, SparkleIcon } from '../../components/BrandMotifs';
 import { isAllowedBusinessDay } from '../../lib/calendarConfig';
@@ -313,12 +314,13 @@ export default function AdminTurnos() {
     .map((day) => ({ day, count: getEventsForDay(day).length }))
     .sort((a, b) => b.count - a.count)[0];
   const occupancySummary = [
-    { label: 'Slots visibles', value: String(availableSlotsCount), detail: 'turnos libres en este rango' },
-    { label: 'Días con disponibilidad', value: String(daysWithAvailability), detail: 'jornadas con al menos un bloque libre' },
+    { label: 'Slots visibles', value: String(availableSlotsCount), detail: 'turnos libres en este rango', icon: 'calendar' },
+    { label: 'D?as con disponibilidad', value: String(daysWithAvailability), detail: 'jornadas con al menos un bloque libre', icon: 'sparkle' },
     {
       label: 'Pico actual',
       value: peakDay?.count ? `${peakDay.count}` : '0',
       detail: peakDay?.count ? `${format(peakDay.day, "d MMM", { locale: es })} concentra más huecos` : 'sin huecos destacados',
+      icon: 'pulse',
     },
   ];
 
@@ -417,10 +419,15 @@ export default function AdminTurnos() {
 
           <div className="grid gap-3 md:grid-cols-3">
             {occupancySummary.map((item) => (
-              <div key={item.label} className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4 shadow-[0_10px_24px_rgba(225,27,116,0.06)]">
-                <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--brand-light)' }}>{item.label}</p>
-                <p className="mt-2 text-3xl font-bold" style={{ color: 'var(--ink-medium)' }}>{item.value}</p>
-                <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>{item.detail}</p>
+              <div key={item.label} className="admin-metric-card rounded-2xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-600">{item.label}</p>
+                    <p className="mt-2 text-3xl font-black text-slate-950">{item.value}</p>
+                  </div>
+                  <AdminMetricIcon type={item.icon} />
+                </div>
+                <p className="mt-3 text-sm font-semibold text-slate-600">{item.detail}</p>
               </div>
             ))}
           </div>

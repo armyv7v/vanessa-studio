@@ -4,6 +4,7 @@ import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMont
 import { es } from 'date-fns/locale';
 import HorarioEditor from '../../components/HorarioEditor';
 import AdminShell from '../../components/AdminShell';
+import AdminMetricIcon from '../../components/AdminMetricIcon';
 import { hasAdminToken } from '../../lib/adminAuth';
 import { ArrowLeftIcon, ArrowRightIcon } from '../../components/BrandMotifs';
 
@@ -203,21 +204,22 @@ export default function AdminHorarios() {
             Aquí defines la ventana de atención por día y también ocultas sábados o domingos específicos para que el flujo público nunca muestre espacios que no quieres abrir.
           </p>
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4 shadow-[0_10px_24px_rgba(225,27,116,0.06)]">
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--brand-light)' }}>Bloqueos ordinales</p>
-              <p className="mt-2 text-3xl font-bold" style={{ color: 'var(--ink-medium)' }}>{disabledDays.length}</p>
-              <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>Sábados y domingos ordinales ocultos</p>
-            </div>
-            <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4 shadow-[0_10px_24px_rgba(225,27,116,0.06)]">
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--brand-light)' }}>Fechas puntuales</p>
-              <p className="mt-2 text-3xl font-bold" style={{ color: 'var(--ink-medium)' }}>{disabledDates.length}</p>
-              <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>Días específicos fuera de agenda</p>
-            </div>
-            <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4 shadow-[0_10px_24px_rgba(225,27,116,0.06)]">
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--brand-light)' }}>Rangos activos</p>
-              <p className="mt-2 text-3xl font-bold" style={{ color: 'var(--ink-medium)' }}>{blackoutRanges.length}</p>
-              <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>Semanas o meses completos bloqueados</p>
-            </div>
+            {[
+              { label: 'Bloqueos ordinales', value: disabledDays.length, detail: 'S?bados y domingos ordinales ocultos', icon: 'lock' },
+              { label: 'Fechas puntuales', value: disabledDates.length, detail: 'D?as espec?ficos fuera de agenda', icon: 'calendar' },
+              { label: 'Rangos activos', value: blackoutRanges.length, detail: 'Semanas o meses completos bloqueados', icon: 'pulse' },
+            ].map((metric) => (
+              <div key={metric.label} className="admin-metric-card rounded-2xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-600">{metric.label}</p>
+                    <p className="mt-2 text-3xl font-black text-slate-950">{metric.value}</p>
+                  </div>
+                  <AdminMetricIcon type={metric.icon} />
+                </div>
+                <p className="mt-3 text-sm font-semibold text-slate-600">{metric.detail}</p>
+              </div>
+            ))}
           </div>
         </div>
 
