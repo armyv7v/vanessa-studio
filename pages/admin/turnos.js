@@ -333,8 +333,8 @@ export default function AdminTurnos() {
         <title>Admin Turnos | Vanessa Studio</title>
       </Head>
 
-      <div className="mx-auto max-w-6xl" data-turnos-build={TURNOS_BUILD_VERSION}>
-        <div className="admin-highlight-card mb-5 rounded-3xl p-5 sm:p-6">
+      <div className="admin-workspace space-y-7" data-turnos-build={TURNOS_BUILD_VERSION}>
+        <div className="admin-highlight-card rounded-[2rem] p-5 sm:p-7">
           <div className="mb-5 flex flex-col items-center justify-between gap-4 md:flex-row">
             <div>
               <p className="admin-section-kicker">Disponibilidad editorial</p>
@@ -435,7 +435,7 @@ export default function AdminTurnos() {
 
         {/* ── Availability Legend ──────────────────────────── */}
         <div
-          className="admin-surface-card mb-4 rounded-2xl p-4 shadow-sm"
+          className="admin-section-band rounded-[1.75rem] p-5 shadow-sm"
           style={{
             background: 'rgba(255,255,255,0.95)',
             border: '1px solid var(--gold-lighter)',
@@ -469,7 +469,7 @@ export default function AdminTurnos() {
 
         {/* ── Calendar ─────────────────────────────────────── */}
         <div
-          className="admin-surface-card overflow-hidden rounded-2xl shadow-lg"
+          className="admin-section-band overflow-hidden rounded-[2rem] shadow-lg"
           style={{ background: 'rgba(255,255,255,0.98)' }}
         >
           {/* Calendar Header */}

@@ -327,7 +327,7 @@ export default function ValidarCitas() {
       title="Validar citas y abonos"
       description="Liberá turnos confirmando el abono recibido por transferencia, o validá asistencia cuando las clientas lleguen al estudio."
     >
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="admin-workspace space-y-8">
         
         {/* Alerts */}
         {error && (
@@ -402,13 +402,13 @@ export default function ValidarCitas() {
         </section>
 
         {/* Dashboard Grid */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
           
           {/* Main Controls Section (Left/Top 2 Cols) */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-7">
             
             {/* Search and Filters Card */}
-            <div className="admin-highlight-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm space-y-4">
+            <div className="admin-section-band rounded-[2rem] p-5 shadow-sm space-y-5 sm:p-6">
               
               {/* Search Bar */}
               <div className="relative">
@@ -504,7 +504,7 @@ export default function ValidarCitas() {
             </div>
 
             {/* Citations List Panel */}
-            <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm">
+            <div className="admin-section-band rounded-[2rem] p-5 shadow-sm sm:p-6">
               <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
                   <h2 className="text-lg font-bold text-slate-800">Turnos Registrados</h2>
@@ -755,7 +755,7 @@ export default function ValidarCitas() {
           </div>
 
           {/* Sidebar Area (Right 1 Col) */}
-          <div className="space-y-6">
+          <div className="space-y-6 xl:sticky xl:top-28">
             
             {/* PIN authorization */}
             <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm">

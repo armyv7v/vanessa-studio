@@ -191,13 +191,13 @@ export default function AdminHorarios() {
       title="Administrar horarios"
       description="Configura horarios de atención y bloquea sábados o domingos específicos del mes para controlar la disponibilidad visible en la reserva."
     >
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="admin-workspace space-y-8">
         {successMsg ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-800 animate-pulse">
             {successMsg}
           </div>
         ) : null}
-        <div className="admin-highlight-card rounded-3xl p-5 sm:p-6">
+        <div className="admin-highlight-card rounded-[2rem] p-5 sm:p-7">
           <p className="admin-section-kicker">Operación del calendario</p>
           <h2 className="mt-3 text-xl font-bold" style={{ color: 'var(--ink-medium)' }}>Ajusta disponibilidad real del estudio</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
@@ -223,7 +223,7 @@ export default function AdminHorarios() {
           </div>
         </div>
 
-        <div className="admin-surface-card rounded-3xl p-6 shadow-sm" style={{ border: '1px solid rgba(242, 200, 212, 0.6)', background: 'rgba(255,255,255,0.97)' }}>
+        <div className="admin-section-band rounded-[2rem] p-6 shadow-sm" style={{ border: '1px solid rgba(242, 200, 212, 0.6)', background: 'rgba(255,255,255,0.97)' }}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-bold" style={{ color: 'var(--ink-medium)' }}>Calendario visual de bloqueos</h2>
@@ -385,7 +385,7 @@ export default function AdminHorarios() {
 
         {/* Horario Editor Card */}
         <div
-          className="admin-surface-card rounded-3xl p-6 shadow-sm"
+          className="admin-section-band rounded-[2rem] p-6 shadow-sm"
           style={{
             border: '1px solid rgba(242, 200, 212, 0.6)',
             background: 'rgba(255,255,255,0.97)',
@@ -403,7 +403,7 @@ export default function AdminHorarios() {
         </div>
 
         <div
-          className="admin-surface-card rounded-3xl p-6 shadow-sm"
+          className="admin-section-band rounded-[2rem] p-6 shadow-sm"
           style={{
             border: '1px solid rgba(242, 200, 212, 0.6)',
             background: 'rgba(255,255,255,0.97)',
@@ -461,9 +461,10 @@ export default function AdminHorarios() {
           </div>
         </div>
 
+        <div className="grid items-start gap-8 xl:grid-cols-[0.95fr_1.05fr]">
         {/* Disabled Days Card */}
         <div
-          className="admin-surface-card rounded-3xl p-6 shadow-sm"
+          className="admin-section-band rounded-[2rem] p-6 shadow-sm"
           style={{
             border: '1px solid var(--gold-lighter)',
             background: 'linear-gradient(135deg, var(--gold-lightest), rgba(255,255,255,0.90))',
@@ -556,7 +557,7 @@ export default function AdminHorarios() {
           </div>
         </div>
 
-        <div className="admin-surface-card rounded-3xl p-6 shadow-sm" style={{ border: '1px solid rgba(242, 200, 212, 0.6)', background: 'rgba(255,255,255,0.97)' }}>
+        <div className="admin-section-band rounded-[2rem] p-6 shadow-sm" style={{ border: '1px solid rgba(242, 200, 212, 0.6)', background: 'rgba(255,255,255,0.97)' }}>
           <h2 className="mb-2 text-lg font-bold" style={{ color: 'var(--ink-medium)' }}>Resumen de bloqueos activos</h2>
           <p className="mb-5 text-sm" style={{ color: 'var(--ink-muted)' }}>
             Este bloque resume lo que está activo ahora mismo para que puedas revisarlo o limpiar bloqueos viejos sin salir del flujo principal.
@@ -613,13 +614,17 @@ export default function AdminHorarios() {
           </div>
         </div>
 
+        </div>
+
         {/* Save Button */}
+        <div className="sticky bottom-4 z-10 flex justify-end rounded-[1.5rem] border border-slate-200 bg-white/88 p-3 shadow-[0_18px_46px_rgba(15,23,42,0.12)] backdrop-blur">
         <button
           onClick={handleSave}
           className="premium-button"
         >
           Guardar Cambios
         </button>
+        </div>
       </div>
     </AdminShell>
   );

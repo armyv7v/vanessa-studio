@@ -6,3 +6,5 @@
 - [x] Reemplazar loading inicial de reservas por skeleton estructurado.
 - [x] Verificar build de Next.js.
 - [x] Corregir contraste de texto/fondo en la capa admin siguiendo criterio WCAG AA.
+- [x] Descondensar el panel admin separando resumen, operacion principal, configuracion secundaria y acciones finales.
+- [x] Reforzar presencia premium de cards con iconos, acentos vivos y mas respiracion visual.
