@@ -5,9 +5,7 @@ import StudioPageShell from '../components/StudioPageShell';
 
 const extraConfig = {
   isExtra: true,
-  openHour: 18,
-  closeHour: 20,
-  allowOverflowEnd: true,
+  mode: 'extra',
   daysToShow: 35,
 };
 

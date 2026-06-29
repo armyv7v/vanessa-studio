@@ -1,32 +1,19 @@
 {
-    "horarioAtencion": {
-        "lunes": [
-            "09:00",
-            "22:00"
-        ],
-        "martes": [
-            "09:00",
-            "22:00"
-        ],
-        "miércoles": [
-            "09:00",
-            "22:00"
-        ],
-        "jueves": [
-            "09:00",
-            "22:00"
-        ],
-        "viernes": [
-            "09:00",
-            "22:00"
-        ],
-        "sábado": [
-            "09:00",
-            "22:00"
-        ],
-        "domingo": [
-            "09:00",
-            "22:00"
-        ]
-    }
+  "__comment": "Fallback local del frontend. La fuente de verdad runtime es ConfiguracionHorarios via backend.",
+  "horarioAtencion": {
+    "lunes": ["10:00", "21:00"],
+    "martes": ["10:00", "21:00"],
+    "miercoles": ["10:00", "21:00"],
+    "jueves": ["10:00", "21:00"],
+    "viernes": ["10:00", "21:00"],
+    "sabado": ["10:00", "21:00"],
+    "domingo": ["10:00", "21:00"]
+  },
+  "extraCuposConfig": {
+    "enabled": true,
+    "start": "18:00",
+    "end": "20:00",
+    "daysToShow": 35,
+    "extraChargeClp": 5000
+  }
 }

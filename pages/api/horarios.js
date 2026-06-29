@@ -4,17 +4,24 @@ import { enforceAllowedOrigin, handleCorsPreflight, setCorsHeaders } from '../..
 
 const DEFAULT_CONFIG = {
   horarioAtencion: {
-    lunes: ['09:00', '22:00'],
-    martes: ['09:00', '22:00'],
-    miércoles: ['09:00', '22:00'],
-    jueves: ['09:00', '22:00'],
-    viernes: ['09:00', '22:00'],
-    sábado: ['09:00', '22:00'],
-    domingo: ['09:00', '22:00'],
+    lunes: ['10:00', '21:00'],
+    martes: ['10:00', '21:00'],
+    miercoles: ['10:00', '21:00'],
+    jueves: ['10:00', '21:00'],
+    viernes: ['10:00', '21:00'],
+    sabado: ['10:00', '21:00'],
+    domingo: ['10:00', '21:00'],
   },
   disabledDays: [],
   disabledDates: [],
   blackoutRanges: [],
+  extraCuposConfig: {
+    enabled: true,
+    start: '18:00',
+    end: '20:00',
+    daysToShow: 35,
+    extraChargeClp: 5000,
+  },
 };
 
 function normalizeConfig(config) {
@@ -23,6 +30,7 @@ function normalizeConfig(config) {
     disabledDays: Array.isArray(config?.disabledDays) ? config.disabledDays : [],
     disabledDates: Array.isArray(config?.disabledDates) ? config.disabledDates : [],
     blackoutRanges: Array.isArray(config?.blackoutRanges) ? config.blackoutRanges : [],
+    extraCuposConfig: config?.extraCuposConfig || DEFAULT_CONFIG.extraCuposConfig,
   };
 }
 

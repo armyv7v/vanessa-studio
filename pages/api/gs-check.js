@@ -2,13 +2,21 @@
 // Resiliente: nunca retorna 500. Siempre cae a DEFAULT_CONFIG si algo falla.
 
 import { getBackendHorariosUrl } from '../../lib/backendRouting';
+import horariosConfig from '../../config/horarios.json';
 
 const DEFAULT_CONFIG = {
   ok: true,
   disabledDays: [],
   disabledDates: [],
   blackoutRanges: [],
-  workingHours: { start: '10:00', end: '21:00' },
+  workingHours: horariosConfig.horarioAtencion || {},
+  extraCuposConfig: horariosConfig.extraCuposConfig || {
+    enabled: true,
+    start: '18:00',
+    end: '20:00',
+    daysToShow: 35,
+    extraChargeClp: 5000,
+  },
 };
 
 function jsonRes(body, status = 200) {
@@ -44,6 +52,7 @@ export default async function handler(req, res) {
       disabledDates: Array.isArray(data?.disabledDates) ? data.disabledDates : [],
       blackoutRanges: Array.isArray(data?.blackoutRanges) ? data.blackoutRanges : [],
       workingHours: data?.horarioAtencion || DEFAULT_CONFIG.workingHours,
+      extraCuposConfig: data?.extraCuposConfig || DEFAULT_CONFIG.extraCuposConfig,
     });
     return res.status(result.status).json(result.body);
   } catch {

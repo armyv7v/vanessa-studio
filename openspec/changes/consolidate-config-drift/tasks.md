@@ -11,8 +11,8 @@
 - [ ] Commit: `chore: remove unused lib/dateUtils.js`
 
 ## 3. Alinear config/horarios.json (tras unify-slot-and-hours-logic)
-- [ ] Editar `config/horarios.json` para reflejar: 10:00–18:00 lun-vie normal, 18:00–20:00 extra, sábado 10:00–14:00, domingo cerrado
-- [ ] Añadir comentario: `// fallback cuando ConfiguracionHorarios (sheet) no carga`
+- [x] Editar `config/horarios.json` para reflejar el fallback runtime consolidado vigente
+- [x] Añadir comentario aclarando que es fallback cuando `ConfiguracionHorarios` no carga
 - [ ] Commit: `chore(config): align horarios.json with runtime rules`
 
 ## 4. Consolidar jsconfig.json → tsconfig.json

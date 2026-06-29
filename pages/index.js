@@ -7,9 +7,7 @@ import StudioPageShell from '../components/StudioPageShell';
 // Las citas ya agendadas (normales o extra) bloquearán los turnos correspondientes.
 const normalConfig = {
   isExtra: false,
-  openHour: 10,
-  closeHour: 21, // Horario extendido por defecto
-  allowOverflowEnd: true, // Permitir que el último turno termine después de las 21:00
+  mode: 'normal',
   daysToShow: 21,
 };
 

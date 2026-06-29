@@ -48,7 +48,7 @@ Devuelve intervalos `busy` para que el frontend calcule disponibles.
 Computa slots disponibles localmente para un rango de fechas.
 
 - **Scenario 4.1:** WHEN llega `?startDate=&endDate=` THEN pide busy al backend resuelto por helper compartido y calcula slots localmente.
-- **Scenario 4.2:** Usa business hours hardcodeadas; pendiente de `unify-slot-and-hours-logic`.
+- **Scenario 4.2:** Obtiene `horarioAtencion` del backend de horarios y cae a fallback local si esa carga falla.
 - **Scenario 4.3:** Responde `{available: [...]}`.
 
 ### Requirement 5: `GET /api/client` — lookup de cliente
@@ -115,6 +115,6 @@ El endpoint HTTP de diagnostico de secrets fue eliminado.
 - Backend Netlify: validacion/confirmacion de citas valida `code` con el formato real actual (`8 hex` o fallback `VAL-...`) antes de buscar en Sheets.
 - Backend Netlify: `api.js` y `horarios.js` usan CORS por allowlist dinamica; origenes no permitidos reciben `403`.
 - Webhooks/funciones de mensajeria (`whatsapp-webhook.js`, `send-whatsapp-reminder.js`) conservan CORS separado para no romper integraciones externas; requieren revision especifica aparte.
-- `/api/available-slots` mantiene horarios hardcodeados.
+- `/api/available-slots` ya no usa horarios hardcodeados, pero sigue dependiendo de fallbacks distintos entre frontend y backend.
 - `/api/client` y `/api/gs-check` siguen publicos.
 - Persisten varias estrategias de enrutamiento backend fuera de este slice, especialmente en funciones/jobs del repo Netlify y rutas legacy todavía no consolidadas.

@@ -1,85 +1,37 @@
 import { DateTime } from 'luxon';
-import { getBackendApiUrl } from '../../lib/backendRouting';
+import { getBackendApiUrl, getBackendHorariosUrl } from '../../lib/backendRouting';
+import { getFullDayBusinessHours } from '../../lib/businessHours';
+import { generateTimeSlots } from '../../lib/slots';
 
 const TIMEZONE = process.env.NEXT_PUBLIC_TZ || 'America/Santiago';
-
-const horariosConfig = {
-  horarioAtencion: {
-    lunes: ['09:00', '22:00'],
-    martes: ['09:00', '22:00'],
-    miercoles: ['09:00', '22:00'],
-    jueves: ['09:00', '22:00'],
-    viernes: ['09:00', '22:00'],
-    sabado: ['09:00', '22:00'],
-    domingo: ['09:00', '22:00'],
-  },
-};
-
-const DAY_NAMES = {
-  0: 'domingo',
-  1: 'lunes',
-  2: 'martes',
-  3: 'miercoles',
-  4: 'jueves',
-  5: 'viernes',
-  6: 'sabado',
-};
-
-const STEP_MINUTES = 30;
 const DEFAULT_SERVICE_DURATION = 120;
 
-function getHorarioAtencion() {
-  const horarios = {};
+const DEFAULT_HORARIO_ATENCION = {
+  lunes: ['10:00', '21:00'],
+  martes: ['10:00', '21:00'],
+  miércoles: ['10:00', '21:00'],
+  jueves: ['10:00', '21:00'],
+  viernes: ['10:00', '21:00'],
+  sábado: ['10:00', '21:00'],
+  domingo: ['10:00', '21:00'],
+};
 
-  for (let dayNum = 0; dayNum <= 6; dayNum += 1) {
-    const dayName = DAY_NAMES[dayNum];
-    const horario = horariosConfig.horarioAtencion[dayName];
+async function fetchHorarioAtencion() {
+  try {
+    const response = await fetch(getBackendHorariosUrl(), {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-    horarios[dayNum] = Array.isArray(horario) && horario.length === 2
-      ? { inicio: horario[0], fin: horario[1] }
-      : null;
-  }
-
-  return horarios;
-}
-
-const HORARIO_ATENCION = getHorarioAtencion();
-
-function generateTimeSlots(startTime, endTime, step, serviceDuration) {
-  const slots = [];
-  const [startHour, startMin] = startTime.split(':').map(Number);
-  const [endHour, endMin] = endTime.split(':').map(Number);
-
-  let currentMinutes = startHour * 60 + startMin;
-  const endMinutes = endHour * 60 + endMin;
-
-  while (currentMinutes + serviceDuration <= endMinutes) {
-    const hours = Math.floor(currentMinutes / 60);
-    const mins = currentMinutes % 60;
-    slots.push(`${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`);
-    currentMinutes += step;
-  }
-
-  return slots;
-}
-
-function isSlotBusy(dateStr, timeStr, busySlots, serviceDuration) {
-  if (!Array.isArray(busySlots) || busySlots.length === 0) return false;
-
-  const slotStart = DateTime.fromISO(`${dateStr}T${timeStr}:00`, { zone: TIMEZONE });
-  const slotEnd = slotStart.plus({ minutes: serviceDuration });
-
-  return busySlots.some((busy) => {
-    if (!busy?.start || !busy?.end) return false;
-
-    try {
-      const busyStart = DateTime.fromISO(busy.start).setZone(TIMEZONE);
-      const busyEnd = DateTime.fromISO(busy.end).setZone(TIMEZONE);
-      return slotStart < busyEnd && slotEnd > busyStart;
-    } catch {
-      return false;
+    if (!response.ok) {
+      throw new Error(`Backend status ${response.status}`);
     }
-  });
+
+    const payload = await response.json().catch(() => null);
+    return payload?.horarioAtencion || DEFAULT_HORARIO_ATENCION;
+  } catch {
+    return DEFAULT_HORARIO_ATENCION;
+  }
 }
 
 export default async function handler(req, res) {
@@ -101,6 +53,7 @@ export default async function handler(req, res) {
     }
 
     const backendUrl = `${getBackendApiUrl()}?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+    const horarioAtencion = await fetchHorarioAtencion();
 
     let busySlots = [];
     try {
@@ -126,26 +79,33 @@ export default async function handler(req, res) {
     let iterationCount = 0;
 
     while (currentDate <= end && iterationCount < 100) {
-      const dayOfWeek = currentDate.weekday === 7 ? 0 : currentDate.weekday;
-      const horario = HORARIO_ATENCION[dayOfWeek];
+      const businessHours = getFullDayBusinessHours({
+        date: currentDate.toISODate(),
+        horarioAtencion,
+      });
 
-      if (horario) {
+      if (businessHours) {
         const dateStr = currentDate.toISODate();
-        const timeSlots = generateTimeSlots(horario.inicio, horario.fin, STEP_MINUTES, serviceDuration);
+        const timeSlots = generateTimeSlots({
+          date: dateStr,
+          openHour: businessHours.openHour,
+          closeHour: businessHours.closeHour,
+          stepMinutes: businessHours.stepMinutes,
+          durationMinutes: serviceDuration,
+          busy: busySlots,
+          tz: TIMEZONE,
+          allowOverflowEnd: businessHours.allowOverflowEnd,
+        });
 
-        for (const time of timeSlots) {
-          const slotDateTime = DateTime.fromISO(`${dateStr}T${time}:00`, { zone: TIMEZONE });
-          if (slotDateTime <= now) continue;
-
-          if (!isSlotBusy(dateStr, time, busySlots, serviceDuration)) {
-            const slotEnd = slotDateTime.plus({ minutes: serviceDuration });
-            availableSlots.push({
-              start: slotDateTime.toISO(),
-              end: slotEnd.toFormat('HH:mm'),
+        availableSlots.push(
+          ...timeSlots
+            .filter((slot) => slot.available && DateTime.fromISO(slot.start, { zone: TIMEZONE }) > now)
+            .map((slot) => ({
+              start: slot.start,
+              end: DateTime.fromISO(slot.end, { zone: TIMEZONE }).toFormat('HH:mm'),
               available: true,
-            });
-          }
-        }
+            }))
+        );
       }
 
       currentDate = currentDate.plus({ days: 1 });

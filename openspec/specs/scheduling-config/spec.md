@@ -1,21 +1,19 @@
-# Spec: Scheduling Config
+﻿# Spec: Scheduling Config
 
 > Configuración de horarios y generación de slots disponibles.
-> **Estado: AS-IS.** Última revisión: 2026-06-22.
-> 🔴 **Hallazgo crítico:** existen **4 definiciones de "business hours"** en el código, en conflicto entre sí.
+> **Estado: AS-IS.** Última revisión: 2026-06-28.
+> 🟡 **Hallazgo vigente:** ya no existe el motor duplicado en `lib/api.js`, pero todavía conviven defaults/fallbacks distintos entre frontend y backend.
 
 ## Overview
 
 La disponibilidad de citas depende de:
-1. **Horarios base** (apertura/cierre por día de semana + excepciones) — configurable por admin.
-2. **Eventos ocupados** del Google Calendar — fuente externa.
-3. **Duración del servicio** seleccionado (90–180 min en `lib/services.js`).
-4. **Modo** (normal vs extra-cupos) — cambia la ventana horaria.
+1. **Horarios base** por día (`horarioAtencion`) editables desde admin.
+2. **Excepciones** (`disabledDays`, `disabledDates`, `blackoutRanges`).
+3. **Eventos ocupados** del Google Calendar.
+4. **Duración del servicio** seleccionado.
+5. **Modo** (`normal` vs `extra`) que segmenta la ventana visible al cliente.
 
-La matemática de "qué slots están libres" se ejecuta en **3 lugares distintos** con reglas parcialmente inconsistentes:
-- `lib/slots.js` (cliente, usado por `BookingFlow`)
-- `lib/api.js:30-99` (cliente, duplicado paralelo)
-- `pages/api/available-slots.js` (server-side, hours hardcodeadas)
+La matemática de slots ahora se centraliza en `lib/slots.js`, y tanto el flujo público como `/api/available-slots` reutilizan ese motor compartido.
 
 ## Requirements
 
@@ -24,64 +22,60 @@ Los horarios son editables desde el panel y persisten en múltiples sitios.
 
 - **Scenario 1.1:** El admin edita horarios semanales en `/admin/horarios` (apertura/cierre por día, toggle "Cerrado").
 - **Scenario 1.2:** Se persiste en **3 lugares**: sheet tab `ConfiguracionHorarios` (A1 JSON), Netlify Blobs, y `vanessa-studio-backend/data/horarios.json`.
-- **Scenario 1.3:** Excepciones: ordinales (`SUN1`, `SAT3`), fechas puntuales, rangos blackout.
+- **Scenario 1.3:** Excepciones: ordinales (`SUN1`, `SAT3`), fechas puntuales y rangos blackout.
 
-### Requirement 2: Las 4 definiciones de "business hours" (CONFLICTO)
-Diferentes partes del código asumen horarios distintos. **Esto es la principal fuente de bugs de scheduling.**
+### Requirement 2: Fuente primaria y fallbacks de business hours
+La fuente primaria de horarios para runtime es la config admin remota.
 
-| Fuente | Horario asumido | Notas |
-|---|---|---|
-| `config/horarios.json` (default) | **09:00–22:00 todos los días** (incl. domingo) | Valor por defecto en disco |
-| `pages/api/available-slots.js:6-16` | **09:00–22:00 todos los días** | Hardcodeado en server |
-| `pages/index.js` (modo normal) | **10:00–18:00** | Window pasada a `BookingFlow` |
-| `pages/extra-cupos.js` | **18:00–20:00** | Window pasada a `BookingFlow` (modo extra) |
-| `lib/calendarConfig.js` | 10:00–18:00 normal / 18:00–20:00 extra + días condicionalmente deshabilitados | Reglas por defecto en cliente |
-| `vanessa-studio-backend` (Netlify) | **09:00–18:00** lun-vie, **10:00–14:00** sáb, **cerrado** dom | Default backend |
+- **Scenario 2.1:** `BookingFlow` obtiene `workingHours` desde `/api/gs-check?action=getConfig`.
+- **Scenario 2.2:** `workingHours` representa `horarioAtencion` por día de semana.
+- **Scenario 2.3:** `extraCuposConfig` modela explícitamente la franja extendida (`enabled`, `start`, `end`, `daysToShow`).
+- **Scenario 2.4:** `lib/calendarConfig.js` define ventanas fallback para segmentar `normal` vs `extra` y cubrir degradación.
+- **Scenario 2.5:** `config/horarios.json` es fallback local del frontend, no fuente de verdad primaria.
 
-> Hay al menos **6 conjuntos de reglas distintos**. La activa en runtime depende del camino de ejecución.
+### Requirement 3: Generación de slots compartida (`lib/slots.js`)
+`generateTimeSlots()` es el motor compartido de slots.
 
-### Requirement 3: Generación de slots (cliente, `lib/slots.js`)
-`generateTimeSlots()` es la función usada por `BookingFlow`.
+- **Scenario 3.1:** Inputs: `date`, `openHour`, `closeHour`, `stepMinutes`, `durationMinutes`, `busy[]`, `tz`, `allowOverflowEnd`.
+- **Scenario 3.2:** Genera candidatos dentro de la ventana, marcando `available` según solapamiento con `busy`.
+- **Scenario 3.3:** Oculta horas pasadas si la fecha es hoy.
+- **Scenario 3.4:** Tiene un cap de iteración de 150 para evitar loops infinitos.
 
-- **Scenario 3.1:** Inputs: `date`, `serviceDurationMin`, `businessHours{start,end}`, `busyIntervals[]`, `tz`.
-- **Scenario 3.2:** Genera candidatos cada (duración del servicio) dentro de la ventana, descartando los que solapan con `busy`.
-- **Scenario 3.3:** Oculta horas pasadas si la fecha es "hoy".
-- **Scenario 3.4:** Tiene un **cap de iteración de 150** para evitar loops infinitos.
+### Requirement 4: Cliente público (`BookingFlow`)
+El flujo público deriva su ventana visible según modo y config admin.
 
-### Requirement 4: Generación de slots (cliente, `lib/api.js:30-99`) — DUPLICADO
-Existe una **segunda implementación paralela** de la misma matemática.
+- **Scenario 4.1:** El modo `normal` usa `workingHours` remota intersectada con la ventana fallback normal.
+- **Scenario 4.2:** El modo `extra` usa `extraCuposConfig` remota cuando existe.
+- **Scenario 4.3:** Si una fecha no tiene `horarioAtencion` para ese día, no debe mostrarse como seleccionable.
+- **Scenario 4.4:** Las props `openHour`/`closeHour` quedan como override para tests o casos controlados.
 
-- **Scenario 4.1:** `lib/api.js` define `generateTimeSlots`, `buildAvailableRange`, `isSlotBusy` localmente.
-- **Scenario 4.2:** Esta copia **puede divergir** de `lib/slots.js` — riesgo de comportamiento inconsistente según qué camino se ejecute.
+### Requirement 5: Rango server-side (`/api/available-slots`)
+La ruta server-side calcula disponibilidad por rango usando el mismo motor compartido.
 
-### Requirement 5: Generación de slots (server, `available-slots.js`)
-La ruta server-side computa para rangos de fechas.
+- **Scenario 5.1:** Pide `busy` al backend Netlify para `startDate..endDate`.
+- **Scenario 5.2:** Pide `horarioAtencion` al backend de horarios y usa fallback local solo si falla.
+- **Scenario 5.3:** Reutiliza `generateTimeSlots()` y devuelve `{ available: [...] }`.
 
-- **Scenario 5.1:** Pide busy al backend Netlify para `startDate..endDate`.
-- **Scenario 5.2:** Aplica horas **hardcodeadas 09:00–22:00** (ignora la config admin).
-- **Scenario 5.3:** Expone `isSlotBusy` y devuelve `{available: [...]}`.
+### Requirement 6: Cliente admin (`getAvailableSlotsRange`)
+El panel admin sigue usando `/api/available-slots` para obtener disponibilidad de rango.
 
-### Requirement 6: Resolución en runtime
-Cuál definición "gana" depende del camino de código.
-
-- **Scenario 6.1:** `BookingFlow.js` (camino principal del cliente) usa `lib/slots.js` con la window pasada por props (10:00–18:00 normal / 18:00–20:00 extra).
-- **Scenario 6.2:** Si se llama `getAvailableSlotsRange` (rango), se pasa a `/api/available-slots.js` con hours hardcodeadas.
-- **Scenario 6.3:** Si el Worker está configurado, usa su propia lógica (read-only Calendar).
+- **Scenario 6.1:** `pages/admin/turnos.js` consume `getAvailableSlotsRange()`.
+- **Scenario 6.2:** `lib/api.js` ya no mantiene un motor duplicado de slots.
+- **Scenario 6.3:** El cálculo de rango queda centralizado en la ruta server-side.
 
 ## Referencias de código
 
-- `lib/slots.js` — motor principal (cliente)
-- `lib/api.js:30-99` — motor duplicado (cliente)
-- `pages/api/available-slots.js:6-16,85` — motor server
-- `lib/calendarConfig.js` — reglas por defecto cliente
-- `config/horarios.json` — default disco (09–22)
-- `pages/index.js`, `pages/extra-cupos.js` — windows pasadas a BookingFlow
-- `vanessa-studio-backend/data/horarios.json` — default backend
-- `api-worker/src/index.ts` — motor Worker (legacy)
+- `lib/slots.js` — motor compartido de slots.
+- `lib/businessHours.js` — resolución de ventanas por modo y día.
+- `components/BookingFlow.js` — flujo público que deriva horarios desde config admin.
+- `pages/api/available-slots.js` — rango server-side usando el motor compartido.
+- `pages/api/gs-check.js` — proxy resiliente para `workingHours` + excepciones.
+- `lib/calendarConfig.js` — fallback y segmentación de modo.
+- `config/horarios.json` — fallback local del frontend.
+- `vanessa-studio-backend/data/horarios.json` — fallback local del backend.
 
 ## Deuda conocida (ver `changes/`)
 
-- 4+ definiciones de business hours en conflicto → `changes/unify-slot-and-hours-logic`
-- Doble motor de slots (`lib/slots.js` vs `lib/api.js`) → `changes/unify-slot-and-hours-logic`
-- `config/horarios.json` no refleja las reglas runtime → `changes/consolidate-config-drift`
-- `available-slots.js` ignora la config admin → `changes/unify-slot-and-hours-logic`
+- El worker legacy mantiene deuda de consolidación separada.
+- Falta verificación funcional manual completa del flujo normal y extra tras la unificación.
+- La configuración real remota puede seguir difiriendo del fallback versionado si el sheet/admin no está alineado.

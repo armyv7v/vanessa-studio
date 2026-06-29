@@ -16,6 +16,7 @@ export default function AdminHorarios() {
   const [disabledDays, setDisabledDays] = useState([]);
   const [disabledDates, setDisabledDates] = useState([]);
   const [blackoutRanges, setBlackoutRanges] = useState([]);
+  const [extraCuposConfig, setExtraCuposConfig] = useState({ enabled: true, start: '18:00', end: '20:00', daysToShow: 35, extraChargeClp: 5000 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -45,6 +46,7 @@ export default function AdminHorarios() {
         setDisabledDays(data?.disabledDays || []);
         setDisabledDates(Array.isArray(data?.disabledDates) ? data.disabledDates : []);
         setBlackoutRanges(Array.isArray(data?.blackoutRanges) ? data.blackoutRanges : []);
+        setExtraCuposConfig(data?.extraCuposConfig || { enabled: true, start: '18:00', end: '20:00', daysToShow: 35, extraChargeClp: 5000 });
       } catch (e) {
         setError(e.message || 'No se pudo cargar horarios.');
       } finally {
@@ -62,7 +64,7 @@ export default function AdminHorarios() {
       const res = await fetch(HORARIOS_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ horarioAtencion: horarios, disabledDays, disabledDates, blackoutRanges }),
+        body: JSON.stringify({ horarioAtencion: horarios, disabledDays, disabledDates, blackoutRanges, extraCuposConfig }),
       });
 
       const data = await res.json().catch(() => null);
@@ -396,6 +398,65 @@ export default function AdminHorarios() {
               setHorarios={setHorarios}
             />
           ))}
+        </div>
+
+        <div
+          className="admin-surface-card rounded-3xl p-6 shadow-sm"
+          style={{
+            border: '1px solid rgba(242, 200, 212, 0.6)',
+            background: 'rgba(255,255,255,0.97)',
+          }}
+        >
+          <div className="mb-5">
+            <h2 className="text-lg font-bold" style={{ color: 'var(--ink-medium)' }}>Configuración explícita de extra-cupos</h2>
+            <p className="mt-1 text-sm" style={{ color: 'var(--ink-muted)' }}>
+              Define la franja extendida que usará la página <strong>/extra-cupos</strong> sin depender de fallback implícito.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <label className="rounded-2xl border border-[#f3d9e4] bg-white/85 p-4">
+              <span className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Habilitado</span>
+              <input
+                type="checkbox"
+                checked={Boolean(extraCuposConfig?.enabled)}
+                onChange={(event) => setExtraCuposConfig((prev) => ({ ...prev, enabled: event.target.checked }))}
+                className="h-5 w-5 accent-[var(--brand)]"
+              />
+            </label>
+
+            <label className="rounded-2xl border border-[#f3d9e4] bg-white/85 p-4">
+              <span className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Inicio extra</span>
+              <input
+                type="time"
+                value={extraCuposConfig?.start || '18:00'}
+                onChange={(event) => setExtraCuposConfig((prev) => ({ ...prev, start: event.target.value }))}
+                className="w-full rounded-xl border border-[#f2c8d4] bg-white px-3 py-2"
+              />
+            </label>
+
+            <label className="rounded-2xl border border-[#f3d9e4] bg-white/85 p-4">
+              <span className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Fin extra</span>
+              <input
+                type="time"
+                value={extraCuposConfig?.end || '20:00'}
+                onChange={(event) => setExtraCuposConfig((prev) => ({ ...prev, end: event.target.value }))}
+                className="w-full rounded-xl border border-[#f2c8d4] bg-white px-3 py-2"
+              />
+            </label>
+
+            <label className="rounded-2xl border border-[#f3d9e4] bg-white/85 p-4">
+              <span className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Horizonte (días)</span>
+              <input
+                type="number"
+                min="1"
+                max="90"
+                value={extraCuposConfig?.daysToShow || 35}
+                onChange={(event) => setExtraCuposConfig((prev) => ({ ...prev, daysToShow: Number(event.target.value) || 35 }))}
+                className="w-full rounded-xl border border-[#f2c8d4] bg-white px-3 py-2"
+              />
+            </label>
+          </div>
         </div>
 
         {/* Disabled Days Card */}

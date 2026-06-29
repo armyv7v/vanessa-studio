@@ -5,6 +5,7 @@ import Confetti from 'react-confetti';
 import BookingConfirmation from './BookingConfirmation';
 import { CalendarIcon, ErrorIcon, GemIcon, LaunchIcon, PolishBottleIcon, SparkleIcon, SuccessIcon, SwirlDivider } from './BrandMotifs';
 import { bookAppointment } from '../lib/api';
+import { getBusinessHoursForDate, getDayHours, normalizeExtraCuposConfig } from '../lib/businessHours';
 import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 import { isAllowedBusinessDay } from '../lib/calendarConfig';
 import { services as servicesData } from '../lib/services';
@@ -208,7 +209,14 @@ function StatusBanner({ bookingStatus }) {
 }
 
 export default function BookingFlow({ config }) {
-  const { isExtra, openHour, closeHour, allowOverflowEnd, daysToShow } = config;
+  const {
+    isExtra,
+    mode = config?.isExtra ? 'extra' : 'normal',
+    openHour,
+    closeHour,
+    allowOverflowEnd,
+    daysToShow,
+  } = config;
 
   const [selectedService, setSelectedService] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
@@ -221,12 +229,18 @@ export default function BookingFlow({ config }) {
   const [bookingStatus, setBookingStatus] = useState(null);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const [disabledDaysConfig, setDisabledDaysConfig] = useState({ disabledDays: [], disabledDates: [], blackoutRanges: [] });
+  const [workingHoursConfig, setWorkingHoursConfig] = useState(null);
+  const [extraCuposConfig, setExtraCuposConfig] = useState(null);
   const [reduceMotion, setReduceMotion] = useState(false);
 
   const { isFetchingClient, handleEmailBlur } = useClientAutocomplete(setClientInfo);
   const selectedServiceData = getServiceById(selectedService);
 
-  const nextDays = Array.from({ length: daysToShow }, (_, index) => {
+  const resolvedDaysToShow = mode === 'extra'
+    ? normalizeExtraCuposConfig(extraCuposConfig).daysToShow
+    : daysToShow;
+
+  const nextDays = Array.from({ length: resolvedDaysToShow }, (_, index) => {
     const day = new Date();
     day.setDate(day.getDate() + index);
     return day;
@@ -236,7 +250,9 @@ export default function BookingFlow({ config }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const isPast = day < today;
-    return !isPast && isAllowedBusinessDay(day, disabledDaysConfig);
+    const hasConfiguredHours = workingHoursConfig ? Boolean(getDayHours({ date: day, horarioAtencion: workingHoursConfig })) : true;
+    const isExtraEnabled = mode !== 'extra' || normalizeExtraCuposConfig(extraCuposConfig).enabled;
+    return !isPast && isExtraEnabled && hasConfiguredHours && isAllowedBusinessDay(day, disabledDaysConfig);
   });
 
   useEffect(() => {
@@ -294,10 +310,14 @@ export default function BookingFlow({ config }) {
             disabledDates: Array.isArray(data?.disabledDates) ? data.disabledDates : [],
             blackoutRanges: Array.isArray(data?.blackoutRanges) ? data.blackoutRanges : [],
           });
+          setWorkingHoursConfig(data?.workingHours || null);
+          setExtraCuposConfig(data?.extraCuposConfig || null);
         }
       } catch {
         if (isMounted) {
           setDisabledDaysConfig({ disabledDays: [], disabledDates: [], blackoutRanges: [] });
+          setWorkingHoursConfig(null);
+          setExtraCuposConfig(null);
         }
       }
     }
@@ -325,15 +345,29 @@ export default function BookingFlow({ config }) {
 
         const date = format(dateObj, 'yyyy-MM-dd');
         const { busy = [] } = await listSlotsViaApi({ date, serviceId });
+        const businessHours = getBusinessHoursForDate({
+          date,
+          horarioAtencion: workingHoursConfig,
+          mode,
+          extraCuposConfig,
+          overrides: openHour != null && closeHour != null
+            ? { openHour, closeHour, allowOverflowEnd }
+            : undefined,
+        });
+
+        if (!businessHours) {
+          setAvailableSlots([]);
+          return;
+        }
 
         const generatedSlots = generateTimeSlots({
           date,
-          openHour,
-          closeHour,
-          stepMinutes: 30,
+          openHour: businessHours.openHour,
+          closeHour: businessHours.closeHour,
+          stepMinutes: businessHours.stepMinutes || 30,
           durationMinutes: service.duration,
           busy,
-          allowOverflowEnd,
+          allowOverflowEnd: businessHours.allowOverflowEnd,
         });
 
         setAvailableSlots(
@@ -348,7 +382,7 @@ export default function BookingFlow({ config }) {
         setLoadingSlots(false);
       }
     },
-    [allowOverflowEnd, closeHour, openHour]
+    [allowOverflowEnd, closeHour, extraCuposConfig, mode, openHour, workingHoursConfig]
   );
 
   useEffect(() => {

@@ -38,8 +38,9 @@ Permite configurar horarios semanales y excepciones que afectan disponibilidad.
 
 - **Scenario 3.1:** El admin edita por dia de la semana: hora apertura/cierre usando `<HorarioEditor>`.
 - **Scenario 3.2:** Permite deshabilitar ordinales, fechas puntuales y rangos blackout.
-- **Scenario 3.3:** WHEN se carga o guarda configuracion THEN la pagina llama `/api/horarios`, proxy local protegido por `admin_session`.
-- **Scenario 3.4:** La config persiste en el backend de horarios y mantiene fallback local degradado para lectura.
+- **Scenario 3.3:** El admin tambien puede editar `extraCuposConfig` (enabled, start, end, daysToShow).
+- **Scenario 3.4:** WHEN se carga o guarda configuracion THEN la pagina llama `/api/horarios`, proxy local protegido por `admin_session`.
+- **Scenario 3.5:** La config persiste en el backend de horarios y mantiene fallback local degradado para lectura.
 
 ### Requirement 4: Calendario de turnos (`/admin/turnos`)
 Vista mensual/semanal con capacidad real y creacion manual de reservas.
