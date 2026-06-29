@@ -345,11 +345,13 @@ export default function ValidarCitas() {
         <section className="admin-command-card rounded-[2rem] p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="admin-section-kicker">Centro operativo</p>
-              <h2 className="mt-4 text-2xl font-black tracking-tight sm:text-3xl" style={{ color: 'var(--ink-medium)' }}>
+              <p className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.24em] text-pink-100">
+                Centro operativo
+              </p>
+              <h2 className="mt-5 max-w-2xl text-3xl font-black tracking-tight text-white sm:text-4xl">
                 Agenda, abonos y asistencia en una sola vista
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
+              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-pink-50/85">
                 Inspirado en un SaaS de gestion de citas: primero lo urgente, despues el detalle.
               </p>
             </div>
@@ -358,7 +360,7 @@ export default function ValidarCitas() {
                 type="button"
                 onClick={refreshReservations}
                 disabled={listLoading}
-                className="premium-button-secondary inline-flex items-center gap-2 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-white/15 disabled:opacity-60"
               >
                 <RefreshCw className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`} />
                 Actualizar agenda
@@ -367,7 +369,7 @@ export default function ValidarCitas() {
                 type="button"
                 onClick={handleSweepExpiredPayments}
                 disabled={sweepingPayments}
-                className="premium-button inline-flex items-center gap-2 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 shadow-xl transition hover:-translate-y-px disabled:opacity-60"
               >
                 <Trash2 className="h-4 w-4" />
                 Liberar vencidas
@@ -377,17 +379,17 @@ export default function ValidarCitas() {
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: 'Citas visibles', value: visibleReservations.length, detail: `${paymentSummary.total} en el rango cargado`, tone: 'var(--brand)' },
-              { label: 'Acciones criticas', value: operationsSummary.actionRequired, detail: 'Abonos, vencidas o asistencia', tone: '#be123c' },
-              { label: 'Abonos confirmados', value: paymentSummary.confirmed, detail: `${paymentSummary.pending} pendientes de pago`, tone: '#059669' },
-              { label: 'Flujo resuelto', value: `${operationsSummary.completionRate}%`, detail: `${operationsSummary.attendancePending} esperan asistencia`, tone: 'var(--gold-dark)' },
+              { label: 'Citas visibles', value: visibleReservations.length, detail: `${paymentSummary.total} en el rango cargado` },
+              { label: 'Acciones criticas', value: operationsSummary.actionRequired, detail: 'Abonos, vencidas o asistencia' },
+              { label: 'Abonos confirmados', value: paymentSummary.confirmed, detail: `${paymentSummary.pending} pendientes de pago` },
+              { label: 'Flujo resuelto', value: `${operationsSummary.completionRate}%`, detail: `${operationsSummary.attendancePending} esperan asistencia` },
             ].map((metric) => (
               <div key={metric.label} className="admin-metric-card rounded-3xl p-4">
-                <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: metric.tone }}>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-pink-100">
                   {metric.label}
                 </p>
-                <p className="mt-2 text-3xl font-black" style={{ color: 'var(--ink-medium)' }}>{metric.value}</p>
-                <p className="mt-1 text-xs font-semibold" style={{ color: 'var(--ink-faint)' }}>{metric.detail}</p>
+                <p className="mt-2 text-4xl font-black text-white">{metric.value}</p>
+                <p className="mt-1 text-xs font-semibold text-white/70">{metric.detail}</p>
               </div>
             ))}
           </div>

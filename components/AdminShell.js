@@ -116,19 +116,19 @@ export default function AdminShell({ title, description, children }) {
       className="min-h-screen text-slate-900"
       style={{
         background: `
-          radial-gradient(circle at top, rgba(225, 27, 116, 0.07), transparent 30%),
-          radial-gradient(circle at 85% 10%, rgba(197, 160, 89, 0.12), transparent 22%),
-          linear-gradient(180deg, #FFFBFD 0%, #FFF0F6 45%, #FDF6EF 100%)
+          radial-gradient(circle at 16% 8%, rgba(209, 18, 111, 0.10), transparent 28%),
+          radial-gradient(circle at 88% 4%, rgba(37, 99, 235, 0.10), transparent 24%),
+          linear-gradient(180deg, #F8FAFC 0%, #F6F8FC 52%, #FFF7FB 100%)
         `,
       }}
     >
-      <div className="mx-auto flex min-h-screen max-w-7xl">
+      <div className="mx-auto flex min-h-screen max-w-[1440px]">
         {/* Desktop Sidebar */}
         <aside
-          className="hidden w-80 px-6 py-8 backdrop-blur lg:block"
+          className="hidden w-[300px] px-6 py-8 backdrop-blur lg:block"
           style={{
-            borderRight: '1px solid rgba(242, 200, 212, 0.6)',
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(254,240,248,0.95) 100%)',
+            borderRight: '1px solid rgba(226, 232, 240, 0.95)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%)',
           }}
         >
           <SidebarContent />
@@ -191,7 +191,7 @@ export default function AdminShell({ title, description, children }) {
         {/* Main Content */}
         <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-8 step-fade-in" key={router.pathname}>
           <div className="mb-6 flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-white/70 bg-white/70 px-4 py-3 shadow-sm backdrop-blur">
+            <div className="admin-pro-topbar sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 backdrop-blur">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="admin-status-chip">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
