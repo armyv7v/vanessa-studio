@@ -72,6 +72,15 @@ Proxy protegido para configuracion de horarios.
 - **Scenario 7.3:** WHEN la sesion es valida THEN proxiea al backend `horarios` resuelto por helper compartido.
 - **Scenario 7.4:** WHEN GET falla contra backend remoto THEN responde fallback local degradado.
 
+### Requirement 7.1: Mutaciones admin de reserva existente
+
+Endpoints operativos para editar citas ya creadas desde el panel admin.
+
+- **Scenario 7.1.1:** WHEN el admin edita datos de una cita THEN `POST /api/reservation-update` valida PIN, codigo, nombre, email, telefono y servicio, y actualiza Sheets + Calendar.
+- **Scenario 7.1.2:** WHEN el admin reagenda una cita THEN `POST /api/reservation-reschedule` valida PIN, codigo, fecha, hora y duracion, verifica conflictos en Calendar y actualiza Sheets + Calendar.
+- **Scenario 7.1.3:** WHEN el admin elimina una hora THEN `POST /api/reservation-cancel` valida PIN, cancela el evento de Calendar y marca la fila como `CANCELADA` sin borrar auditoria historica.
+- **Scenario 7.1.4:** Las acciones rechazan citas ya asistidas para no corromper fidelidad/asistencia.
+
 ### Requirement 7.5: CORS admin local
 Las rutas `/api/admin/*` y `/api/horarios` usan allowlist de origen.
 

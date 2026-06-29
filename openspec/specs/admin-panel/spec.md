@@ -58,6 +58,8 @@ Lista reservas con filtros y acciones operativas.
 - **Scenario 5.3:** Las mutaciones sensibles (`confirm-payment`, `validate-attendance`, `expire-pending-payments`) requieren PIN admin de 4 digitos enviado en el body.
 - **Scenario 5.4:** El device token en `localStorage` ya no se usa como autorizacion para operaciones criticas.
 - **Scenario 5.5:** La vista principal presenta un resumen operativo tipo SaaS de agenda profesional con KPIs accionables antes de la lista de citas.
+- **Scenario 5.6:** Cada card de cita permite reagendar, editar datos de clienta/servicio y eliminar/liberar la hora desde acciones inline.
+- **Scenario 5.7:** Las acciones de reagendar, editar y eliminar requieren PIN admin de 4 digitos y actualizan Google Sheets y Google Calendar cuando corresponde.
 
 ## Referencias de codigo
 

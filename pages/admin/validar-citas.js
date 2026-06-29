@@ -17,8 +17,8 @@ import {
   Trash2,
   CalendarDays,
   ExternalLink,
-  ChevronDown,
-  ChevronUp,
+  Save,
+  X,
 } from 'lucide-react';
 import AdminShell from '../../components/AdminShell';
 import AdminMetricIcon from '../../components/AdminMetricIcon';
@@ -66,6 +66,9 @@ export default function ValidarCitas() {
   const [confirmingPaymentCode, setConfirmingPaymentCode] = useState('');
   const [sweepingPayments, setSweepingPayments] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [actionPanel, setActionPanel] = useState(null);
+  const [actionDraft, setActionDraft] = useState({});
+  const [actionSubmitting, setActionSubmitting] = useState(false);
 
   const dateRange = useMemo(() => getFilterRange(filter), [filter]);
 
@@ -191,6 +194,98 @@ export default function ValidarCitas() {
     });
     return groups;
   }, [visibleReservations]);
+
+  const openActionPanel = (mode, reservation) => {
+    const startDate = reservation.startLocal ? reservation.startLocal.slice(0, 10) : '';
+    const startTime = reservation.startLocal ? reservation.startLocal.slice(11, 16) : '';
+
+    setError('');
+    setSuccessMessage('');
+    setActionPanel({ mode, code: reservation.code });
+    setActionDraft({
+      name: reservation.name || '',
+      email: reservation.email || '',
+      phone: reservation.phone || '',
+      service: reservation.service || '',
+      date: startDate,
+      start: startTime,
+      durationMin: reservation.duration || '60',
+    });
+  };
+
+  const closeActionPanel = () => {
+    setActionPanel(null);
+    setActionDraft({});
+  };
+
+  const updateActionDraft = (field, value) => {
+    setActionDraft((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const runReservationAction = async (mode, reservationCode) => {
+    if (!adminPin || adminPin.length < 4) {
+      setError('Ingresa el PIN de administrador para operar esta cita.');
+      return;
+    }
+
+    const endpointByMode = {
+      edit: 'reservation-update',
+      reschedule: 'reservation-reschedule',
+      cancel: 'reservation-cancel',
+    };
+
+    const payloadByMode = {
+      edit: {
+        code: reservationCode,
+        adminPin,
+        client: {
+          name: actionDraft.name,
+          email: actionDraft.email,
+          phone: actionDraft.phone,
+        },
+        service: actionDraft.service,
+      },
+      reschedule: {
+        code: reservationCode,
+        adminPin,
+        date: actionDraft.date,
+        start: actionDraft.start,
+        durationMin: Number(actionDraft.durationMin),
+      },
+      cancel: { code: reservationCode, adminPin },
+    };
+
+    if (mode === 'cancel') {
+      const confirmed = window.confirm('Eliminar esta hora? Se liberara el cupo y se cancelara el evento de Calendar.');
+      if (!confirmed) return;
+    }
+
+    try {
+      setActionSubmitting(true);
+      setError('');
+      setSuccessMessage('');
+
+      const res = await fetch(`${API_BASE}/${endpointByMode[mode]}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloadByMode[mode]),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || 'No se pudo completar la accion sobre la cita.');
+      }
+
+      await refreshReservations();
+      setSuccessMessage(data?.message || 'Cita actualizada correctamente.');
+      setAdminPin('');
+      closeActionPanel();
+    } catch (actionError) {
+      setError(actionError.message || 'No se pudo completar la accion sobre la cita.');
+    } finally {
+      setActionSubmitting(false);
+    }
+  };
 
   // Manejadores de API
   const handleConfirmPayment = async (reservationCode) => {
@@ -741,8 +836,145 @@ export default function ValidarCitas() {
                                     )}
                                   </div>
 
+                                  {!reservation.attended && status !== 'CANCELADA' && (
+                                    <div className="grid w-full grid-cols-3 gap-1.5 border-t border-slate-100 pt-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => openActionPanel('reschedule', reservation)}
+                                        className="rounded-lg border border-sky-100 bg-sky-50 px-2 py-2 text-[10px] font-black text-sky-700 transition hover:bg-sky-100"
+                                      >
+                                        Reagendar
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => openActionPanel('edit', reservation)}
+                                        className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[10px] font-black text-slate-700 transition hover:bg-slate-100"
+                                      >
+                                        Editar
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => runReservationAction('cancel', reservation.code)}
+                                        disabled={actionSubmitting}
+                                        className="rounded-lg border border-rose-100 bg-rose-50 px-2 py-2 text-[10px] font-black text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                                      >
+                                        Eliminar
+                                      </button>
+                                    </div>
+                                  )}
+
                                 </div>
                               </div>
+
+                              {actionPanel?.code === reservation.code && actionPanel.mode !== 'cancel' && (
+                                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                  <div className="mb-3 flex items-center justify-between gap-3">
+                                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-600">
+                                      {actionPanel.mode === 'reschedule' ? 'Reagendar cita' : 'Editar datos'}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={closeActionPanel}
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </div>
+
+                                  {actionPanel.mode === 'reschedule' ? (
+                                    <div className="grid gap-3 sm:grid-cols-3">
+                                      <label className="text-[11px] font-bold text-slate-600">
+                                        Fecha
+                                        <input
+                                          type="date"
+                                          value={actionDraft.date || ''}
+                                          onChange={(event) => updateActionDraft('date', event.target.value)}
+                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
+                                        />
+                                      </label>
+                                      <label className="text-[11px] font-bold text-slate-600">
+                                        Hora
+                                        <input
+                                          type="time"
+                                          value={actionDraft.start || ''}
+                                          onChange={(event) => updateActionDraft('start', event.target.value)}
+                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
+                                        />
+                                      </label>
+                                      <label className="text-[11px] font-bold text-slate-600">
+                                        Duracion min.
+                                        <input
+                                          type="number"
+                                          min="15"
+                                          step="15"
+                                          value={actionDraft.durationMin || ''}
+                                          onChange={(event) => updateActionDraft('durationMin', event.target.value)}
+                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
+                                        />
+                                      </label>
+                                    </div>
+                                  ) : (
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                      <label className="text-[11px] font-bold text-slate-600">
+                                        Nombre
+                                        <input
+                                          type="text"
+                                          value={actionDraft.name || ''}
+                                          onChange={(event) => updateActionDraft('name', event.target.value)}
+                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
+                                        />
+                                      </label>
+                                      <label className="text-[11px] font-bold text-slate-600">
+                                        Telefono
+                                        <input
+                                          type="tel"
+                                          value={actionDraft.phone || ''}
+                                          onChange={(event) => updateActionDraft('phone', event.target.value)}
+                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
+                                        />
+                                      </label>
+                                      <label className="text-[11px] font-bold text-slate-600">
+                                        Email
+                                        <input
+                                          type="email"
+                                          value={actionDraft.email || ''}
+                                          onChange={(event) => updateActionDraft('email', event.target.value)}
+                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
+                                        />
+                                      </label>
+                                      <label className="text-[11px] font-bold text-slate-600">
+                                        Servicio
+                                        <input
+                                          type="text"
+                                          value={actionDraft.service || ''}
+                                          onChange={(event) => updateActionDraft('service', event.target.value)}
+                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
+                                        />
+                                      </label>
+                                    </div>
+                                  )}
+
+                                  <div className="mt-4 flex flex-wrap justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={closeActionPanel}
+                                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                      Cancelar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => runReservationAction(actionPanel.mode, reservation.code)}
+                                      disabled={actionSubmitting}
+                                      className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
+                                    >
+                                      {actionSubmitting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                      Guardar cambios
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
