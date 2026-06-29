@@ -76,9 +76,9 @@ Proxy protegido para configuracion de horarios.
 
 Endpoints operativos para editar citas ya creadas desde el panel admin.
 
-- **Scenario 7.1.1:** WHEN el admin edita datos de una cita THEN `POST /api/reservation-update` valida PIN, codigo, nombre, email, telefono y servicio, y actualiza Sheets + Calendar.
-- **Scenario 7.1.2:** WHEN el admin reagenda una cita THEN `POST /api/reservation-reschedule` valida PIN, codigo, fecha, hora y duracion, verifica conflictos en Calendar y actualiza Sheets + Calendar.
-- **Scenario 7.1.3:** WHEN el admin elimina una hora THEN `POST /api/reservation-cancel` valida PIN, cancela el evento de Calendar y marca la fila como `CANCELADA` sin borrar auditoria historica.
+- **Scenario 7.1.1:** WHEN el admin edita datos de una cita THEN `POST /api/admin/reservation-operation` valida `admin_session`, proxyea `reservation-update` con secreto server-side, valida codigo/nombre/email/telefono/servicio en backend y actualiza Sheets + Calendar.
+- **Scenario 7.1.2:** WHEN el admin reagenda una cita THEN `POST /api/admin/reservation-operation` valida `admin_session`, proxyea `reservation-reschedule` con secreto server-side, verifica conflictos en Calendar y actualiza Sheets + Calendar.
+- **Scenario 7.1.3:** WHEN el admin elimina una hora THEN `POST /api/admin/reservation-operation` valida `admin_session`, proxyea `reservation-cancel` con secreto server-side, cancela el evento de Calendar y marca la fila como `CANCELADA` sin borrar auditoria historica.
 - **Scenario 7.1.4:** Las acciones rechazan citas ya asistidas para no corromper fidelidad/asistencia.
 
 ### Requirement 7.5: CORS admin local
@@ -119,7 +119,7 @@ El endpoint HTTP de diagnostico de secrets fue eliminado.
 ## Deuda conocida
 
 - Las rutas admin locales (`/api/admin/*`, `/api/horarios`) ya usan CORS por allowlist dinamica; falta decidir si rutas publicas deben restringirse igual.
-- Backend Netlify: las mutaciones admin ya no aceptan `deviceToken`, `ADMIN_VALIDATION_PIN` es obligatorio y las respuestas 401 ya no devuelven `debug` sensible.
+- Backend Netlify: las mutaciones admin ya no aceptan `deviceToken`; el frontend no pide PIN y usa un proxy `/api/admin/reservation-operation` protegido por `admin_session` que inyecta `ADMIN_VALIDATION_PIN` server-side. Las respuestas 401 ya no devuelven `debug` sensible.
 - Backend Netlify: booking POST valida nombre, email, telefono, servicio, fecha, hora y duracion antes de crear Calendar/Sheet.
 - Backend Netlify: validacion/confirmacion de citas valida `code` con el formato real actual (`8 hex` o fallback `VAL-...`) antes de buscar en Sheets.
 - Backend Netlify: `api.js` y `horarios.js` usan CORS por allowlist dinamica; origenes no permitidos reciben `403`.

@@ -5,7 +5,7 @@
 
 ## Overview
 
-El panel admin (`/admin/*`) permite gestionar horarios, turnos y validacion de citas/pagos. El acceso usa login server-side, cookie `admin_session` firmada y middleware para proteger rutas admin. Las mutaciones sensibles del backend operativo siguen requiriendo PIN admin de 4 digitos.
+El panel admin (`/admin/*`) permite gestionar horarios, turnos y validacion de citas/pagos. El acceso usa login server-side, cookie `admin_session` firmada y middleware para proteger rutas admin. Las mutaciones sensibles se autorizan con `admin_session` en endpoints locales `/api/admin/*`; el secreto operativo queda server-side.
 
 **Rutas (4):**
 | Ruta | Archivo | Proposito |
@@ -55,11 +55,11 @@ Lista reservas con filtros y acciones operativas.
 
 - **Scenario 5.1:** Muestra reservas de hoy / semana / 60 dias, filtrables por estado de pago y busqueda libre.
 - **Scenario 5.2:** Acciones: confirmar pago, barrer pagos expirados, validar asistencia.
-- **Scenario 5.3:** Las mutaciones sensibles (`confirm-payment`, `validate-attendance`, `expire-pending-payments`) requieren PIN admin de 4 digitos enviado en el body.
+- **Scenario 5.3:** Las mutaciones sensibles (`confirm-payment`, `validate-attendance`, `expire-pending-payments`) se ejecutan mediante `/api/admin/reservation-operation`, que requiere `admin_session` valida e inyecta el secreto operativo server-side.
 - **Scenario 5.4:** El device token en `localStorage` ya no se usa como autorizacion para operaciones criticas.
 - **Scenario 5.5:** La vista principal presenta un resumen operativo tipo SaaS de agenda profesional con KPIs accionables antes de la lista de citas.
 - **Scenario 5.6:** Cada card de cita permite reagendar, editar datos de clienta/servicio y eliminar/liberar la hora desde acciones inline.
-- **Scenario 5.7:** Las acciones de reagendar, editar y eliminar requieren PIN admin de 4 digitos y actualizan Google Sheets y Google Calendar cuando corresponde.
+- **Scenario 5.7:** Las acciones de reagendar, editar y eliminar requieren `admin_session` valida en el proxy local y actualizan Google Sheets y Google Calendar cuando corresponde.
 
 ## Referencias de codigo
 

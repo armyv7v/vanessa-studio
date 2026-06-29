@@ -9,7 +9,7 @@ import {
   Calendar,
   DollarSign,
   Clock,
-  Lock,
+  ShieldCheck,
   RefreshCw,
   AlertCircle,
   Search,
@@ -61,7 +61,6 @@ export default function ValidarCitas() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [reservations, setReservations] = useState([]);
   const [error, setError] = useState('');
-  const [adminPin, setAdminPin] = useState('');
   const [submittingCode, setSubmittingCode] = useState('');
   const [confirmingPaymentCode, setConfirmingPaymentCode] = useState('');
   const [sweepingPayments, setSweepingPayments] = useState(false);
@@ -195,6 +194,21 @@ export default function ValidarCitas() {
     return groups;
   }, [visibleReservations]);
 
+  const runAdminReservationOperation = async (operation, payload = {}) => {
+    const res = await fetch('/api/admin/reservation-operation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operation, payload }),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(data?.error || 'No se pudo completar la operacion admin.');
+    }
+
+    return data;
+  };
+
   const openActionPanel = (mode, reservation) => {
     const startDate = reservation.startLocal ? reservation.startLocal.slice(0, 10) : '';
     const startTime = reservation.startLocal ? reservation.startLocal.slice(11, 16) : '';
@@ -223,11 +237,6 @@ export default function ValidarCitas() {
   };
 
   const runReservationAction = async (mode, reservationCode) => {
-    if (!adminPin || adminPin.length < 4) {
-      setError('Ingresa el PIN de administrador para operar esta cita.');
-      return;
-    }
-
     const endpointByMode = {
       edit: 'reservation-update',
       reschedule: 'reservation-reschedule',
@@ -237,7 +246,6 @@ export default function ValidarCitas() {
     const payloadByMode = {
       edit: {
         code: reservationCode,
-        adminPin,
         client: {
           name: actionDraft.name,
           email: actionDraft.email,
@@ -247,12 +255,11 @@ export default function ValidarCitas() {
       },
       reschedule: {
         code: reservationCode,
-        adminPin,
         date: actionDraft.date,
         start: actionDraft.start,
         durationMin: Number(actionDraft.durationMin),
       },
-      cancel: { code: reservationCode, adminPin },
+      cancel: { code: reservationCode },
     };
 
     try {
@@ -260,20 +267,10 @@ export default function ValidarCitas() {
       setError('');
       setSuccessMessage('');
 
-      const res = await fetch(`${API_BASE}/${endpointByMode[mode]}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payloadByMode[mode]),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.error || 'No se pudo completar la accion sobre la cita.');
-      }
+      const data = await runAdminReservationOperation(endpointByMode[mode], payloadByMode[mode]);
 
       await refreshReservations();
       setSuccessMessage(data?.message || 'Cita actualizada correctamente.');
-      setAdminPin('');
       closeActionPanel();
     } catch (actionError) {
       setError(actionError.message || 'No se pudo completar la accion sobre la cita.');
@@ -284,26 +281,13 @@ export default function ValidarCitas() {
 
   // Manejadores de API
   const handleConfirmPayment = async (reservationCode) => {
-    if (!adminPin || adminPin.length < 4) {
-      setError('Ingresá el PIN de administrador para confirmar el pago.');
-      return;
-    }
 
     try {
       setConfirmingPaymentCode(reservationCode);
       setError('');
       setSuccessMessage('');
 
-      const res = await fetch(`${API_BASE}/confirm-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: reservationCode, adminPin }),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.error || 'No se pudo confirmar el pago.');
-      }
+      const data = await runAdminReservationOperation('confirm-payment', { code: reservationCode });
 
       setReservations((prev) => prev.map((reservation) => (
         reservation.code === reservationCode
@@ -318,8 +302,6 @@ export default function ValidarCitas() {
           : reservation
       )));
       setSuccessMessage(data?.message || 'Pago confirmado correctamente.');
-      // Limpiar el PIN de entrada para seguridad
-      setAdminPin('');
     } catch (paymentError) {
       setError(paymentError.message || 'No se pudo confirmar el pago.');
     } finally {
@@ -328,30 +310,15 @@ export default function ValidarCitas() {
   };
 
   const handleSweepExpiredPayments = async () => {
-    if (!adminPin || adminPin.length < 4) {
-      setError('Ingresá el PIN de administrador para liberar reservas vencidas.');
-      return;
-    }
 
     try {
       setSweepingPayments(true);
       setError('');
       setSuccessMessage('');
-
-      const res = await fetch(`${API_BASE}/expire-pending-payments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminPin }),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.error || 'No se pudo ejecutar la liberación de vencidas.');
-      }
+      const data = await runAdminReservationOperation('expire-pending-payments');
 
       await refreshReservations();
       setSuccessMessage(data?.message || 'Liberación de vencidas ejecutada correctamente.');
-      setAdminPin('');
     } catch (sweepError) {
       setError(sweepError.message || 'No se pudo ejecutar la liberación de vencidas.');
     } finally {
@@ -360,26 +327,13 @@ export default function ValidarCitas() {
   };
 
   const handleValidate = async (reservationCode) => {
-    if (!adminPin || adminPin.length < 4) {
-      setError('Ingresá el PIN de administrador para validar manualmente.');
-      return;
-    }
 
     try {
       setSubmittingCode(reservationCode);
       setError('');
       setSuccessMessage('');
 
-      const res = await fetch(`${API_BASE}/validate-attendance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: reservationCode, adminPin }),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.error || 'No se pudo validar la cita.');
-      }
+      await runAdminReservationOperation('validate-attendance', { code: reservationCode });
 
       setReservations((prev) => prev.map((reservation) => (
         reservation.code === reservationCode
@@ -391,7 +345,6 @@ export default function ValidarCitas() {
           : reservation
       )));
       setSuccessMessage('Asistencia validada correctamente y tarjeta de fidelidad actualizada.');
-      setAdminPin('');
     } catch (validationError) {
       setError(validationError.message || 'No se pudo validar la cita.');
     } finally {
@@ -885,9 +838,6 @@ export default function ValidarCitas() {
                                           <p className="mt-1 text-xs font-semibold leading-5 text-rose-800">
                                             Esto cancela el evento de Google Calendar y marca la reserva como CANCELADA en Sheets. No borra el historial, porque la auditoria importa.
                                           </p>
-                                          <p className="mt-2 text-xs font-bold text-rose-700">
-                                            Requiere el PIN admin cargado en el panel de seguridad.
-                                          </p>
                                         </div>
                                       </div>
                                     </div>
@@ -1009,35 +959,23 @@ export default function ValidarCitas() {
           {/* Sidebar Area (Right 1 Col) */}
           <div className="space-y-6 xl:sticky xl:top-28">
             
-            {/* PIN authorization */}
+            {/* Session authorization */}
             <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm">
               <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <Lock className="h-4.5 w-4.5 text-pink-600" />
+                <ShieldCheck className="h-4.5 w-4.5 text-emerald-600" />
                 Seguridad de operaciones
               </h3>
 
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs space-y-3">
-                <div className="flex items-center gap-2 text-slate-700 font-bold">
-                  <Lock className="h-4 w-4 text-slate-500" />
-                  PIN requerido
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs space-y-3">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  Sesion admin verificada
                 </div>
-                <p className="text-slate-600 leading-normal">
-                  La sesion admin permite entrar al panel. Para confirmar pagos, validar asistencia o liberar reservas vencidas, ingresa el PIN de 4 digitos.
+                <p className="text-emerald-800 leading-normal">
+                  Ya no necesitas ingresar un PIN adicional. Las operaciones criticas se autorizan en el servidor con tu sesion admin activa.
                 </p>
-
-                <input
-                  id="admin-pin"
-                  type="password"
-                  inputMode="numeric"
-                  maxLength="4"
-                  value={adminPin}
-                  onChange={(e) => setAdminPin(e.target.value.replace(/\D/g, ''))}
-                  placeholder="PIN"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-center text-base tracking-[0.3em] font-mono text-slate-900 outline-none transition focus:border-pink-400 bg-white"
-                />
-
-                <p className="text-[10px] text-slate-400">
-                  El device token fue eliminado del frontend: era comodo, pero no era una autorizacion segura para operaciones criticas.
+                <p className="text-[10px] text-emerald-700/80">
+                  El secreto operativo queda server-side: la interfaz nunca lo expone en el navegador.
                 </p>
               </div>
 
@@ -1057,7 +995,7 @@ export default function ValidarCitas() {
                   {sweepingPayments ? 'Liberando vencidas...' : 'Liberar Vencidas Manual'}
                 </button>
                 <p className="text-[10px] text-slate-400 mt-2 text-center leading-normal">
-                  El sistema limpia las citas automáticamente cada 15 minutos. Usá este botón si querés forzar la limpieza ahora.
+                  El sistema limpia las citas automaticamente cada 15 minutos. Usa este boton si queres forzar la limpieza ahora.
                 </p>
               </div>
             </div>
