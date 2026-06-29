@@ -1,14 +1,59 @@
 // components/BookingConfirmation.js
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CalendarIcon, GemIcon, LaunchIcon, SuccessIcon } from './BrandMotifs';
 
-export default function BookingConfirmation({ service, date, time, client, isExtra, reservationCode, paymentExpiresAt }) {
+function ShareIcon({ children }) {
+  return (
+    <span
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/70 bg-white/80"
+      style={{ color: 'var(--brand)' }}
+      aria-hidden="true"
+    >
+      {children}
+    </span>
+  );
+}
+
+export default function BookingConfirmation({ service, date, time, client, isExtra, reservationCode, paymentExpiresAt, onNewBooking }) {
+  const [copied, setCopied] = useState(false);
+
+  const sharePayload = useMemo(() => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://vanessa-studio.vercel.app';
+    const validationUrl = reservationCode ? `${origin}/validar?code=${encodeURIComponent(reservationCode)}` : origin;
+    const lines = [
+      'Hola, te comparto mi cita en Vanessa Nails Studio:',
+      `• Servicio: ${service?.name || ''}`,
+      `• Fecha: ${date ? format(date, 'd MMMM yyyy', { locale: es }) : ''}`,
+      `• Hora: ${time || ''}`,
+      reservationCode ? `• Código de reserva: ${reservationCode}` : null,
+      `• Detalle: ${validationUrl}`,
+    ].filter(Boolean);
+
+    const message = lines.join('\n');
+    return {
+      message,
+      validationUrl,
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(message)}`,
+      telegram: `https://t.me/share/url?url=${encodeURIComponent(validationUrl)}&text=${encodeURIComponent(message)}`,
+      email: `mailto:${encodeURIComponent(client?.email || '')}?subject=${encodeURIComponent('Mi cita en Vanessa Nails Studio')}&body=${encodeURIComponent(message)}`,
+    };
+  }, [client?.email, date, reservationCode, service?.name, time]);
+
   if (!service || !date || !time || !client) {
     return null;
   }
 
   const formatDate = (d) => format(d, 'd MMMM yyyy', { locale: es });
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(sharePayload.message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (_) {}
+  };
 
   return (
     <section className="premium-card gloss-card gradient-outline mx-auto max-w-3xl overflow-hidden p-4 text-center sm:p-10">
@@ -98,9 +143,53 @@ export default function BookingConfirmation({ service, date, time, client, isExt
         </div>
       </div>
 
-      <p className="mt-5 text-xs leading-6 sm:mt-6 sm:text-sm" style={{ color: 'var(--ink-muted)' }}>
-        Te redirigiremos al inicio en aproximadamente 8 segundos.
-      </p>
+      <div className="mt-6 rounded-[24px] border border-[#f3d9e4] bg-white/85 p-4 text-left sm:mt-8 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--brand)' }}>
+              Compartir cita
+            </p>
+            <p className="mt-1 text-sm" style={{ color: 'var(--ink-muted)' }}>
+              Deja este comprobante en pantalla o compártelo por el canal que prefieras.
+            </p>
+          </div>
+          {onNewBooking ? (
+            <button type="button" onClick={onNewBooking} className="premium-button-secondary whitespace-nowrap">
+              Nueva reserva
+            </button>
+          ) : null}
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <a href={sharePayload.whatsapp} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] px-4 py-3 transition hover:-translate-y-px">
+            <ShareIcon>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M17.5 6.7A7.4 7.4 0 0 0 4.9 12.1c0 1.3.3 2.5 1 3.6l-.7 3 3.1-.8a7.4 7.4 0 0 0 3.5.9h0a7.4 7.4 0 0 0 5.7-12.1Zm-5.6 10.8a6 6 0 0 1-3-.8l-.2-.1-1.8.5.5-1.8-.1-.2a6 6 0 1 1 4.6 2.4Zm3.3-4.5c-.2-.1-1.1-.6-1.3-.6-.2-.1-.3-.1-.4.1s-.5.6-.6.7-.2.1-.4 0a4.9 4.9 0 0 1-1.4-.9 5.5 5.5 0 0 1-1-1.3c-.1-.2 0-.3.1-.4l.3-.3.2-.3v-.3c0-.1-.4-1.1-.6-1.4-.1-.3-.3-.2-.4-.2h-.3c-.1 0-.3 0-.5.2s-.7.7-.7 1.6.7 1.8.8 2c.1.1 1.4 2.2 3.4 3 .5.2.9.3 1.2.4.5.1 1 .1 1.4.1.4-.1 1.1-.5 1.3-.9.2-.4.2-.8.1-.9-.1-.1-.2-.1-.4-.2Z"/></svg>
+            </ShareIcon>
+            <span className="text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>WhatsApp</span>
+          </a>
+
+          <a href={sharePayload.email} className="flex items-center gap-3 rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] px-4 py-3 transition hover:-translate-y-px">
+            <ShareIcon>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7.5h16v9A1.5 1.5 0 0 1 18.5 18h-13A1.5 1.5 0 0 1 4 16.5v-9Z"/><path d="m5 8 7 5 7-5"/></svg>
+            </ShareIcon>
+            <span className="text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Email</span>
+          </a>
+
+          <a href={sharePayload.telegram} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] px-4 py-3 transition hover:-translate-y-px">
+            <ShareIcon>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M20.7 4.2 3.9 10.7c-1.1.4-1.1 1 .2 1.4l4.3 1.3 1.7 5.1c.2.6.1.8.7.8.4 0 .6-.2.8-.4l2.1-2 4.4 3.2c.8.4 1.3.2 1.5-.8l2.9-13.6c.3-1.2-.4-1.8-1.4-1.5Zm-3.1 3.2-6.8 6.2-.3 3.4-1.2-3.8 8.3-5.2Z"/></svg>
+            </ShareIcon>
+            <span className="text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Telegram</span>
+          </a>
+
+          <button type="button" onClick={handleCopy} className="flex items-center gap-3 rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] px-4 py-3 text-left transition hover:-translate-y-px">
+            <ShareIcon>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="9" width="10" height="10" rx="2"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>
+            </ShareIcon>
+            <span className="text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>{copied ? 'Copiado' : 'Copiar texto'}</span>
+          </button>
+        </div>
+      </div>
     </section>
   );
 }

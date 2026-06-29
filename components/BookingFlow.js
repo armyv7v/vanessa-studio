@@ -60,7 +60,6 @@ const services = [...servicesData].sort((a, b) => a.duration - b.duration);
 const stepLabels = ['Servicio', 'Fecha', 'Hora', 'Datos'];
 const emptyClient = { name: '', email: '', phone: '' };
 const stepIcons = [PolishBottleIcon, CalendarIcon, SparkleIcon, LaunchIcon];
-const SUCCESS_RESET_DELAY_MS = 8000;
 const CONFETTI_PIECES = 600;
 const CONFETTI_DURATION_MS = 8000;
 
@@ -454,9 +453,6 @@ export default function BookingFlow({ config }) {
         paymentExpiresAt: bookingResult?.paymentExpiresAt || '',
       });
 
-      setTimeout(() => {
-        resetFlow();
-      }, SUCCESS_RESET_DELAY_MS);
     } catch (error) {
       setBookingStatus({ error: true, message: String(error?.message || error) });
     }
@@ -699,6 +695,7 @@ export default function BookingFlow({ config }) {
               isExtra={isExtra}
               reservationCode={bookingStatus?.reservationCode}
               paymentExpiresAt={bookingStatus?.paymentExpiresAt}
+              onNewBooking={resetFlow}
             />
           </>
         ) : (
