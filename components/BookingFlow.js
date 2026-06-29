@@ -480,19 +480,19 @@ export default function BookingFlow({ config }) {
                 type="button"
                 onClick={() => handleServiceSelect(service.id)}
                 aria-label={`Seleccionar ${service.name}, duración ${service.duration} minutos`}
-                className="group flex h-full flex-col rounded-xl border border-[#F2C8D4]/30 bg-white/80 p-4 sm:p-5 text-left transition duration-200 hover:border-[#F2C8D4]/60 hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/35"
+                className="service-card-frame service-card-reveal group flex h-full flex-col rounded-[1.4rem] p-4 text-left focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/35 sm:p-5"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <div className="mb-3 flex w-full items-start justify-between gap-4">
+                <div className="service-title-block mb-3 flex w-full items-start justify-between gap-4">
                   <h3 className="text-lg font-black leading-[1.15] tracking-[-0.02em] text-[var(--brand-darker)] transition-colors group-hover:text-[var(--brand-dark)]">
                     {service.name}
                   </h3>
-                  <span className="shrink-0 rounded-full bg-[var(--brand-lightest)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-dark)]">
+                  <span className="service-duration-pill shrink-0 rounded-full bg-[var(--brand-lightest)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-dark)]">
                     {service.duration} min
                   </span>
                 </div>
 
-                <p className="mb-3 text-[11px] leading-relaxed text-[var(--ink-muted)] flex-grow">
+                <p className="service-summary-block mb-3 text-[11px] leading-relaxed text-[var(--ink-muted)] flex-grow">
                   {service.summary}
                 </p>
 
