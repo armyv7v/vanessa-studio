@@ -483,8 +483,8 @@ export default function BookingFlow({ config }) {
                 className="group flex h-full flex-col rounded-xl border border-[#F2C8D4]/30 bg-white/80 p-4 sm:p-5 text-left transition duration-200 hover:border-[#F2C8D4]/60 hover:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/35"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <div className="mb-2.5 flex items-center justify-between gap-4 w-full">
-                  <h3 className="text-base font-bold leading-tight text-[var(--brand-darker)] transition-colors group-hover:text-[var(--brand-dark)]">
+                <div className="mb-3 flex w-full items-start justify-between gap-4">
+                  <h3 className="text-lg font-black leading-[1.15] tracking-[-0.02em] text-[var(--brand-darker)] transition-colors group-hover:text-[var(--brand-dark)]">
                     {service.name}
                   </h3>
                   <span className="shrink-0 rounded-full bg-[var(--brand-lightest)] px-2 py-0.5 text-[10px] font-semibold text-[var(--brand-dark)]">
@@ -504,9 +504,9 @@ export default function BookingFlow({ config }) {
                   ))}
                 </div>
 
-                                <div className="mt-auto flex w-full items-center justify-end border-t border-[#f3d9e4]/30 pt-2 text-[11px]">
+                <div className="mt-auto flex w-full items-center justify-end border-t border-[#f3d9e4]/30 pt-2 text-[11px]">
                   <span className="font-bold text-[var(--brand)] group-hover:text-[var(--brand-dark)]">
-                    Reservar ?
+                    Reservar →
                   </span>
                 </div>
               </button>
