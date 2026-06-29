@@ -504,10 +504,9 @@ export default function BookingFlow({ config }) {
                   ))}
                 </div>
 
-                <div className="mt-auto border-t border-[#f3d9e4]/30 pt-2 flex w-full items-center justify-between text-[11px] text-[var(--gold-dark)]">
-                  <span className="font-semibold">Vanessa Premium</span>
+                                <div className="mt-auto flex w-full items-center justify-end border-t border-[#f3d9e4]/30 pt-2 text-[11px]">
                   <span className="font-bold text-[var(--brand)] group-hover:text-[var(--brand-dark)]">
-                    Reservar →
+                    Reservar ?
                   </span>
                 </div>
               </button>
