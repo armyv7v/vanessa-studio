@@ -5,3 +5,4 @@
 - [x] Agregar tarjetas metricas operativas en `/admin/validar-citas`.
 - [x] Reemplazar loading inicial de reservas por skeleton estructurado.
 - [x] Verificar build de Next.js.
+- [x] Corregir contraste de texto/fondo en la capa admin siguiendo criterio WCAG AA.

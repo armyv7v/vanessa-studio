@@ -345,13 +345,13 @@ export default function ValidarCitas() {
         <section className="admin-command-card rounded-[2rem] p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.24em] text-pink-100">
+              <p className="inline-flex rounded-full border border-pink-200 bg-pink-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.24em] text-pink-800">
                 Centro operativo
               </p>
-              <h2 className="mt-5 max-w-2xl text-3xl font-black tracking-tight text-white sm:text-4xl">
+              <h2 className="mt-5 max-w-2xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
                 Agenda, abonos y asistencia en una sola vista
               </h2>
-              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-pink-50/85">
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-700">
                 Inspirado en un SaaS de gestion de citas: primero lo urgente, despues el detalle.
               </p>
             </div>
@@ -360,7 +360,7 @@ export default function ValidarCitas() {
                 type="button"
                 onClick={refreshReservations}
                 disabled={listLoading}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-white/15 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-900 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
               >
                 <RefreshCw className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`} />
                 Actualizar agenda
@@ -369,7 +369,7 @@ export default function ValidarCitas() {
                 type="button"
                 onClick={handleSweepExpiredPayments}
                 disabled={sweepingPayments}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 shadow-xl transition hover:-translate-y-px disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-pink-700 px-5 py-3 text-sm font-black text-white shadow-lg shadow-pink-900/10 transition hover:-translate-y-px hover:bg-pink-800 disabled:opacity-60"
               >
                 <Trash2 className="h-4 w-4" />
                 Liberar vencidas
@@ -385,11 +385,11 @@ export default function ValidarCitas() {
               { label: 'Flujo resuelto', value: `${operationsSummary.completionRate}%`, detail: `${operationsSummary.attendancePending} esperan asistencia` },
             ].map((metric) => (
               <div key={metric.label} className="admin-metric-card rounded-3xl p-4">
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-pink-100">
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-600">
                   {metric.label}
                 </p>
-                <p className="mt-2 text-4xl font-black text-white">{metric.value}</p>
-                <p className="mt-1 text-xs font-semibold text-white/70">{metric.detail}</p>
+                <p className="mt-2 text-4xl font-black text-slate-950">{metric.value}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-600">{metric.detail}</p>
               </div>
             ))}
           </div>
