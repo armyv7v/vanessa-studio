@@ -46,6 +46,17 @@ export default function BookingConfirmation({ service, date, time, client, isExt
   }
 
   const formatDate = (d) => format(d, 'd MMMM yyyy', { locale: es });
+  const glitterPieces = [
+    { top: '6%', left: '10%', w: 10, h: 18, r: '-18deg', o: 0.78 },
+    { top: '10%', left: '18%', w: 8, h: 12, r: '22deg', o: 0.72 },
+    { top: '14%', left: '78%', w: 10, h: 16, r: '28deg', o: 0.82 },
+    { top: '9%', left: '84%', w: 6, h: 10, r: '-24deg', o: 0.68 },
+    { top: '24%', left: '88%', w: 12, h: 20, r: '16deg', o: 0.84 },
+    { top: '66%', left: '9%', w: 9, h: 14, r: '14deg', o: 0.7 },
+    { top: '74%', left: '15%', w: 7, h: 11, r: '-30deg', o: 0.76 },
+    { top: '82%', left: '79%', w: 11, h: 16, r: '18deg', o: 0.8 },
+    { top: '86%', left: '87%', w: 8, h: 12, r: '-12deg', o: 0.74 },
+  ];
 
   const handleCopy = async () => {
     try {
@@ -58,24 +69,48 @@ export default function BookingConfirmation({ service, date, time, client, isExt
   return (
     <section className="premium-card gloss-card gradient-outline relative mx-auto max-w-3xl overflow-hidden p-4 text-center sm:p-10">
       <div
-        className="pointer-events-none absolute inset-0 opacity-80"
+        className="pointer-events-none absolute inset-0 opacity-100"
         aria-hidden="true"
         style={{
           backgroundImage: `
-            radial-gradient(circle at 14% 18%, rgba(197,160,89,0.34) 0 1px, transparent 1.4px),
-            radial-gradient(circle at 78% 16%, rgba(197,160,89,0.24) 0 1.1px, transparent 1.5px),
-            radial-gradient(circle at 24% 78%, rgba(237,217,163,0.34) 0 1.2px, transparent 1.7px),
-            radial-gradient(circle at 86% 72%, rgba(197,160,89,0.24) 0 1px, transparent 1.4px),
-            radial-gradient(circle at 56% 28%, rgba(255,255,255,0.75) 0 0.9px, transparent 1.3px)
+            radial-gradient(circle at 14% 18%, rgba(197,160,89,0.52) 0 1.2px, transparent 1.8px),
+            radial-gradient(circle at 78% 16%, rgba(197,160,89,0.42) 0 1.3px, transparent 1.9px),
+            radial-gradient(circle at 24% 78%, rgba(237,217,163,0.48) 0 1.4px, transparent 2px),
+            radial-gradient(circle at 86% 72%, rgba(197,160,89,0.4) 0 1.2px, transparent 1.8px),
+            radial-gradient(circle at 56% 28%, rgba(255,255,255,0.9) 0 1.1px, transparent 1.6px),
+            linear-gradient(115deg, transparent 18%, rgba(251,244,227,0.22) 46%, rgba(197,160,89,0.2) 52%, transparent 70%)
           `,
-          backgroundSize: '240px 180px, 210px 170px, 260px 200px, 220px 190px, 180px 160px',
+          backgroundSize: '220px 170px, 200px 160px, 240px 190px, 210px 180px, 170px 150px, 100% 100%',
           mixBlendMode: 'screen',
         }}
       />
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        {glitterPieces.map((piece, index) => (
+          <span
+            key={`${piece.top}-${piece.left}-${index}`}
+            className="absolute rounded-[3px]"
+            style={{
+              top: piece.top,
+              left: piece.left,
+              width: `${piece.w}px`,
+              height: `${piece.h}px`,
+              opacity: piece.o,
+              transform: `rotate(${piece.r})`,
+              background: 'linear-gradient(180deg, rgba(255,248,214,0.98) 0%, rgba(237,217,163,0.96) 46%, rgba(197,160,89,0.94) 100%)',
+              boxShadow: '0 0 12px rgba(197,160,89,0.24), inset 0 1px 0 rgba(255,255,255,0.72)',
+            }}
+          />
+        ))}
+      </div>
       <div
-        className="pointer-events-none absolute -right-12 top-10 h-36 w-36 rounded-full blur-3xl"
+        className="pointer-events-none absolute -right-10 top-8 h-48 w-48 rounded-full blur-3xl"
         aria-hidden="true"
-        style={{ background: 'radial-gradient(circle, rgba(197,160,89,0.22) 0%, rgba(197,160,89,0) 72%)' }}
+        style={{ background: 'radial-gradient(circle, rgba(197,160,89,0.42) 0%, rgba(197,160,89,0.08) 38%, rgba(197,160,89,0) 74%)' }}
+      />
+      <div
+        className="pointer-events-none absolute left-8 top-24 h-24 w-24 rounded-full blur-2xl"
+        aria-hidden="true"
+        style={{ background: 'radial-gradient(circle, rgba(237,217,163,0.24) 0%, rgba(237,217,163,0) 72%)' }}
       />
       <div className="relative z-[1]">
       <span className="badge-pill mx-auto !border-[#b9efd0] !bg-[#ecfff4] !text-[#2f9b67]">
