@@ -190,8 +190,25 @@ export default function AdminShell({ title, description, children }) {
 
         {/* Main Content */}
         <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-8 step-fade-in" key={router.pathname}>
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div>
+          <div className="mb-6 flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-white/70 bg-white/70 px-4 py-3 shadow-sm backdrop-blur">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="admin-status-chip">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
+                  Sesion segura
+                </span>
+                <span className="admin-status-chip">
+                  <SparkleIcon className="h-3.5 w-3.5 text-[var(--brand)]" />
+                  Centro de gestion
+                </span>
+              </div>
+              <p className="text-xs font-semibold" style={{ color: 'var(--ink-faint)' }}>
+                Operacion de agenda, abonos y asistencia
+              </p>
+            </div>
+
+            <div className="flex items-start justify-between gap-4">
+              <div>
               {/* Hamburger — mobile only */}
               <button
                 type="button"
@@ -218,6 +235,7 @@ export default function AdminShell({ title, description, children }) {
                   {description}
                 </p>
               ) : null}
+              </div>
             </div>
           </div>
 

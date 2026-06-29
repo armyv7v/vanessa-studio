@@ -57,6 +57,7 @@ Lista reservas con filtros y acciones operativas.
 - **Scenario 5.2:** Acciones: confirmar pago, barrer pagos expirados, validar asistencia.
 - **Scenario 5.3:** Las mutaciones sensibles (`confirm-payment`, `validate-attendance`, `expire-pending-payments`) requieren PIN admin de 4 digitos enviado en el body.
 - **Scenario 5.4:** El device token en `localStorage` ya no se usa como autorizacion para operaciones criticas.
+- **Scenario 5.5:** La vista principal presenta un resumen operativo tipo SaaS de agenda profesional con KPIs accionables antes de la lista de citas.
 
 ## Referencias de codigo
 

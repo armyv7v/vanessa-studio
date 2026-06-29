@@ -125,6 +125,22 @@ export default function ValidarCitas() {
     }, { total: 0, pending: 0, confirmed: 0, expired: 0 });
   }, [reservations]);
 
+  const operationsSummary = useMemo(() => {
+    const attendancePending = reservations.filter((reservation) => (
+      reservation.paymentStatus === 'PAGO_CONFIRMADO' && !reservation.attended
+    )).length;
+    const actionRequired = paymentSummary.pending + paymentSummary.expired + attendancePending;
+    const completionRate = paymentSummary.total
+      ? Math.round(((paymentSummary.confirmed + reservations.filter((item) => item.attended).length) / (paymentSummary.total * 2)) * 100)
+      : 0;
+
+    return {
+      actionRequired,
+      attendancePending,
+      completionRate,
+    };
+  }, [paymentSummary.confirmed, paymentSummary.expired, paymentSummary.pending, paymentSummary.total, reservations]);
+
   // Filtrado y búsqueda de reservas
   const visibleReservations = useMemo(() => {
     let result = reservations;
@@ -326,6 +342,57 @@ export default function ValidarCitas() {
           </div>
         )}
 
+        <section className="admin-command-card rounded-[2rem] p-5 sm:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="admin-section-kicker">Centro operativo</p>
+              <h2 className="mt-4 text-2xl font-black tracking-tight sm:text-3xl" style={{ color: 'var(--ink-medium)' }}>
+                Agenda, abonos y asistencia en una sola vista
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
+                Inspirado en un SaaS de gestion de citas: primero lo urgente, despues el detalle.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={refreshReservations}
+                disabled={listLoading}
+                className="premium-button-secondary inline-flex items-center gap-2 disabled:opacity-60"
+              >
+                <RefreshCw className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`} />
+                Actualizar agenda
+              </button>
+              <button
+                type="button"
+                onClick={handleSweepExpiredPayments}
+                disabled={sweepingPayments}
+                className="premium-button inline-flex items-center gap-2 disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" />
+                Liberar vencidas
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: 'Citas visibles', value: visibleReservations.length, detail: `${paymentSummary.total} en el rango cargado`, tone: 'var(--brand)' },
+              { label: 'Acciones criticas', value: operationsSummary.actionRequired, detail: 'Abonos, vencidas o asistencia', tone: '#be123c' },
+              { label: 'Abonos confirmados', value: paymentSummary.confirmed, detail: `${paymentSummary.pending} pendientes de pago`, tone: '#059669' },
+              { label: 'Flujo resuelto', value: `${operationsSummary.completionRate}%`, detail: `${operationsSummary.attendancePending} esperan asistencia`, tone: 'var(--gold-dark)' },
+            ].map((metric) => (
+              <div key={metric.label} className="admin-metric-card rounded-3xl p-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: metric.tone }}>
+                  {metric.label}
+                </p>
+                <p className="mt-2 text-3xl font-black" style={{ color: 'var(--ink-medium)' }}>{metric.value}</p>
+                <p className="mt-1 text-xs font-semibold" style={{ color: 'var(--ink-faint)' }}>{metric.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Dashboard Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
           
@@ -450,9 +517,26 @@ export default function ValidarCitas() {
               </div>
 
               {listLoading && reservations.length === 0 ? (
-                <div className="py-16 text-center">
-                  <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-pink-600" />
-                  <p className="text-sm text-slate-500">Cargando base de datos...</p>
+                <div className="space-y-4 py-2">
+                  {[0, 1, 2].map((item) => (
+                    <div key={item} className="rounded-2xl border border-slate-100 bg-white p-4">
+                      <div className="flex items-start gap-4">
+                        <div className="admin-skeleton-row h-16 w-20 rounded-2xl" />
+                        <div className="min-w-0 flex-1 space-y-3">
+                          <div className="admin-skeleton-row h-4 w-32 rounded-full" />
+                          <div className="admin-skeleton-row h-5 w-2/3 rounded-full" />
+                          <div className="admin-skeleton-row h-3 w-1/2 rounded-full" />
+                        </div>
+                        <div className="hidden space-y-2 sm:block">
+                          <div className="admin-skeleton-row h-9 w-36 rounded-xl" />
+                          <div className="admin-skeleton-row h-9 w-36 rounded-xl" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-center text-xs font-semibold" style={{ color: 'var(--ink-faint)' }}>
+                    Cargando agenda operativa...
+                  </p>
                 </div>
               ) : visibleReservations.length === 0 ? (
                 <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
