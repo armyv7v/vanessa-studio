@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { clearAdminToken } from '../lib/adminAuth';
 import {
   AdminShieldIcon,
+  ArrowLeftIcon,
   CloseIcon,
   GemIcon,
   MenuIcon,
@@ -114,7 +115,7 @@ export default function AdminShell({ title, description, children }) {
         className={`mt-8 premium-button-secondary transition-all duration-300 hover:-translate-y-px hover:scale-[1.01] ${compact ? 'h-12 w-12 px-0 text-xl' : 'w-full'}`}
         style={{ borderRadius: '16px' }}
       >
-        {compact ? '?' : 'Cerrar sesi?n'}
+        {compact ? <ArrowLeftIcon className="h-5 w-5" /> : 'Cerrar sesi?n'}
       </button>
     </>
   );
