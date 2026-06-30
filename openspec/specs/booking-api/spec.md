@@ -80,6 +80,7 @@ Endpoints operativos para editar citas ya creadas desde el panel admin.
 - **Scenario 7.1.2:** WHEN el admin reagenda una cita THEN `POST /api/admin/reservation-operation` valida `admin_session`, proxyea `reservation-reschedule` con secreto server-side, verifica conflictos en Calendar y actualiza Sheets + Calendar.
 - **Scenario 7.1.3:** WHEN el admin elimina una hora THEN `POST /api/admin/reservation-operation` valida `admin_session`, proxyea `reservation-cancel` con secreto server-side, cancela el evento de Calendar y marca la fila como `CANCELADA` sin borrar auditoria historica.
 - **Scenario 7.1.4:** Las acciones rechazan citas ya asistidas para no corromper fidelidad/asistencia.
+- **Scenario 7.1.5:** WHEN una mutacion admin encuentra un `eventId` de Google Calendar borrado (`404/410`) THEN debe recrear el evento o limpiar la referencia sin romper la operacion principal.
 
 ### Requirement 7.5: CORS admin local
 Las rutas `/api/admin/*` y `/api/horarios` usan allowlist de origen.

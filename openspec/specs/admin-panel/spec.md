@@ -60,6 +60,7 @@ Lista reservas con filtros y acciones operativas.
 - **Scenario 5.5:** La vista principal presenta un resumen operativo tipo SaaS de agenda profesional con KPIs accionables antes de la lista de citas.
 - **Scenario 5.6:** Cada card de cita permite reagendar, editar datos de clienta/servicio y eliminar/liberar la hora desde acciones inline.
 - **Scenario 5.7:** Las acciones de reagendar, editar y eliminar requieren `admin_session` valida en el proxy local y actualizan Google Sheets y Google Calendar cuando corresponde.
+- **Scenario 5.8:** Si la referencia de Google Calendar fue borrada fuera de banda, el panel debe recuperarse recreando o limpiando el evento sin dejar la operacion en error tecnico.
 
 ## Referencias de codigo
 
