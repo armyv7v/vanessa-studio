@@ -35,3 +35,6 @@ Thumbs.db
 
 # Repo backend separado dentro del workspace local
 vanessa-studio-backend/
+
+.vercel
+.vercel
