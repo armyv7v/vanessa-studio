@@ -31,7 +31,7 @@ export default function AdminShell({ title, description, children }) {
   };
 
   const NavLinks = ({ compact = false } = {}) => (
-    <nav className="space-y-2" aria-label="Navegaci?n admin">
+    <nav className="space-y-2" aria-label="Navegación admin">
       {navigation.map((item) => {
         const isActive = router.pathname === item.href;
 
@@ -91,7 +91,7 @@ export default function AdminShell({ title, description, children }) {
               Vanessa Nails Studio
             </h1>
             <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ink-faint)' }}>
-              Administra horarios, visibilidad del calendario y validaci?n de citas desde un solo lugar.
+              Administra horarios, visibilidad del calendario y validación de citas desde un solo lugar.
             </p>
             <div className="mt-4 flex items-center gap-3" style={{ color: 'var(--gold)' }}>
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full" style={{ background: 'var(--gold-lightest)' }}>
@@ -111,11 +111,11 @@ export default function AdminShell({ title, description, children }) {
       <button
         type="button"
         onClick={handleLogout}
-        title={compact ? 'Cerrar sesi?n' : undefined}
+        title={compact ? 'Cerrar sesión' : undefined}
         className={`mt-8 premium-button-secondary transition-all duration-300 hover:-translate-y-px hover:scale-[1.01] ${compact ? 'h-12 w-12 px-0 text-xl' : 'w-full'}`}
         style={{ borderRadius: '16px' }}
       >
-        {compact ? <ArrowLeftIcon className="h-5 w-5" /> : 'Cerrar sesi?n'}
+        {compact ? <ArrowLeftIcon className="h-5 w-5" /> : 'Cerrar sesión'}
       </button>
     </>
   );
@@ -147,8 +147,8 @@ export default function AdminShell({ title, description, children }) {
             onClick={() => setIsDesktopSidebarExpanded((value) => !value)}
             className="mb-6 inline-flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-bold transition hover:-translate-y-px"
             style={{ borderColor: 'rgba(230,0,126,0.18)', background: 'rgba(255,255,255,0.9)', color: 'var(--brand)' }}
-            aria-label={isDesktopSidebarExpanded ? 'Contraer men? lateral' : 'Expandir men? lateral'}
-            title={isDesktopSidebarExpanded ? 'Contraer men?' : 'Expandir men?'}
+            aria-label={isDesktopSidebarExpanded ? 'Contraer menú lateral' : 'Expandir menú lateral'}
+            title={isDesktopSidebarExpanded ? 'Contraer menú' : 'Expandir menú'}
           >
             {isDesktopSidebarExpanded ? 'Contraer' : <MenuIcon className="h-5 w-5" />}
           </button>
@@ -188,7 +188,7 @@ export default function AdminShell({ title, description, children }) {
               onClick={() => setIsSidebarOpen(false)}
               className="rounded-full p-2 transition"
               style={{ color: 'var(--ink-faint)', background: 'var(--bg-blush)' }}
-              aria-label="Cerrar men?"
+              aria-label="Cerrar menú"
             >
               <CloseIcon className="h-5 w-5" />
             </button>
@@ -202,7 +202,7 @@ export default function AdminShell({ title, description, children }) {
             className="mt-8 w-full premium-button-secondary transition-all duration-300"
             style={{ borderRadius: '16px' }}
           >
-            Cerrar sesi?n
+            Cerrar sesión
           </button>
         </aside>
 
@@ -213,15 +213,15 @@ export default function AdminShell({ title, description, children }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="admin-status-chip">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
-                  Sesi?n segura
+                  Sesión segura
                 </span>
                 <span className="admin-status-chip">
                   <SparkleIcon className="h-3.5 w-3.5 text-[var(--brand)]" />
-                  Centro de gesti?n
+                  Centro de gestión
                 </span>
               </div>
               <p className="text-xs font-semibold" style={{ color: 'var(--ink-faint)' }}>
-                Operaci?n de agenda, abonos y asistencia
+                Operación de agenda, abonos y asistencia
               </p>
             </div>
 
@@ -236,7 +236,7 @@ export default function AdminShell({ title, description, children }) {
                     background: 'rgba(255,255,255,0.95)',
                     color: 'var(--brand)',
                   }}
-                  aria-label="Abrir men?"
+                  aria-label="Abrir menú"
                 >
                   <MenuIcon className="h-5 w-5" />
                 </button>
