@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { DateTime } from 'luxon';
@@ -22,6 +23,26 @@ import {
 } from '../../components/BrandMotifs';
 import { services } from '../../lib/services';
 import { getAvailableSlots } from '../../lib/api';
+
+/**
+ * Componente Portal para asegurar que todos los modales se rendericen en document.body
+ * y queden perfectamente centrados en la ventana del navegador (viewport) independientemente del scroll.
+ */
+function ModalPortal({ children }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  if (!mounted || typeof document === 'undefined') return null;
+  return createPortal(children, document.body);
+}
 
 export default function AdminClientes() {
   const router = useRouter();
@@ -606,375 +627,382 @@ export default function AdminClientes() {
         </div>
       )}
 
-      {/* --- MODAL 1: AGENDAMIENTO RÁPIDO --- */}
+      {/* --- MODAL 1: AGENDAMIENTO RÁPIDO EN PORTAL BODY --- */}
       {quickBookingClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2">
-                <UserPlusIcon className="h-5 w-5" />
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Agendamiento Rápido</h3>
-                  <p className="text-xs text-slate-500">Cliente: <b>{quickBookingClient.name}</b> ({quickBookingClient.email})</p>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm overflow-y-auto">
+            <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl my-auto">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2">
+                  <UserPlusIcon className="h-5 w-5" />
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Agendamiento Rápido</h3>
+                    <p className="text-xs text-slate-500">Cliente: <b>{quickBookingClient.name}</b> ({quickBookingClient.email})</p>
+                  </div>
                 </div>
+                <button onClick={() => setQuickBookingClient(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
+                  <CloseIcon className="h-5 w-5" />
+                </button>
               </div>
-              <button onClick={() => setQuickBookingClient(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
-                <CloseIcon className="h-5 w-5" />
-              </button>
+
+              <form onSubmit={handleConfirmQuickBooking} className="mt-4 space-y-4 text-sm">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Servicio</label>
+                  <select
+                    value={bookingForm.serviceId}
+                    onChange={(e) => setBookingForm((p) => ({ ...p, serviceId: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:border-pink-500 focus:outline-none"
+                  >
+                    {services.map((svc) => (
+                      <option key={svc.id} value={svc.id}>
+                        {svc.name} ({svc.duration} min)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Fecha</label>
+                  <input
+                    type="date"
+                    value={bookingForm.date}
+                    onChange={(e) => setBookingForm((p) => ({ ...p, date: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:border-pink-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Horario Libre (Google Calendar)</label>
+                  {loadingSlots ? (
+                    <p className="text-xs text-pink-600 font-bold animate-pulse">Consultando disponibilidad en tiempo real...</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {availableSlots.map((slot) => (
+                        <button
+                          type="button"
+                          key={slot}
+                          onClick={() => setBookingForm((p) => ({ ...p, start: slot }))}
+                          className={`rounded-xl py-2 text-xs font-bold transition ${
+                            bookingForm.start === slot
+                              ? 'bg-pink-600 text-white shadow-md'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {slot} hrs
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="extraCupo"
+                    checked={bookingForm.extraCupo}
+                    onChange={(e) => setBookingForm((p) => ({ ...p, extraCupo: e.target.checked }))}
+                    className="h-4 w-4 rounded border-slate-300 text-pink-600"
+                  />
+                  <label htmlFor="extraCupo" className="text-xs font-semibold text-slate-700">
+                    Modalidad Extra Cupo (18:00 - 20:00)
+                  </label>
+                </div>
+
+                {bookingError && <p className="text-xs font-bold text-rose-600">{bookingError}</p>}
+                {bookingSuccess && <p className="text-xs font-bold text-emerald-600">{bookingSuccess}</p>}
+
+                <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setQuickBookingClient(null)}
+                    className="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={bookingSubmitting}
+                    className="rounded-2xl bg-pink-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-pink-700 disabled:opacity-50"
+                  >
+                    {bookingSubmitting ? 'Confirmando...' : 'Confirmar y Agendar'}
+                  </button>
+                </div>
+              </form>
             </div>
+          </div>
+        </ModalPortal>
+      )}
 
-            <form onSubmit={handleConfirmQuickBooking} className="mt-4 space-y-4 text-sm">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Servicio</label>
-                <select
-                  value={bookingForm.serviceId}
-                  onChange={(e) => setBookingForm((p) => ({ ...p, serviceId: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:border-pink-500 focus:outline-none"
-                >
-                  {services.map((svc) => (
-                    <option key={svc.id} value={svc.id}>
-                      {svc.name} ({svc.duration} min)
-                    </option>
-                  ))}
-                </select>
+      {/* --- MODAL 2: EDITOR DE CAMPAÑA / EMAIL MASIVO EN PORTAL BODY --- */}
+      {showEmailModal && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm overflow-y-auto">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl my-auto">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2">
+                  <MailIcon className="h-5 w-5" />
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Envío Masivo de Recordatorios</h3>
+                    <p className="text-xs text-slate-500">Destinatarios: <b>{selectedEmails.size} clientes seleccionados</b></p>
+                  </div>
+                </div>
+                <button onClick={() => setShowEmailModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
+                  <CloseIcon className="h-5 w-5" />
+                </button>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Fecha</label>
-                <input
-                  type="date"
-                  value={bookingForm.date}
-                  onChange={(e) => setBookingForm((p) => ({ ...p, date: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:border-pink-500 focus:outline-none"
-                />
+              <form onSubmit={handleSendOrScheduleEmail} className="mt-4 space-y-4 text-sm">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Asunto del Correo</label>
+                  <input
+                    type="text"
+                    value={emailForm.subject}
+                    onChange={(e) => setEmailForm((p) => ({ ...p, subject: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:border-pink-500 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+                    Cuerpo del Mensaje (Etiquetas: {'{nombre}'} y {'{ultima_cita}'})
+                  </label>
+                  <textarea
+                    rows={5}
+                    value={emailForm.bodyHtml}
+                    onChange={(e) => setEmailForm((p) => ({ ...p, bodyHtml: e.target.value }))}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-800 font-medium focus:border-pink-500 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="emailMode"
+                        checked={!emailForm.isScheduled}
+                        onChange={() => setEmailForm((p) => ({ ...p, isScheduled: false }))}
+                        className="text-pink-600"
+                      />
+                      Envío Inmediato
+                    </label>
+
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="emailMode"
+                        checked={emailForm.isScheduled}
+                        onChange={() => setEmailForm((p) => ({ ...p, isScheduled: true }))}
+                        className="text-pink-600"
+                      />
+                      Programar Envío Futuro
+                    </label>
+                  </div>
+
+                  {emailForm.isScheduled && (
+                    <div className="mt-3">
+                      <label className="block text-xs font-bold text-slate-500 mb-1">Fecha y Hora de Envío</label>
+                      <input
+                        type="datetime-local"
+                        value={emailForm.scheduledAt}
+                        onChange={(e) => setEmailForm((p) => ({ ...p, scheduledAt: e.target.value }))}
+                        className="rounded-xl border border-slate-300 p-2 text-xs font-bold"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {emailNotice && (
+                  <div
+                    className={`rounded-2xl p-3 text-xs font-bold ${
+                      emailNotice.type === 'error' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                    }`}
+                  >
+                    {emailNotice.message}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailModal(false)}
+                    className="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={emailSubmitting}
+                    className="rounded-2xl bg-pink-600 px-6 py-2.5 text-xs font-bold text-white shadow hover:bg-pink-700 disabled:opacity-50"
+                  >
+                    {emailSubmitting
+                      ? 'Procesando...'
+                      : emailForm.isScheduled
+                      ? 'Programar Campaña'
+                      : 'Enviar Correos Ahora'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* --- MODAL 3: HISTORIAL & SUSPENSIÓN DE CAMPAÑAS EN PORTAL BODY --- */}
+      {showCampaignsModal && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm overflow-y-auto">
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl my-auto">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2">
+                  <ClipboardListIcon className="h-5 w-5" />
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Campañas Programadas y Envíos</h3>
+                    <p className="text-xs text-slate-500">Historial y gestión de suspensión de envíos futuros</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowCampaignsModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
+                  <CloseIcon className="h-5 w-5" />
+                </button>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Horario Libre (Google Calendar)</label>
-                {loadingSlots ? (
-                  <p className="text-xs text-pink-600 font-bold animate-pulse">Consultando disponibilidad en tiempo real...</p>
+              <div className="mt-4">
+                {loadingCampaigns ? (
+                  <div className="py-8 text-center text-xs font-bold text-slate-500">Cargando campañas...</div>
+                ) : campaigns.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-500">No hay campañas registradas o programadas aún.</div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {availableSlots.map((slot) => (
-                      <button
-                        type="button"
-                        key={slot}
-                        onClick={() => setBookingForm((p) => ({ ...p, start: slot }))}
-                        className={`rounded-xl py-2 text-xs font-bold transition ${
-                          bookingForm.start === slot
-                            ? 'bg-pink-600 text-white shadow-md'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                      >
-                        {slot} hrs
-                      </button>
+                  <div className="divide-y divide-slate-100">
+                    {campaigns.map((camp) => (
+                      <div key={camp.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 gap-2 text-xs">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900">{camp.subject}</span>
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold ${
+                                camp.status === 'ENVIADO'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : camp.status === 'SUSPENDIDO'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {camp.status}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-slate-500">
+                            ID: {camp.id} • {camp.recipientsCount} destinatarios • Fecha programada: {formatDateLabel(camp.scheduledAt)}
+                          </p>
+                        </div>
+
+                        {camp.status === 'PENDIENTE' && (
+                          <button
+                            onClick={() => handleSuspendCampaign(camp.id)}
+                            className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 font-bold text-rose-700 hover:bg-rose-100 transition"
+                          >
+                            <SuspendIcon className="h-3.5 w-3.5" />
+                            Suspender Envío
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="extraCupo"
-                  checked={bookingForm.extraCupo}
-                  onChange={(e) => setBookingForm((p) => ({ ...p, extraCupo: e.target.checked }))}
-                  className="h-4 w-4 rounded border-slate-300 text-pink-600"
-                />
-                <label htmlFor="extraCupo" className="text-xs font-semibold text-slate-700">
-                  Modalidad Extra Cupo (18:00 - 20:00)
-                </label>
-              </div>
-
-              {bookingError && <p className="text-xs font-bold text-rose-600">{bookingError}</p>}
-              {bookingSuccess && <p className="text-xs font-bold text-emerald-600">{bookingSuccess}</p>}
-
-              <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+              <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
                 <button
-                  type="button"
-                  onClick={() => setQuickBookingClient(null)}
-                  className="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700"
+                  onClick={() => setShowCampaignsModal(false)}
+                  className="rounded-2xl border border-slate-200 bg-slate-100 px-5 py-2 text-xs font-bold text-slate-700"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={bookingSubmitting}
-                  className="rounded-2xl bg-pink-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-pink-700 disabled:opacity-50"
-                >
-                  {bookingSubmitting ? 'Confirmando...' : 'Confirmar y Agendar'}
+                  Cerrar
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
-      {/* --- MODAL 2: EDITOR DE CAMPAÑA / EMAIL MASIVO --- */}
-      {showEmailModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2">
-                <MailIcon className="h-5 w-5" />
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Envío Masivo de Recordatorios</h3>
-                  <p className="text-xs text-slate-500">Destinatarios: <b>{selectedEmails.size} clientes seleccionados</b></p>
-                </div>
-              </div>
-              <button onClick={() => setShowEmailModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
-                <CloseIcon className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSendOrScheduleEmail} className="mt-4 space-y-4 text-sm">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Asunto del Correo</label>
-                <input
-                  type="text"
-                  value={emailForm.subject}
-                  onChange={(e) => setEmailForm((p) => ({ ...p, subject: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-800 font-semibold focus:border-pink-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-                  Cuerpo del Mensaje (Etiquetas: {'{nombre}'} y {'{ultima_cita}'})
-                </label>
-                <textarea
-                  rows={5}
-                  value={emailForm.bodyHtml}
-                  onChange={(e) => setEmailForm((p) => ({ ...p, bodyHtml: e.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-800 font-medium focus:border-pink-500 focus:outline-none"
-                  required
-                />
-              </div>
-
-              {/* Selector Modo Envío */}
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-6">
-                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="emailMode"
-                      checked={!emailForm.isScheduled}
-                      onChange={() => setEmailForm((p) => ({ ...p, isScheduled: false }))}
-                      className="text-pink-600"
-                    />
-                    Envío Inmediato
-                  </label>
-
-                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="emailMode"
-                      checked={emailForm.isScheduled}
-                      onChange={() => setEmailForm((p) => ({ ...p, isScheduled: true }))}
-                      className="text-pink-600"
-                    />
-                    Programar Envío Futuro
-                  </label>
-                </div>
-
-                {emailForm.isScheduled && (
-                  <div className="mt-3">
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Fecha y Hora de Envío</label>
-                    <input
-                      type="datetime-local"
-                      value={emailForm.scheduledAt}
-                      onChange={(e) => setEmailForm((p) => ({ ...p, scheduledAt: e.target.value }))}
-                      className="rounded-xl border border-slate-300 p-2 text-xs font-bold"
-                    />
+      {/* MODAL 4: DETALLE CLIENTE EN PORTAL BODY */}
+      {selectedClient && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm overflow-y-auto">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl my-auto">
+              <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 text-xl font-bold text-white shadow">
+                    {selectedClient.name ? selectedClient.name.charAt(0).toUpperCase() : 'C'}
                   </div>
-                )}
-              </div>
-
-              {emailNotice && (
-                <div
-                  className={`rounded-2xl p-3 text-xs font-bold ${
-                    emailNotice.type === 'error' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
-                  }`}
-                >
-                  {emailNotice.message}
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">{selectedClient.name}</h3>
+                    <p className="text-xs text-slate-500">{selectedClient.email} • {selectedClient.phone || 'Sin teléfono'}</p>
+                  </div>
                 </div>
-              )}
-
-              <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEmailModal(false)}
-                  className="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={emailSubmitting}
-                  className="rounded-2xl bg-pink-600 px-6 py-2.5 text-xs font-bold text-white shadow hover:bg-pink-700 disabled:opacity-50"
-                >
-                  {emailSubmitting
-                    ? 'Procesando...'
-                    : emailForm.isScheduled
-                    ? 'Programar Campaña'
-                    : 'Enviar Correos Ahora'}
+                <button onClick={() => setSelectedClient(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
+                  <CloseIcon className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* --- MODAL 3: HISTORIAL & SUSPENSIÓN DE CAMPAÑAS --- */}
-      {showCampaignsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2">
-                <ClipboardListIcon className="h-5 w-5" />
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Campañas Programadas y Envíos</h3>
-                  <p className="text-xs text-slate-500">Historial y gestión de suspensión de envíos futuros</p>
+              <div className="my-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl bg-slate-50 p-4 text-center">
+                  <span className="text-xs font-bold text-slate-400 uppercase">Total Citas</span>
+                  <p className="mt-1 text-2xl font-black text-slate-800">{selectedClient.totalReservations}</p>
+                </div>
+                <div className="rounded-2xl bg-emerald-50 p-4 text-center">
+                  <span className="text-xs font-bold text-emerald-600 uppercase">Asistidas</span>
+                  <p className="mt-1 text-2xl font-black text-emerald-700">{selectedClient.attendedCount}</p>
+                </div>
+                <div className="col-span-2 sm:col-span-1 rounded-2xl bg-pink-50 p-4 text-center">
+                  <span className="text-xs font-bold text-pink-600 uppercase">Fidelidad</span>
+                  <p className="mt-1 text-lg font-bold text-pink-700">{selectedClient.loyalty?.stamps || 0} / 6 Sellos</p>
                 </div>
               </div>
-              <button onClick={() => setShowCampaignsModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
-                <CloseIcon className="h-5 w-5" />
-              </button>
-            </div>
 
-            <div className="mt-4">
-              {loadingCampaigns ? (
-                <div className="py-8 text-center text-xs font-bold text-slate-500">Cargando campañas...</div>
-              ) : campaigns.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-500">No hay campañas registradas o programadas aún.</div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {campaigns.map((camp) => (
-                    <div key={camp.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 gap-2 text-xs">
+              <div>
+                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Historial de Citas</h4>
+                <div className="max-h-60 overflow-y-auto rounded-2xl border border-slate-100 divide-y divide-slate-100">
+                  {selectedClient.appointments.map((app, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900">{camp.subject}</span>
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold ${
-                              camp.status === 'ENVIADO'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : camp.status === 'SUSPENDIDO'
-                                ? 'bg-rose-100 text-rose-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
-                          >
-                            {camp.status}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-slate-500">
-                          ID: {camp.id} • {camp.recipientsCount} destinatarios • Fecha programada: {formatDateLabel(camp.scheduledAt)}
-                        </p>
+                        <p className="font-bold text-slate-800">{app.service}</p>
+                        <p className="text-slate-400">{formatDateLabel(app.date)} ({app.duration} min)</p>
                       </div>
-
-                      {camp.status === 'PENDIENTE' && (
-                        <button
-                          onClick={() => handleSuspendCampaign(camp.id)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 font-bold text-rose-700 hover:bg-rose-100 transition"
-                        >
-                          <SuspendIcon className="h-3.5 w-3.5" />
-                          Suspender Envío
-                        </button>
-                      )}
+                      <div>
+                        {app.attended ? (
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-bold text-emerald-700">Asistió</span>
+                        ) : (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-500">Agendada</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
 
-            <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
-              <button
-                onClick={() => setShowCampaignsModal(false)}
-                className="rounded-2xl border border-slate-200 bg-slate-100 px-5 py-2 text-xs font-bold text-slate-700"
-              >
-                Cerrar
-              </button>
+              <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+                <button
+                  onClick={() => {
+                    const client = selectedClient;
+                    setSelectedClient(null);
+                    handleOpenQuickBooking(client);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-2xl bg-pink-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-pink-700 transition"
+                >
+                  <UserPlusIcon className="h-4 w-4 text-white" />
+                  Agendar Cita Rápida
+                </button>
+                <button
+                  onClick={() => setSelectedClient(null)}
+                  className="rounded-2xl border border-slate-200 bg-slate-100 px-5 py-2.5 text-xs font-bold text-slate-700"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* MODAL 4: DETALLE CLIENTE */}
-      {selectedClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 text-xl font-bold text-white shadow">
-                  {selectedClient.name ? selectedClient.name.charAt(0).toUpperCase() : 'C'}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">{selectedClient.name}</h3>
-                  <p className="text-xs text-slate-500">{selectedClient.email} • {selectedClient.phone || 'Sin teléfono'}</p>
-                </div>
-              </div>
-              <button onClick={() => setSelectedClient(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
-                <CloseIcon className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="my-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl bg-slate-50 p-4 text-center">
-                <span className="text-xs font-bold text-slate-400 uppercase">Total Citas</span>
-                <p className="mt-1 text-2xl font-black text-slate-800">{selectedClient.totalReservations}</p>
-              </div>
-              <div className="rounded-2xl bg-emerald-50 p-4 text-center">
-                <span className="text-xs font-bold text-emerald-600 uppercase">Asistidas</span>
-                <p className="mt-1 text-2xl font-black text-emerald-700">{selectedClient.attendedCount}</p>
-              </div>
-              <div className="col-span-2 sm:col-span-1 rounded-2xl bg-pink-50 p-4 text-center">
-                <span className="text-xs font-bold text-pink-600 uppercase">Fidelidad</span>
-                <p className="mt-1 text-lg font-bold text-pink-700">{selectedClient.loyalty?.stamps || 0} / 6 Sellos</p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Historial de Citas</h4>
-              <div className="max-h-60 overflow-y-auto rounded-2xl border border-slate-100 divide-y divide-slate-100">
-                {selectedClient.appointments.map((app, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3.5 text-xs">
-                    <div>
-                      <p className="font-bold text-slate-800">{app.service}</p>
-                      <p className="text-slate-400">{formatDateLabel(app.date)} ({app.duration} min)</p>
-                    </div>
-                    <div>
-                      {app.attended ? (
-                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-bold text-emerald-700">Asistió</span>
-                      ) : (
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-500">Agendada</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
-              <button
-                onClick={() => {
-                  const client = selectedClient;
-                  setSelectedClient(null);
-                  handleOpenQuickBooking(client);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-2xl bg-pink-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-pink-700 transition"
-              >
-                <UserPlusIcon className="h-4 w-4 text-white" />
-                Agendar Cita Rápida
-              </button>
-              <button
-                onClick={() => setSelectedClient(null)}
-                className="rounded-2xl border border-slate-200 bg-slate-100 px-5 py-2.5 text-xs font-bold text-slate-700"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
+        </ModalPortal>
       )}
     </AdminShell>
   );
