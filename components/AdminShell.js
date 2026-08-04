@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { clearAdminToken } from '../lib/adminAuth';
@@ -11,6 +11,7 @@ import {
   PolishBottleIcon,
   SparkleIcon,
   SwirlDivider,
+  UsersIcon,
   ValidationIcon,
 } from './BrandMotifs';
 
@@ -18,6 +19,7 @@ const navigation = [
   { href: '/admin/horarios', label: 'Horarios', icon: <PolishBottleIcon className="h-4 w-4" /> },
   { href: '/admin/turnos', label: 'Turnos', icon: <GemIcon className="h-4 w-4" /> },
   { href: '/admin/validar-citas', label: 'Validar citas', icon: <ValidationIcon className="h-4 w-4" /> },
+  { href: '/admin/clientes', label: 'Clientes', icon: <UsersIcon className="h-4 w-4" /> },
 ];
 
 export default function AdminShell({ title, description, children }) {
@@ -91,7 +93,7 @@ export default function AdminShell({ title, description, children }) {
               Vanessa Nails Studio
             </h1>
             <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ink-faint)' }}>
-              Administra horarios, visibilidad del calendario y validación de citas desde un solo lugar.
+              Administra horarios, visibilidad del calendario, validación de citas y módulo de clientes.
             </p>
             <div className="mt-4 flex items-center gap-3" style={{ color: 'var(--gold)' }}>
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full" style={{ background: 'var(--gold-lightest)' }}>
@@ -221,7 +223,7 @@ export default function AdminShell({ title, description, children }) {
                 </span>
               </div>
               <p className="text-xs font-semibold" style={{ color: 'var(--ink-faint)' }}>
-                Operación de agenda, abonos y asistencia
+                Operación de agenda, abonos, clientes y asistencia
               </p>
             </div>
 

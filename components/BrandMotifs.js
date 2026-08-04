@@ -245,3 +245,21 @@ export function BrushAccent({ className = 'h-12 w-28', ...props }) {
     </svg>
   );
 }
+
+export function UsersIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="users-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F04A94" />
+          <stop offset="100%" stopColor="#E11B74" />
+        </linearGradient>
+      </defs>
+      <path d="M17 21V19C17 16.7909 15.2091 15 13 15H5C2.79086 15 1 16.7909 1 19V21" stroke="url(#users-grad)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9" cy="7" r="4" stroke="url(#users-grad)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M23 21V19C22.9986 17.1771 21.6603 15.6427 19.86 15.35" stroke="url(#users-grad)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 3.13C17.7983 3.42805 19.1368 4.96238 19.1382 6.785C19.1396 8.60762 17.8037 10.144 16.005 10.44" stroke="url(#users-grad)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
