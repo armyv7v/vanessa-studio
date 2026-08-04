@@ -5,7 +5,21 @@ import { DateTime } from 'luxon';
 import AdminShell from '../../components/AdminShell';
 import AdminMetricIcon from '../../components/AdminMetricIcon';
 import { hasAdminToken } from '../../lib/adminAuth';
-import { SparkleIcon, UsersIcon, CloseIcon } from '../../components/BrandMotifs';
+import {
+  SparkleIcon,
+  UsersIcon,
+  CloseIcon,
+  SearchIcon,
+  WhatsAppIcon,
+  MailIcon,
+  GiftIcon,
+  ChartIcon,
+  ClockIcon,
+  SuspendIcon,
+  UserPlusIcon,
+  ClipboardListIcon,
+  PolishBottleIcon,
+} from '../../components/BrandMotifs';
 import { services } from '../../lib/services';
 import { getAvailableSlots } from '../../lib/api';
 
@@ -18,7 +32,7 @@ export default function AdminClientes() {
 
   // Filtros y búsqueda
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMode, setFilterMode] = useState('all'); // 'all', 'frequent', 'loyalty', 'inactive'
+  const [filterMode, setFilterMode] = useState('all');
 
   // Selección múltiple para envíos masivos
   const [selectedEmails, setSelectedEmails] = useState(new Set());
@@ -26,7 +40,7 @@ export default function AdminClientes() {
   // Modal de detalle de cliente
   const [selectedClient, setSelectedClient] = useState(null);
 
-  // --- 1. Estado Agendamiento Rápido ---
+  // Agendamiento Rápido
   const [quickBookingClient, setQuickBookingClient] = useState(null);
   const [bookingForm, setBookingForm] = useState({
     serviceId: String(services[0]?.id || ''),
@@ -40,7 +54,7 @@ export default function AdminClientes() {
   const [bookingSuccess, setBookingSuccess] = useState(null);
   const [bookingError, setBookingError] = useState(null);
 
-  // --- 2. Estado Campañas / Envíos de Email ---
+  // Campañas / Envíos de Email
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailForm, setEmailForm] = useState({
     subject: '💅 ¡Es hora de renovar tus uñas en Vanessa Nails Studio!',
@@ -51,7 +65,7 @@ export default function AdminClientes() {
   const [emailSubmitting, setEmailSubmitting] = useState(false);
   const [emailNotice, setEmailNotice] = useState(null);
 
-  // --- 3. Estado Histórico / Suspensión de Campañas ---
+  // Histórico / Suspensión de Campañas
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
@@ -85,9 +99,7 @@ export default function AdminClientes() {
     try {
       const res = await fetch('/api/admin/reminders');
       const data = await res.json();
-      if (res.ok) {
-        setCampaigns(data.campaigns || []);
-      }
+      if (res.ok) setCampaigns(data.campaigns || []);
     } catch (err) {
       console.warn('Error al cargar campañas:', err.message);
     } finally {
@@ -95,18 +107,12 @@ export default function AdminClientes() {
     }
   };
 
-  // Cargar slots cuando se abre agendamiento rápido o cambia fecha/servicio
   const loadSlotsForQuickBooking = useCallback(async (dateStr, serviceId) => {
     if (!dateStr || !serviceId) return;
     setLoadingSlots(true);
     try {
       const dateObj = new Date(`${dateStr}T12:00:00`);
       const busySlots = await getAvailableSlots(dateObj, serviceId);
-      
-      // Generar turnos sugeridos entre 10:00 y 19:00
-      const service = services.find((s) => String(s.id) === String(serviceId));
-      const durationMin = service?.duration || 120;
-
       const potentialStarts = ['10:00', '11:30', '13:00', '15:00', '16:30', '18:00'];
       const free = potentialStarts.filter((timeStr) => !busySlots.includes(timeStr));
 
@@ -126,7 +132,6 @@ export default function AdminClientes() {
     }
   }, [quickBookingClient, bookingForm.date, bookingForm.serviceId, loadSlotsForQuickBooking]);
 
-  // Selección de Clientes
   const filteredClients = useMemo(() => {
     return clients.filter((client) => {
       const query = searchTerm.toLowerCase().trim();
@@ -167,7 +172,6 @@ export default function AdminClientes() {
     }
   };
 
-  // KPIs
   const stats = useMemo(() => {
     const total = clients.length;
     const frequent = clients.filter((c) => c.totalReservations >= 3).length;
@@ -177,9 +181,7 @@ export default function AdminClientes() {
     return { total, frequent, rewardsAvailable, avgBookings };
   }, [clients]);
 
-  // Acciones de Agendamiento Rápido
   const handleOpenQuickBooking = (client) => {
-    // Buscar servicio preferido del cliente si existe
     const favService = services.find((s) => s.name === client.favoriteServices?.[0]);
     const serviceId = favService ? String(favService.id) : String(services[0]?.id || '');
 
@@ -238,7 +240,6 @@ export default function AdminClientes() {
     }
   };
 
-  // Acciones de Campaña de Email
   const handleOpenEmailModal = () => {
     setEmailNotice(null);
     setShowEmailModal(true);
@@ -276,8 +277,8 @@ export default function AdminClientes() {
       setEmailNotice({
         type: 'success',
         message: emailForm.isScheduled
-          ? '📅 Campaña programada exitosamente.'
-          : `🚀 ¡Se enviaron ${data.sentCount || targetClients.length} correos exitosamente!`,
+          ? 'Campaña programada exitosamente.'
+          : `¡Se enviaron ${data.sentCount || targetClients.length} correos exitosamente!`,
       });
 
       setTimeout(() => {
@@ -291,7 +292,6 @@ export default function AdminClientes() {
     }
   };
 
-  // Suspender Campaña
   const handleSuspendCampaign = async (campaignId) => {
     if (!confirm('¿Seguro que deseas suspender esta campaña programada?')) return;
     try {
@@ -362,7 +362,7 @@ export default function AdminClientes() {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Premio Fidelidad</span>
             <AdminMetricIcon variant="warning">
-              <span className="text-sm font-black">🎁</span>
+              <GiftIcon className="h-5 w-5 text-amber-500" />
             </AdminMetricIcon>
           </div>
           <p className="mt-3 text-3xl font-extrabold text-amber-600">{stats.rewardsAvailable}</p>
@@ -373,7 +373,7 @@ export default function AdminClientes() {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Promedio Citas</span>
             <AdminMetricIcon variant="default">
-              <span className="text-sm font-black">📊</span>
+              <ChartIcon className="h-5 w-5 text-slate-700" />
             </AdminMetricIcon>
           </div>
           <p className="mt-3 text-3xl font-extrabold text-slate-800">{stats.avgBookings}</p>
@@ -391,7 +391,9 @@ export default function AdminClientes() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pl-11 text-sm font-medium text-slate-800 transition focus:border-pink-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/20"
           />
-          <span className="absolute left-4 top-3.5 text-slate-400">🔍</span>
+          <span className="absolute left-4 top-3.5">
+            <SearchIcon className="h-4 w-4" />
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -419,16 +421,17 @@ export default function AdminClientes() {
               setShowCampaignsModal(true);
               fetchCampaigns();
             }}
-            className="rounded-2xl border border-slate-200 bg-slate-800 px-4 py-2.5 text-xs font-bold text-white shadow transition hover:bg-slate-900"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow transition hover:bg-slate-800"
           >
-            📋 Campañas Programadas
+            <ClipboardListIcon className="h-4 w-4" />
+            Campañas Programadas
           </button>
         </div>
       </div>
 
       {/* Barra de Acciones Flotante al Seleccionar Clientes */}
       {selectedEmails.size > 0 && (
-        <div className="sticky top-20 z-30 mb-6 flex items-center justify-between rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 p-4 text-white shadow-xl animate-bounce">
+        <div className="sticky top-20 z-30 mb-6 flex items-center justify-between rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 p-4 text-white shadow-xl">
           <div className="flex items-center gap-3">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-black">
               {selectedEmails.size}
@@ -438,13 +441,14 @@ export default function AdminClientes() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleOpenEmailModal}
-              className="rounded-xl bg-white px-4 py-2 text-xs font-extrabold text-pink-700 shadow hover:bg-pink-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-extrabold text-pink-700 shadow hover:bg-pink-50 transition"
             >
-              ✉️ Redactar Correo Masivo
+              <MailIcon className="h-4 w-4" />
+              Redactar Correo Masivo
             </button>
             <button
               onClick={() => setSelectedEmails(new Set())}
-              className="rounded-xl bg-pink-800/60 px-3 py-2 text-xs font-bold hover:bg-pink-800"
+              className="rounded-xl bg-pink-800/60 px-3 py-2 text-xs font-bold hover:bg-pink-800 transition"
             >
               Desmarcar
             </button>
@@ -468,7 +472,7 @@ export default function AdminClientes() {
         </div>
       ) : filteredClients.length === 0 ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-          <p className="text-4xl">💅</p>
+          <PolishBottleIcon className="mx-auto h-12 w-12 text-slate-400" />
           <h3 className="mt-3 text-lg font-bold text-slate-800">No se encontraron clientes</h3>
         </div>
       ) : (
@@ -548,12 +552,14 @@ export default function AdminClientes() {
 
                       <td className="px-6 py-4">
                         {client.loyalty?.rewardAvailable ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">
-                            🎁 Premio Listo ({client.loyalty.stamps}/6)
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">
+                            <GiftIcon className="h-3.5 w-3.5" />
+                            Premio Listo ({client.loyalty.stamps}/6)
                           </span>
                         ) : client.loyalty?.stamps > 0 ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-pink-100 px-3 py-1 text-xs font-bold text-pink-800">
-                            ✨ {client.loyalty.stamps} / 6 sellos
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1 text-xs font-bold text-pink-800">
+                            <SparkleIcon className="h-3.5 w-3.5 text-pink-600" />
+                            {client.loyalty.stamps} / 6 sellos
                           </span>
                         ) : (
                           <span className="text-xs text-slate-400">Sin tarjeta activa</span>
@@ -565,10 +571,11 @@ export default function AdminClientes() {
                           {/* BOTÓN AGENDAMIENTO RÁPIDO */}
                           <button
                             onClick={() => handleOpenQuickBooking(client)}
-                            className="rounded-xl bg-pink-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-pink-700"
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-pink-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-pink-700"
                             title="Agendar nueva cita con datos pre-rellenados"
                           >
-                            📅 Agendar
+                            <UserPlusIcon className="h-3.5 w-3.5 text-white" />
+                            Agendar
                           </button>
 
                           {waUrl && (
@@ -579,7 +586,7 @@ export default function AdminClientes() {
                               className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500 text-white shadow transition hover:bg-emerald-600"
                               title="Abrir WhatsApp"
                             >
-                              💬
+                              <WhatsAppIcon className="h-4 w-4" />
                             </a>
                           )}
                           <button
@@ -604,9 +611,12 @@ export default function AdminClientes() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Agendamiento Rápido ⚡</h3>
-                <p className="text-xs text-slate-500">Cliente: <b>{quickBookingClient.name}</b> ({quickBookingClient.email})</p>
+              <div className="flex items-center gap-2">
+                <UserPlusIcon className="h-5 w-5" />
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Agendamiento Rápido</h3>
+                  <p className="text-xs text-slate-500">Cliente: <b>{quickBookingClient.name}</b> ({quickBookingClient.email})</p>
+                </div>
               </div>
               <button onClick={() => setQuickBookingClient(null)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
                 <CloseIcon className="h-5 w-5" />
@@ -705,9 +715,12 @@ export default function AdminClientes() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Envío Masivo de Recordatorios ✉️</h3>
-                <p className="text-xs text-slate-500">Destinatarios: <b>{selectedEmails.size} clientes seleccionados</b></p>
+              <div className="flex items-center gap-2">
+                <MailIcon className="h-5 w-5" />
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Envío Masivo de Recordatorios</h3>
+                  <p className="text-xs text-slate-500">Destinatarios: <b>{selectedEmails.size} clientes seleccionados</b></p>
+                </div>
               </div>
               <button onClick={() => setShowEmailModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
                 <CloseIcon className="h-5 w-5" />
@@ -728,7 +741,7 @@ export default function AdminClientes() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-                  Cuerpo del Mensaje (Podés usar {'{nombre}'} y {'{ultima_cita}'})
+                  Cuerpo del Mensaje (Etiquetas: {'{nombre}'} y {'{ultima_cita}'})
                 </label>
                 <textarea
                   rows={5}
@@ -741,7 +754,7 @@ export default function AdminClientes() {
 
               {/* Selector Modo Envío */}
               <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
                     <input
                       type="radio"
@@ -750,7 +763,7 @@ export default function AdminClientes() {
                       onChange={() => setEmailForm((p) => ({ ...p, isScheduled: false }))}
                       className="text-pink-600"
                     />
-                    🚀 Envío Inmediato
+                    Envío Inmediato
                   </label>
 
                   <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
@@ -761,7 +774,7 @@ export default function AdminClientes() {
                       onChange={() => setEmailForm((p) => ({ ...p, isScheduled: true }))}
                       className="text-pink-600"
                     />
-                    📅 Programar Envío Futuro
+                    Programar Envío Futuro
                   </label>
                 </div>
 
@@ -818,9 +831,12 @@ export default function AdminClientes() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Campañas Programadas y Envíos 📋</h3>
-                <p className="text-xs text-slate-500">Historial y gestión de suspensión de envíos futuros</p>
+              <div className="flex items-center gap-2">
+                <ClipboardListIcon className="h-5 w-5" />
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Campañas Programadas y Envíos</h3>
+                  <p className="text-xs text-slate-500">Historial y gestión de suspensión de envíos futuros</p>
+                </div>
               </div>
               <button onClick={() => setShowCampaignsModal(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
                 <CloseIcon className="h-5 w-5" />
@@ -845,7 +861,7 @@ export default function AdminClientes() {
                                 ? 'bg-emerald-100 text-emerald-800'
                                 : camp.status === 'SUSPENDIDO'
                                 ? 'bg-rose-100 text-rose-800'
-                                : 'bg-amber-100 text-amber-800 animate-pulse'
+                                : 'bg-amber-100 text-amber-800'
                             }`}
                           >
                             {camp.status}
@@ -859,9 +875,10 @@ export default function AdminClientes() {
                       {camp.status === 'PENDIENTE' && (
                         <button
                           onClick={() => handleSuspendCampaign(camp.id)}
-                          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 font-bold text-rose-700 hover:bg-rose-100"
+                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 font-bold text-rose-700 hover:bg-rose-100 transition"
                         >
-                          ⛔ Suspender Envío
+                          <SuspendIcon className="h-3.5 w-3.5" />
+                          Suspender Envío
                         </button>
                       )}
                     </div>
@@ -882,7 +899,7 @@ export default function AdminClientes() {
         </div>
       )}
 
-      {/* MODAL 4: DETALLE CLIENTE (Existente) */}
+      {/* MODAL 4: DETALLE CLIENTE */}
       {selectedClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
@@ -944,9 +961,10 @@ export default function AdminClientes() {
                   setSelectedClient(null);
                   handleOpenQuickBooking(client);
                 }}
-                className="rounded-2xl bg-pink-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-pink-700"
+                className="inline-flex items-center gap-1.5 rounded-2xl bg-pink-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-pink-700 transition"
               >
-                ⚡ Agendar Cita Rápida
+                <UserPlusIcon className="h-4 w-4 text-white" />
+                Agendar Cita Rápida
               </button>
               <button
                 onClick={() => setSelectedClient(null)}

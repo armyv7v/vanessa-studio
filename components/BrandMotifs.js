@@ -263,3 +263,146 @@ export function UsersIcon({ className = 'h-5 w-5' }) {
   );
 }
 
+export function SearchIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="search-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F04A94" />
+          <stop offset="100%" stopColor="#C5A059" />
+        </linearGradient>
+      </defs>
+      <circle cx="11" cy="11" r="7" stroke="url(#search-grad)" strokeWidth="1.8" />
+      <path d="M20 20L16 16" stroke="url(#search-grad)" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function WhatsAppIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="wa-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#25D366" />
+          <stop offset="100%" stopColor="#128C7E" />
+        </linearGradient>
+      </defs>
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="url(#wa-grad)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="url(#wa-grad)" fillOpacity="0.1" />
+      <path d="M16.5 14.5c-.3 0-.7-.1-1.1-.3l-1.3-1.3c-.2-.2-.5-.3-.8-.1l-.6.6c-.2.2-.5.2-.8 0-.6-.4-1.3-.9-1.8-1.5-.5-.5-1-1.2-1.4-1.8-.2-.3-.2-.6 0-.8l.6-.6c.2-.2.2-.5.1-.8L8.1 7.6c-.2-.4-.3-.8-.3-1.1 0-.6.3-1.1.8-1.3.4-.2.9-.2 1.3 0 .4.2.8.5 1.1.9l.6.9c.2.3.2.7 0 1L11 9c-.2.2-.2.5 0 .8l2.2 2.2c.3.2.6.2.8 0l1.1-.6c.3-.2.7-.2 1 0l.9.6c.4.3.7.7.9 1.1.2.4.2.9 0 1.3-.2.5-.7.8-1.4.8z" fill="url(#wa-grad)" />
+    </svg>
+  );
+}
+
+export function MailIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="mail-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FF3F9A" />
+          <stop offset="100%" stopColor="#C5A059" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="5" width="18" height="14" rx="3" stroke="url(#mail-grad)" strokeWidth="1.8" fill="url(#mail-grad)" fillOpacity="0.08" />
+      <path d="M3 7l9 6 9-6" stroke="url(#mail-grad)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function GiftIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gift-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F59E0B" />
+          <stop offset="100%" stopColor="#D97706" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="8" width="18" height="13" rx="2" stroke="url(#gift-grad)" strokeWidth="1.8" fill="url(#gift-grad)" fillOpacity="0.1" />
+      <path d="M12 8v13" stroke="url(#gift-grad)" strokeWidth="1.8" />
+      <path d="M3 12h18" stroke="url(#gift-grad)" strokeWidth="1.5" />
+      <path d="M12 8C10.5 5 7.5 4 6 5.5S6.5 9.5 12 8z" stroke="url(#gift-grad)" strokeWidth="1.6" fill="url(#gift-grad)" fillOpacity="0.2" />
+      <path d="M12 8C13.5 5 16.5 4 18 5.5S17.5 9.5 12 8z" stroke="url(#gift-grad)" strokeWidth="1.6" fill="url(#gift-grad)" fillOpacity="0.2" />
+    </svg>
+  );
+}
+
+export function ChartIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="chart-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FF3F9A" />
+          <stop offset="100%" stopColor="#E6007E" />
+        </linearGradient>
+      </defs>
+      <path d="M4 19h16" stroke="url(#chart-grad)" strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="6" y="11" width="3" height="5" rx="1" fill="url(#chart-grad)" />
+      <rect x="11" y="7" width="3" height="9" rx="1" fill="url(#chart-grad)" />
+      <rect x="16" y="4" width="3" height="12" rx="1" fill="url(#chart-grad)" />
+    </svg>
+  );
+}
+
+export function ClockIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="clock-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#EDD9A3" />
+          <stop offset="100%" stopColor="#C5A059" />
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="12" r="9" stroke="url(#clock-grad)" strokeWidth="1.8" fill="url(#clock-grad)" fillOpacity="0.08" />
+      <path d="M12 7v5l3 2" stroke="url(#clock-grad)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function SuspendIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="suspend-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#EF4444" />
+          <stop offset="100%" stopColor="#991B1B" />
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="12" r="9" stroke="url(#suspend-grad)" strokeWidth="1.8" fill="url(#suspend-grad)" fillOpacity="0.1" />
+      <path d="M9 9h6v6H9z" fill="url(#suspend-grad)" />
+    </svg>
+  );
+}
+
+export function UserPlusIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="uplus-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FF3F9A" />
+          <stop offset="100%" stopColor="#E6007E" />
+        </linearGradient>
+      </defs>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="url(#uplus-grad)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="8.5" cy="7" r="4" stroke="url(#uplus-grad)" strokeWidth="1.8" />
+      <path d="M20 8v6M17 11h6" stroke="url(#uplus-grad)" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ClipboardListIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="clip-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#475569" />
+          <stop offset="100%" stopColor="#0F172A" />
+        </linearGradient>
+      </defs>
+      <rect x="5" y="4" width="14" height="17" rx="2" stroke="url(#clip-grad)" strokeWidth="1.8" fill="url(#clip-grad)" fillOpacity="0.05" />
+      <path d="M9 3h6v3H9z" fill="url(#clip-grad)" />
+      <path d="M9 10h6M9 14h6M9 18h4" stroke="url(#clip-grad)" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+
