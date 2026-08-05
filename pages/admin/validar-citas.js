@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { addDays, endOfDay, endOfWeek, format, startOfDay, startOfWeek, parseISO } from 'date-fns';
+import { addDays, subDays, endOfDay, endOfWeek, format, startOfDay, startOfWeek, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   Check,
@@ -39,8 +39,8 @@ function getFilterRange(filter) {
 
   if (filter === 'all') {
     return {
-      start: startOfDay(today),
-      end: endOfDay(addDays(today, 60)),
+      start: startOfDay(subDays(today, 90)),
+      end: endOfDay(addDays(today, 90)),
     };
   }
 
@@ -472,7 +472,7 @@ export default function ValidarCitas() {
                   {[
                     { id: 'today', label: 'Hoy' },
                     { id: 'week', label: 'Esta Semana' },
-                    { id: 'all', label: 'Ver Todo (60 días)' },
+                    { id: 'all', label: 'Ver Todo (Histórico)' },
                   ].map((tab) => (
                     <button
                       key={tab.id}
