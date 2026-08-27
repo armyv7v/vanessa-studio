@@ -14,14 +14,12 @@
     "gs:push": "cd scripts/google-script && npx @google/clasp push"
   },
   "dependencies": {
-    "@sendgrid/mail": "^8.0.0",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.542.0",
     "luxon": "^3.4.4",
     "next": "14.2.35",
     "react": "18.3.0",
     "react-confetti": "^6.1.0",
-    "react-day-picker": "^9.8.1",
     "react-dom": "18.3.0"
   },
   "devDependencies": {
