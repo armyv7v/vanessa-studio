@@ -10,6 +10,7 @@ import { useClientAutocomplete } from '../lib/useClientAutocomplete';
 import { isAllowedBusinessDay } from '../lib/calendarConfig';
 import { services as servicesData } from '../lib/services';
 import { generateTimeSlots } from '../lib/slots';
+import { getBackendApiUrl, getBackendHorariosUrl } from '../lib/backendRouting';
 
 const MorningIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -65,7 +66,7 @@ const CONFETTI_DURATION_MS = 8000;
 
 async function listSlotsViaApi({ date, serviceId }) {
   const params = new URLSearchParams({ date, serviceId: String(serviceId) });
-  const directSlotsUrl = process.env.NEXT_PUBLIC_API_WORKER_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/api';
+  const directSlotsUrl = getBackendApiUrl();
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
   const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
   const useHostedBackend = !isLocalHost && Boolean(process.env.NEXT_PUBLIC_API_WORKER_URL);
@@ -288,7 +289,7 @@ export default function BookingFlow({ config }) {
     let isMounted = true;
 
     async function fetchDisabledDays() {
-      const directHorariosUrl = process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/horarios';
+      const directHorariosUrl = getBackendHorariosUrl();
       const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
       const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
       const useHostedBackend = hostname.includes('pages.dev') && !isLocalHost && Boolean(process.env.NEXT_PUBLIC_BACKEND_HORARIOS_URL);

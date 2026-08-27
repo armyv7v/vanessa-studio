@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { AdminShieldIcon, ErrorIcon, ScanIcon, SuccessIcon, SparkleIcon } from '../components/BrandMotifs';
+import { getBackendApiUrl } from '../lib/backendRouting';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_WORKER_URL || 'https://vanessastudioback.netlify.app/.netlify/functions/api';
+const API_BASE = getBackendApiUrl();
 
 function LoyaltySummary({ card }) {
   if (!card) return null;
