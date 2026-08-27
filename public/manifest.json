@@ -3,9 +3,11 @@
   "short_name": "VNS",
   "description": "Reserva tu cita en Vanessa Nails Studio",
   "start_url": "/",
+  "scope": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#fef0f5",
-  "theme_color": "#d63384",
+  "theme_color": "#E6007E",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

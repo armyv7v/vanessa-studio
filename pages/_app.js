@@ -1,7 +1,18 @@
 import Head from 'next/head';
+import { useEffect } from 'react';
 import '../styles/globals.css';
 
 export default function App({ Component, pageProps }) {
+  // Registra el Service Worker en producción para hacer la app instalable (PWA)
+  // y precargar el app-shell. Solo en prod para no interferir con el dev/HMR.
+  useEffect(() => {
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        /* SW opcional: si falla, no rompe la app */
+      });
+    }
+  }, []);
+
   return (
     <>
       <Head>

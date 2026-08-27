@@ -1,5 +1,5 @@
 // Nombra y versiona tu caché. Cambia la versión para invalidar cachés antiguos.
-const CACHE_NAME = 'vanessa-nails-studio-cache-v2';
+const CACHE_NAME = 'vanessa-nails-studio-cache-v3';
 
 // Lista de archivos esenciales para el funcionamiento offline inicial.
 const urlsToCache = [
@@ -7,6 +7,9 @@ const urlsToCache = [
   '/extra-cupos',
   '/manifest.json',
   '/favicon.ico',
+  '/favicon.svg',
+  '/apple-touch-icon.png',
+  '/og-image.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
 ];
