@@ -1,11 +1,12 @@
 # Tasks: Harden Admin Auth
 
+> 🏁 **ESTADO: IMPLEMENTADO** (commit `b857ee5`). Archivado el 2026-08-27.
 > Depende de `harden-secrets-and-gitignore` para rotacion real de secretos y coordina con `harden-api-routes`.
 
 ## 1. Setup de secrets server-only
-- [ ] Definir `ADMIN_PASSWORD_HASH` en Vercel si se decide mover de password plana server-side a hash.
-- [ ] Definir `ADMIN_SESSION_SECRET` real en Vercel (32+ bytes aleatorios).
-- [ ] Eliminar `NEXT_PUBLIC_ADMIN_PASSWORD` y `NEXT_PUBLIC_ADMIN_PASSWORD_FALLBACK` de Vercel.
+- [x] Definir `ADMIN_PASSWORD_HASH` en Vercel si se decide mover de password plana server-side a hash. *(implementado: PBKDF2-SHA256 via WebCrypto, `pbkdf2$…`; ver `lib/adminSession.js` + `npm run hash:password`)*
+- [x] Definir `ADMIN_SESSION_SECRET` real en Vercel (32+ bytes aleatorios).
+- [x] Eliminar `NEXT_PUBLIC_ADMIN_PASSWORD` y `NEXT_PUBLIC_ADMIN_PASSWORD_FALLBACK` de Vercel.
 - [x] Documentar `ADMIN_PASSWORD` y `ADMIN_SESSION_SECRET` en `.env.example`.
 - [x] Eliminar `NEXT_PUBLIC_ADMIN_PASSWORD` de `.env.example`.
 
@@ -15,7 +16,7 @@
 - [x] Setear cookie `admin_session` firmada, `HttpOnly`, `SameSite=Strict`, `Secure` en produccion.
 - [x] Crear `pages/api/admin/logout.js` para expirar la cookie.
 - [x] Crear `pages/api/admin/session.js` para verificacion client-side sin exponer la cookie.
-- [ ] Reemplazar password plana por `ADMIN_PASSWORD_HASH` cuando se agregue estrategia de hashing.
+- [x] Reemplazar password plana por `ADMIN_PASSWORD_HASH` cuando se agregue estrategia de hashing. *(implementado: PBKDF2-SHA256, `lib/adminSession.js`)*
 
 ## 3. Crear middleware server-side
 - [x] Crear `middleware.js` en raiz.
@@ -71,4 +72,6 @@
 
 ## Deviations
 
-- La propuesta original mencionaba `jose`/JWT y `bcrypt`. Este slice evita nuevas dependencias y usa HMAC SHA-256 con WebCrypto para la firma de sesion. La password queda server-only, pero aun plana en env; el hash queda como hardening pendiente.
+- La propuesta original mencionaba `jose`/JWT y `bcrypt`. Se evitó (sin dependencias nuevas): firma de sesion con **HMAC SHA-256 WebCrypto** y password con **PBKDF2-SHA256 WebCrypto** (iteraciones 210000), ambas edge+node compatibles.
+- `ADMIN_PASSWORD` sigue siendo server-only; ahora acepta hash `pbkdf2$…` (preferido) con fallback a texto plano solo para la migración.
+- Pendiente menor (no bloqueante): test del PIN end-to-end y actualizar `ADMIN_PANEL_GUIDE.md`.

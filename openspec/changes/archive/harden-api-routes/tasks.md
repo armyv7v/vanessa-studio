@@ -1,5 +1,8 @@
 # Tasks: Harden API Routes
 
+> 🏁 **ESTADO: IMPLEMENTADO** (frontend + backend Netlify editado en local). Archivado 2026-08-27.
+> **Pendiente de deploy/ops:** subir el backend Netlify (PIN sin default + CORS por origen + sin `debug`), y deprecación de GAS (decisión en `formalize-backend-submodule`).
+
 ## Frontend (`/api/*`)
 
 ### 1. Rate limiting en booking

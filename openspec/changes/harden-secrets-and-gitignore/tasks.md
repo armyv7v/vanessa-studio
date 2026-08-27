@@ -1,5 +1,7 @@
 # Tasks: Harden Secrets and Gitignore
 
+> ⚠️ **ESTADO: OPERATIVO (NO CERRADO).** Este change NO es código: es una checklist de **operaciones en la nube** (rotar claves de Google, migrar GAS a PropertiesService) que requieren acceso a Google Cloud Console / Vercel / Netlify + coordinación con Vanessa. **No se puede cerrar desde el repo.** Sigue abierto.
+> Lo que sí está hecho del `.gitignore` está marcado abajo.
 > ⚠️ **Requiere coordinación** con Vercel/Netlify/GAS para no causar downtime.
 
 ## 1. Preparar nuevas credenciales (sin tocar producción todavía)
@@ -19,7 +21,7 @@
 - [ ] Editar `Code.gs` para leer de PropertiesService en vez de constants hardcodeadas
 
 ## 3. Hardening de `.gitignore`
-- [ ] Añadir entradas: `.dev.vars`, `.wrangler/`, `nul`, `*.local`
+- [x] Añadir entradas: `.dev.vars`, `.wrangler/`, `nul`, `*.local` *(`.dev.vars`, `.wrangler/`, `nul`, `npx` ya presentes; el genérico `*.local` no está — cubierto por `.env.*.local`)*
 - [ ] Quitar la entrada `.vercel` duplicada (dejar 1)
 - [ ] Commit: `chore(git): harden gitignore for secrets and platform artifacts`
 
