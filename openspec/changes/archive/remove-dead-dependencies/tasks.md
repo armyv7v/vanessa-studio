@@ -1,5 +1,8 @@
 # Tasks: Remove Dead Dependencies
 
+> 🏁 **ESTADO: IMPLEMENTADO.** Archivado 2026-08-27.
+> `@sendgrid/mail` y `react-day-picker` → 0 imports, eliminadas (`npm uninstall`). `lucide-react` VIVO (validar-citas.js) → se mantiene (decisión documentada). `esbuild` no declarado → N/A. **Fuera de este change:** consolidar `date-fns` vs `luxon` (→ `consolidate-config-drift`), probar `legacy-peer-deps`.
+
 ## 1. Confirmar que @sendgrid/mail y react-day-picker no se usan
 - [ ] `grep -rn "@sendgrid" pages/ components/ lib/ scripts/` → confirmar 0 matches
 - [ ] `grep -rn "react-day-picker\|day-picker\|DayPicker" pages/ components/ lib/` → confirmar 0 matches

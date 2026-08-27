@@ -105,7 +105,7 @@ El proyecto tiene **multiples variables redundantes** para el mismo propósito (
 ## 8. Cómo leer esta auditoría
 
 - **`specs/`** describe el sistema **AS-IS** (cómo funciona hoy, no cómo debería). Cada requirement tiene escenarios WHEN/THEN.
-- **`changes/`** contiene **propuestas de cambio** derivadas de la auditoría. Cada una tiene `proposal.md` (qué+cómo) y `tasks.md` (checklist). **Estado (2026-08-27):** `harden-admin-auth` y `harden-api-routes` están **implementados y archivados** en `changes/archive/`; el resto sigue sin ejecutar — el usuario decide cuáles aplicar. `harden-secrets-and-gitignore` queda **abierto** porque es un checklist de operaciones (rotación/GAS), no código.
+- **`changes/`** contiene **propuestas de cambio** derivadas de la auditoría. Cada una tiene `proposal.md` (qué+cómo) y `tasks.md` (checklist). **Estado (2026-08-27):** `harden-admin-auth`, `harden-api-routes` y los `remove-*` (cloudflare/dead-deps/patches) están **implementados y archivados** en `changes/archive/`; el resto sigue sin ejecutar — el usuario decide cuáles aplicar. `harden-secrets-and-gitignore` queda **abierto** porque es un checklist de operaciones (rotación/GAS), no código.
 - **Severidades:** `CRITICAL` / `HIGH` / `MEDIUM` / `LOW` en cada proposal.
 
 ---

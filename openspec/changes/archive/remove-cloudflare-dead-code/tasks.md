@@ -1,5 +1,7 @@
 # Tasks: Remove Cloudflare Dead Code
 
+> 🏁 **ESTADO: IMPLEMENTADO.** Archivado 2026-08-27. Toda la maquinaria Cloudflare (`.cf-deploy/`, `api-worker/`, `wrangler*`, `open-next.config*`, scripts `*:cf`, deps `@opennextjs/cloudflare`/`wrangler`) ya estaba removida; deploy Vercel verificado (home 200, build 10/10).
+
 > Ejecutar en orden. Verificar tras cada paso.
 
 ## 1. Backup de seguridad

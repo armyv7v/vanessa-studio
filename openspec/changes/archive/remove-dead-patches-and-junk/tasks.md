@@ -1,5 +1,7 @@
 # Tasks: Remove Dead Patches and Junk Files
 
+> 🏁 **ESTADO: IMPLEMENTADO.** Archivado 2026-08-27. Patches (`*.patch`/`*.diff`) y junk (`nul`, `npx`, `vanessa-nails@1.0.0`, `new.sh`) todos removidos; verificado con `npm run build`. Pendiente opcional: añadir patrones defensivos `nul`/`npx`/`*-@*` al `.gitignore`.
+
 - [ ] Crear branch `chore/remove-dead-patches` desde `main`
 - [ ] `git rm clasp-setup.patch extra-cupos-and-extra-flag.patch fix-availability.patch fix-duplicate-imports.patch fix-tailwind-styles.patch patch1.diff stable-slots-v1.patch`
 - [ ] `git rm nul npx vanessa-nails@1.0.0 new.sh`
