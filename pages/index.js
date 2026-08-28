@@ -27,9 +27,9 @@ export default function Home() {
 
   function handleReserve(serviceId) {
     setReserveState((prev) => ({ serviceId, signal: (prev?.signal || 0) + 1 }));
-    // Lleva el scroll al panel de reserva: la sección queda con su encabezado
-    // arriba y el calendario visible (como muestra la captura).
-    document.getElementById('reservar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Lleva el scroll directo al panel del calendario: así el encabezado no
+    // roba espacio arriba y el calendario queda visible (como en la captura).
+    document.getElementById('booking-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   return (
@@ -66,7 +66,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="premium-shell gloss-panel gradient-outline step-fade-in mt-10 !p-5 sm:!p-6 lg:!p-8">
+              <div id="booking-panel" className="premium-shell gloss-panel gradient-outline step-fade-in mt-10 scroll-mt-20 !p-5 sm:!p-6 lg:!p-8">
                 <BookingFlow config={normalConfig} initialService={reserveState?.serviceId} reserveSignal={reserveState?.signal} hideServiceSelect />
               </div>
             </div>
