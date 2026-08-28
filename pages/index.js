@@ -27,6 +27,8 @@ export default function Home() {
 
   function handleReserve(serviceId) {
     setReserveState((prev) => ({ serviceId, signal: (prev?.signal || 0) + 1 }));
+    // Lleva el scroll al panel de reserva: la sección queda con su encabezado
+    // arriba y el calendario visible (como muestra la captura).
     document.getElementById('reservar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -36,7 +38,7 @@ export default function Home() {
         <title>Vanessa Nails Studio | Reserva Premium de Citas en Coquimbo</title>
         <meta
           name="description"
-          content="Reservá tu cita en Vanessa Nails Studio, Coquimbo. Uñas acrílicas, polygel, softgel y esmaltado permanente con acabado premium. Agenda online."
+          content="Reserva tu cita en Vanessa Nails Studio, Coquimbo. Uñas acrílicas, polygel, softgel y esmaltado permanente con acabado premium. Agenda online."
         />
       </Head>
 
@@ -53,10 +55,10 @@ export default function Home() {
             <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
               <div className="mx-auto max-w-2xl text-center">
                 <span className="section-kicker">Reserva online</span>
-                <h2 className="headline-section mt-4">Agendá tu cita en minutos</h2>
+                <h2 className="headline-section mt-4">Agenda tu cita en minutos</h2>
                 <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-                  Seleccioná tu servicio, elegí el horario ideal y confirmá. Si no encontrás
-                  disponibilidad en el horario regular, revisá los{' '}
+                  Selecciona tu servicio, elige el horario ideal y confirma. Si no encuentras
+                  disponibilidad en el horario regular, revisa los{' '}
                   <Link href="/extra-cupos" className="font-semibold underline decoration-dotted" style={{ color: 'var(--brand)' }}>
                     extra cupos
                   </Link>{' '}

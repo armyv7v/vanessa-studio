@@ -995,7 +995,7 @@ export default function ValidarCitas() {
                   {sweepingPayments ? 'Liberando vencidas...' : 'Liberar Vencidas Manual'}
                 </button>
                 <p className="text-[10px] text-slate-400 mt-2 text-center leading-normal">
-                  El sistema limpia las citas automaticamente cada 15 minutos. Usa este boton si queres forzar la limpieza ahora.
+                  El sistema limpia las citas automaticamente cada 15 minutos. Usa este botón si quieres forzar la limpieza ahora.
                 </p>
               </div>
             </div>

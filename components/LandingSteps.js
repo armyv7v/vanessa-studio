@@ -3,18 +3,18 @@ import { SparkleIcon, CalendarIcon, ValidationIcon } from './BrandMotifs';
 const steps = [
   {
     icon: <SparkleIcon className="h-5 w-5" />,
-    title: 'Elegí tu servicio',
-    text: 'Explorá el menú y seleccioná el tratamiento que mejor se adapte a tus uñas.',
+    title: 'Elige tu servicio',
+    text: 'Explora el menú y selecciona el tratamiento que mejor se adapte a tus uñas.',
   },
   {
     icon: <CalendarIcon className="h-5 w-5" />,
-    title: 'Elegí fecha y hora',
-    text: 'Mirá el calendario en tiempo real y elegí el turno que te quede cómodo.',
+    title: 'Elige fecha y hora',
+    text: 'Mira el calendario en tiempo real y elige el turno que te quede cómodo.',
   },
   {
     icon: <ValidationIcon className="h-5 w-5" />,
-    title: 'Confirmá tu cita',
-    text: 'Completá tus datos en segundos y recibí la confirmación al toque.',
+    title: 'Confirma tu cita',
+    text: 'Completa tus datos en segundos y recibe la confirmación al toque.',
   },
 ];
 

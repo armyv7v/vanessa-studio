@@ -16,6 +16,10 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Las páginas admin generan page-data pesada; en máquinas lentas el default
+  // (60s) suele cortar el build con "page-data-collection-timeout". Subimos el
+  // presupuesto para builds deterministas (Vercel respeta este valor).
+  staticPageGenerationTimeout: 120,
 
   async redirects() {
     return [

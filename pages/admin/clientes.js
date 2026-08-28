@@ -79,7 +79,7 @@ export default function AdminClientes() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailForm, setEmailForm] = useState({
     subject: '💅 ¡Es hora de renovar tus uñas en Vanessa Nails Studio!',
-    bodyHtml: `Hola <b>{nombre}</b>,<br><br>Han pasado unos días desde tu última visita ({ultima_cita}). ¡Queremos invitarte a mantener tus uñas impecables y perfectas!<br><br>Recordá que podés agendar tu próximo turno en segundos.`,
+    bodyHtml: `Hola <b>{nombre}</b>,<br><br>Han pasado unos días desde tu última visita ({ultima_cita}). ¡Queremos invitarte a mantener tus uñas impecables y perfectas!<br><br>Recuerda que puedes agendar tu próximo turno en segundos.`,
     isScheduled: false,
     scheduledAt: DateTime.now().setZone('America/Santiago').plus({ days: 1 }).toFormat("yyyy-MM-dd'T'10:00"),
   });

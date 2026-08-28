@@ -482,8 +482,8 @@ export default function BookingFlow({ config, initialService, reserveSignal, hid
           {hideServiceSelect ? (
             <div className="flex flex-col items-center gap-4">
               <EmptyStateCard
-                title="Elegí tu servicio para continuar"
-                description="Seleccioná un tratamiento en la sección Servicios y te mostramos la disponibilidad del calendario al instante."
+                title="Elige tu servicio para continuar"
+                description="Selecciona un tratamiento en la sección Servicios y te mostramos la disponibilidad del calendario al instante."
               />
               <button
                 type="button"

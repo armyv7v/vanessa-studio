@@ -1,4 +1,4 @@
-import { WhatsAppIcon, SparkleIcon } from './BrandMotifs';
+import { WhatsAppIcon, MapPinIcon, ClockIcon } from './BrandMotifs';
 import { BUSINESS, WHATSAPP_BOOKING } from '../lib/businessInfo';
 
 export default function LandingContact() {
@@ -13,15 +13,15 @@ export default function LandingContact() {
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {/* Ubicación */}
           <div className="premium-card p-6">
-            <span className="motif-icon h-11 w-11"><SparkleIcon className="h-5 w-5" /></span>
-            <h3 className="mt-4 font-display text-lg font-semibold" style={{ color: 'var(--brand-darker)' }}>📍 Ubicación</h3>
+            <span className="motif-icon h-11 w-11"><MapPinIcon className="h-5 w-5" /></span>
+            <h3 className="mt-4 font-display text-lg font-semibold" style={{ color: 'var(--brand-darker)' }}>Ubicación</h3>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--ink-muted)' }}>{BUSINESS.address}</p>
           </div>
 
           {/* Horario */}
           <div className="premium-card p-6">
-            <span className="motif-icon h-11 w-11"><SparkleIcon className="h-5 w-5" /></span>
-            <h3 className="mt-4 font-display text-lg font-semibold" style={{ color: 'var(--brand-darker)' }}>🕒 Horario</h3>
+            <span className="motif-icon h-11 w-11"><ClockIcon className="h-5 w-5" /></span>
+            <h3 className="mt-4 font-display text-lg font-semibold" style={{ color: 'var(--brand-darker)' }}>Horario</h3>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--ink-muted)' }}>
               {BUSINESS.hours}
               <br />

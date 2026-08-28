@@ -23,7 +23,7 @@ export default function LandingGallery() {
           <span className="section-kicker-gold">Galería</span>
           <h2 className="headline-section mt-4">Mira nuestros trabajos de cerca</h2>
           <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-            Seguinos en Instagram para ver diseños reales, procesos y novedades.
+            Síguenos en Instagram para ver diseños reales, procesos y novedades.
           </p>
         </div>
 
@@ -37,7 +37,7 @@ export default function LandingGallery() {
               {BUSINESS.instagram}
             </h3>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--ink-muted)' }}>
-              Acrílicas · Polygel · Softgel · Esmaltado permanente. Inspirate y agendá tu próximo servicio.
+              Acrílicas · Polygel · Softgel · Esmaltado permanente. Inspírate y agenda tu próximo servicio.
             </p>
             <a
               href={BUSINESS.instagramUrl}

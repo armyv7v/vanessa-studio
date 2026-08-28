@@ -1,4 +1,4 @@
-import { SparkleIcon, GemIcon, PolishBottleIcon, WhatsAppIcon } from './BrandMotifs';
+import { SparkleIcon, GemIcon, PolishBottleIcon, WhatsAppIcon, MapPinIcon, ClockIcon, InstagramIcon } from './BrandMotifs';
 import { BUSINESS, WHATSAPP_DEFAULT } from '../lib/businessInfo';
 
 export default function LandingHero() {
@@ -26,7 +26,7 @@ export default function LandingHero() {
 
           <p className="max-w-xl text-base leading-relaxed sm:text-lg" style={{ color: 'var(--ink-muted)' }}>
             Uñas acrílicas, polygel, softgel y esmaltado permanente con acabado premium.
-            Elegí tu servicio, elige el horario ideal y confirmá tu cita en un flujo guiado, elegante y sin fricción.
+            Elige tu servicio, elige el horario ideal y confirma tu cita en un flujo guiado, elegante y sin fricción.
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -65,7 +65,7 @@ export default function LandingHero() {
               Bienvenida al estudio
             </p>
             <h2 className="font-display mt-3 text-2xl font-semibold leading-snug" style={{ color: 'var(--brand-darker)' }}>
-              Un lugar pensado para que tus manos hablen por vos.
+              Un lugar pensado para que tus manos hablen por ti.
             </h2>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--ink-muted)' }}>
               Trabajo certificado, materiales de calidad y atención personalizada en cada visita.
@@ -79,15 +79,15 @@ export default function LandingHero() {
 
             <div className="mt-6 space-y-2 rounded-2xl border p-4" style={{ borderColor: 'var(--gold-lighter)', background: 'var(--gold-lightest)' }}>
               <div className="flex items-center justify-between text-sm">
-                <span style={{ color: 'var(--gold-dark)' }}>📍 Ubicación</span>
+                <span className="flex items-center gap-2" style={{ color: 'var(--gold-dark)' }}><MapPinIcon className="h-4 w-4" /> Ubicación</span>
                 <span className="font-semibold" style={{ color: 'var(--ink-medium)' }}>{BUSINESS.addressShort}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span style={{ color: 'var(--gold-dark)' }}>🕒 Horario</span>
+                <span className="flex items-center gap-2" style={{ color: 'var(--gold-dark)' }}><ClockIcon className="h-4 w-4" /> Horario</span>
                 <span className="font-semibold" style={{ color: 'var(--ink-medium)' }}>{BUSINESS.hoursTime}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span style={{ color: 'var(--gold-dark)' }}>📸 Instagram</span>
+                <span className="flex items-center gap-2" style={{ color: 'var(--gold-dark)' }}><InstagramIcon className="h-4 w-4" /> Instagram</span>
                 <span className="font-semibold" style={{ color: 'var(--ink-medium)' }}>{BUSINESS.instagram}</span>
               </div>
             </div>

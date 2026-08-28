@@ -9,7 +9,7 @@ export default function LandingServices({ onReserve }) {
           <span className="section-kicker">Servicios</span>
           <h2 className="headline-section mt-4">Servicios pensados para tu mejor versión</h2>
           <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-            Cada servicio incluye asesoría personalizada. Elegí el que mejor se adapte a tus uñas.
+            Cada servicio incluye asesoría personalizada. Elige el que mejor se adapte a tus uñas.
           </p>
         </div>
 

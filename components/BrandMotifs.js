@@ -358,6 +358,37 @@ export function ClockIcon({ className = 'h-5 w-5' }) {
   );
 }
 
+export function MapPinIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="mappin-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#EDD9A3" />
+          <stop offset="100%" stopColor="#C5A059" />
+        </linearGradient>
+      </defs>
+      <path d="M20 10.5c0 5.2-6.8 9.7-8 10.5-1.2-.8-8-5.3-8-10.5a8 8 0 0 1 16 0Z" stroke="url(#mappin-grad)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="url(#mappin-grad)" fillOpacity="0.08" />
+      <circle cx="12" cy="10.5" r="3.2" stroke="url(#mappin-grad)" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+export function InstagramIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="instagram-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#EDD9A3" />
+          <stop offset="100%" stopColor="#C5A059" />
+        </linearGradient>
+      </defs>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="url(#instagram-grad)" strokeWidth="1.8" fill="url(#instagram-grad)" fillOpacity="0.06" />
+      <circle cx="12" cy="12" r="4" stroke="url(#instagram-grad)" strokeWidth="1.8" />
+      <circle cx="17.3" cy="6.7" r="1.2" fill="url(#instagram-grad)" />
+    </svg>
+  );
+}
+
 export function SuspendIcon({ className = 'h-5 w-5' }) {
   return (
     <svg viewBox="0 0 24 24" {...baseIconProps(className)} fill="none" xmlns="http://www.w3.org/2000/svg">
