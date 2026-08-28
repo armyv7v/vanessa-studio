@@ -4,7 +4,7 @@ import { services } from '../lib/services';
 export default function LandingServices({ onReserve }) {
   return (
     <section id="servicios" className="scroll-mt-24">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+      <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6 lg:px-8 lg:pt-12 lg:pb-20">
         <div className="mx-auto max-w-2xl text-center">
           <span className="section-kicker">Servicios</span>
           <h2 className="headline-section mt-4">Servicios pensados para tu mejor versión</h2>
@@ -13,7 +13,7 @@ export default function LandingServices({ onReserve }) {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service, index) => (
             <article
               key={service.id}
