@@ -1,4 +1,5 @@
 // pages/index.js
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import BookingFlow from '../components/BookingFlow';
@@ -20,6 +21,15 @@ const normalConfig = {
 };
 
 export default function Home() {
+  // Al elegir un servicio en la grilla del landing baja al reservador con
+  // ese servicio YA seleccionado (salta directo al calendario).
+  const [reserveState, setReserveState] = useState(null);
+
+  function handleReserve(serviceId) {
+    setReserveState((prev) => ({ serviceId, signal: (prev?.signal || 0) + 1 }));
+    document.getElementById('reservar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
     <>
       <Head>
@@ -35,7 +45,7 @@ export default function Home() {
 
         <main>
           <LandingHero />
-          <LandingServices />
+          <LandingServices onReserve={handleReserve} />
           <LandingSteps />
 
           {/* Reserva online */}
@@ -55,7 +65,7 @@ export default function Home() {
               </div>
 
               <div className="premium-shell gloss-panel gradient-outline step-fade-in mt-10 !p-5 sm:!p-6 lg:!p-8">
-                <BookingFlow config={normalConfig} />
+                <BookingFlow config={normalConfig} initialService={reserveState?.serviceId} reserveSignal={reserveState?.signal} hideServiceSelect />
               </div>
             </div>
           </section>

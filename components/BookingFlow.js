@@ -208,7 +208,7 @@ function StatusBanner({ bookingStatus }) {
   );
 }
 
-export default function BookingFlow({ config }) {
+export default function BookingFlow({ config, initialService, reserveSignal, hideServiceSelect }) {
   const {
     isExtra,
     mode = config?.isExtra ? 'extra' : 'normal',
@@ -412,6 +412,15 @@ export default function BookingFlow({ config }) {
     setStep(2);
   }
 
+  // Si el usuario tocó un servicio en la grilla del landing, preseleccionamos
+  // ese servicio y saltamos directo al calendario (evita la doble selección).
+  useEffect(() => {
+    if (initialService && reserveSignal) {
+      handleServiceSelect(initialService);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reserveSignal]);
+
   function handleDateSelect(date) {
     setSelectedDate(date);
     setSelectedTime('');
@@ -470,6 +479,21 @@ export default function BookingFlow({ config }) {
             description="Elige el estilo que quieres lucir. Cada opción muestra el tiempo estimado para que reserves con claridad y sin sorpresas."
           />
 
+          {hideServiceSelect ? (
+            <div className="flex flex-col items-center gap-4">
+              <EmptyStateCard
+                title="Elegí tu servicio para continuar"
+                description="Seleccioná un tratamiento en la sección Servicios y te mostramos la disponibilidad del calendario al instante."
+              />
+              <button
+                type="button"
+                onClick={() => document.getElementById('servicios')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="premium-button py-2 px-5 text-xs"
+              >
+                Ver servicios ↑
+              </button>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {services.map((service, index) => (
               <button
@@ -509,6 +533,7 @@ export default function BookingFlow({ config }) {
               </button>
             ))}
           </div>
+          )}
         </section>
       ) : null}
 
@@ -566,7 +591,13 @@ export default function BookingFlow({ config }) {
           ) : null}
 
           <div className="mt-5 flex justify-center">
-             <button type="button" onClick={() => setStep(1)} className="premium-button-secondary py-2 px-5 text-xs">
+             <button
+               type="button"
+               onClick={() => hideServiceSelect
+                 ? document.getElementById('servicios')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                 : setStep(1)}
+               className="premium-button-secondary py-2 px-5 text-xs"
+             >
                Volver a servicios
              </button>
           </div>

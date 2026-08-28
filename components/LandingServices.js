@@ -1,7 +1,7 @@
 import { ClockIcon } from './BrandMotifs';
 import { services } from '../lib/services';
 
-export default function LandingServices() {
+export default function LandingServices({ onReserve }) {
   return (
     <section id="servicios" className="scroll-mt-24">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
@@ -42,16 +42,15 @@ export default function LandingServices() {
                 </div>
               ) : null}
 
-              <a
-                href="#reservar"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold transition"
-                style={{ color: 'var(--brand)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--brand-dark)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--brand)')}
+              <button
+                type="button"
+                onClick={() => onReserve(service.id)}
+                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold transition hover:translate-x-0.5"
+                style={{ color: 'var(--brand)', cursor: 'pointer' }}
               >
                 Reservar este servicio
                 <span aria-hidden="true">→</span>
-              </a>
+              </button>
             </article>
           ))}
         </div>
