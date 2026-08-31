@@ -37,6 +37,8 @@ const defaultGalleryItems = [
   },
 ];
 
+const realGalleryImages = Array.from({ length: 15 }, (_, i) => `/gallery/modelo-${i + 1}.webp`);
+
 function InstagramGlyph({ className = 'h-6 w-6' }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -52,14 +54,14 @@ export default function LandingGallery({ images = [] }) {
   const [isPaused, setIsPaused] = useState(false);
   const timerRef = useRef(null);
 
-  const items = images.length > 0
-    ? images.map((src, i) => ({
-        src,
-        title: `Diseño ${i + 1}`,
-        category: 'Modelo Real',
-        tag: 'Vanessa Nails',
-      }))
-    : defaultGalleryItems;
+  const activeImages = images.length > 0 ? images : realGalleryImages;
+
+  const items = activeImages.map((src, i) => ({
+    src,
+    title: `Modelo Real ${i + 1}`,
+    category: 'Vanessa Nails Studio',
+    tag: 'Trabajo Real',
+  }));
 
   const total = items.length;
 
