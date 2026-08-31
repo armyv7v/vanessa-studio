@@ -8,6 +8,7 @@ import LandingHero from '../components/LandingHero';
 import LandingServices from '../components/LandingServices';
 import LandingSteps from '../components/LandingSteps';
 import LandingGallery from '../components/LandingGallery';
+import LandingTestimonials from '../components/LandingTestimonials';
 import LandingContact from '../components/LandingContact';
 import { WhatsAppIcon } from '../components/BrandMotifs';
 import { BUSINESS, WHATSAPP_DEFAULT } from '../lib/businessInfo';
@@ -72,19 +73,26 @@ export default function Home() {
             </div>
           </section>
 
+          <LandingTestimonials />
           <LandingGallery />
           <LandingContact />
         </main>
 
         <footer className="border-t border-white/70" style={{ background: 'linear-gradient(180deg, rgba(255,251,253,0.94), rgba(254,240,246,0.96))' }}>
           <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-10 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
-            <div className="text-center sm:text-left">
-              <p className="font-display text-lg font-semibold" style={{ color: 'var(--brand-darker)' }}>
-                Vanessa Nails<span style={{ color: 'var(--brand)' }}> Studio</span>
-              </p>
-              <p className="mt-1 text-xs" style={{ color: 'var(--ink-faint)' }}>
-                {BUSINESS.address} · {BUSINESS.phone}
-              </p>
+            <div className="flex flex-col items-center text-center sm:flex-row sm:gap-3 sm:text-left">
+              <div className="relative h-10 w-10 overflow-hidden rounded-full border border-pink-200 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.jpg" alt="Logo Vanessa Nails" className="h-full w-full object-cover" />
+              </div>
+              <div>
+                <p className="font-display text-lg font-semibold" style={{ color: 'var(--brand-darker)' }}>
+                  Vanessa Nails<span style={{ color: 'var(--brand)' }}> Studio</span>
+                </p>
+                <p className="mt-0.5 text-xs" style={{ color: 'var(--ink-faint)' }}>
+                  {BUSINESS.address} · {BUSINESS.phone}
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2">

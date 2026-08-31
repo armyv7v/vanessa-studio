@@ -1,10 +1,12 @@
+import Image from 'next/image';
 import Link from 'next/link';
-import { WhatsAppIcon, SparkleIcon } from './BrandMotifs';
+import { WhatsAppIcon } from './BrandMotifs';
 import { WHATSAPP_DEFAULT } from '../lib/businessInfo';
 
 const links = [
   { href: '#servicios', label: 'Servicios' },
   { href: '#como-reservar', label: 'Cómo reservar' },
+  { href: '#testimonios', label: 'Testimonios' },
   { href: '#galeria', label: 'Galería' },
   { href: '#contacto', label: 'Contacto' },
 ];
@@ -21,12 +23,14 @@ export default function LandingNav() {
       >
         {/* Marca */}
         <Link href="/" className="flex items-center gap-2.5" style={{ color: 'var(--brand-darker)' }}>
-          <span
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm"
-            style={{ background: 'var(--brand-lightest)', borderColor: 'rgba(230,0,126,0.20)', color: 'var(--brand)' }}
-          >
-            <SparkleIcon className="h-4 w-4" />
-          </span>
+          <div className="relative h-9 w-9 overflow-hidden rounded-full border border-pink-200/80 shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.jpg"
+              alt="Logo Vanessa Nails Studio"
+              className="h-full w-full object-cover"
+            />
+          </div>
           <span className="font-display text-lg font-semibold leading-none tracking-tight">
             Vanessa Nails<span style={{ color: 'var(--brand)' }}> Studio</span>
           </span>

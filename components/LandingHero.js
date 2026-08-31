@@ -72,9 +72,18 @@ export default function LandingHero() {
             </p>
 
             <div className="mt-6 flex items-center gap-4">
-              <span className="motif-icon h-12 w-12"><PolishBottleIcon className="h-6 w-6" /></span>
-              <span className="motif-icon h-12 w-12"><GemIcon className="h-6 w-6" /></span>
-              <span className="motif-icon h-12 w-12"><SparkleIcon className="h-6 w-6" /></span>
+              <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-pink-200 shadow-md">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo.jpg"
+                  alt="Vanessa Nails Logo"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div>
+                <p className="font-display text-sm font-semibold" style={{ color: 'var(--brand-darker)' }}>Vanessa Nails Studio</p>
+                <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>Calidad & Estilo Premium</p>
+              </div>
             </div>
 
             <div className="mt-6 space-y-2 rounded-2xl border p-4" style={{ borderColor: 'var(--gold-lighter)', background: 'var(--gold-lightest)' }}>
