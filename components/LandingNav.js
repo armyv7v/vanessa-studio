@@ -22,8 +22,8 @@ export default function LandingNav() {
         }}
       >
         {/* Marca */}
-        <Link href="/" className="flex items-center gap-2.5" style={{ color: 'var(--brand-darker)' }}>
-          <div className="relative h-9 w-9 overflow-hidden rounded-full border border-pink-200/80 shadow-sm">
+        <Link href="/" className="flex items-center gap-3 shrink-0" style={{ color: 'var(--brand-darker)' }}>
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-pink-200/80 shadow-sm">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo.jpg"
@@ -31,7 +31,7 @@ export default function LandingNav() {
               className="h-full w-full object-cover"
             />
           </div>
-          <span className="font-display text-lg font-semibold leading-none tracking-tight">
+          <span className="font-display text-lg font-semibold leading-none tracking-tight whitespace-nowrap">
             Vanessa Nails<span style={{ color: 'var(--brand)' }}> Studio</span>
           </span>
         </Link>

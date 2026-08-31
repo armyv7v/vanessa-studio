@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { SparkleIcon } from './BrandMotifs';
 import { BUSINESS } from '../lib/businessInfo';
 
@@ -15,33 +15,24 @@ function InstagramGlyph({ className = 'h-6 w-6' }) {
 }
 
 export default function LandingGallery({ images = [] }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [activeModalImage, setActiveModalImage] = useState(null);
-  const timerRef = useRef(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
 
   const activeImages = images.length > 0 ? images : realGalleryImages;
   const total = activeImages.length;
 
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % total);
-  };
-
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + total) % total);
-  };
-
-  useEffect(() => {
-    if (!isPaused && total > 1 && !activeModalImage) {
-      timerRef.current = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % total);
-      }, 4500);
+  const handleNext = (e) => {
+    e?.stopPropagation();
+    if (selectedIndex !== null) {
+      setSelectedIndex((prev) => (prev + 1) % total);
     }
+  };
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isPaused, total, activeModalImage]);
+  const handlePrev = (e) => {
+    e?.stopPropagation();
+    if (selectedIndex !== null) {
+      setSelectedIndex((prev) => (prev - 1 + total) % total);
+    }
+  };
 
   return (
     <section id="galeria" className="scroll-mt-24">
@@ -49,129 +40,105 @@ export default function LandingGallery({ images = [] }) {
         <div className="mx-auto max-w-2xl text-center">
           <span className="section-kicker-gold">
             <SparkleIcon className="h-3.5 w-3.5" />
-            Galería de Diseños
+            Galería & Trabajos Reales
           </span>
-          <h2 className="headline-section mt-4">Modelos de Uñas Realizados</h2>
+          <h2 className="headline-section mt-4">Modelos de Uñas</h2>
           <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-            Haz clic sobre cualquier foto para ver el trabajo en tamaño completo.
+            Vistas previas de nuestros trabajos. Toca cualquier foto para ampliarla y ver los detalles en alta resolución.
           </p>
         </div>
 
-        {/* Carrusel de Modelos */}
-        <div
-          className="relative mt-12 overflow-hidden rounded-3xl p-2 sm:p-4"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
-          <div className="relative mx-auto max-w-3xl overflow-hidden rounded-2xl">
-            <div
-              className="flex transition-transform duration-500 ease-out"
-              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        {/* Grilla de Miniaturas (Vista Previa Compacta) */}
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 sm:gap-4">
+          {activeImages.map((src, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => setSelectedIndex(index)}
+              className="group relative aspect-square w-full overflow-hidden rounded-2xl border border-pink-200/60 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#E11B74]/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#E11B74]"
             >
-              {activeImages.map((src, index) => (
-                <div key={index} className="min-w-full flex-shrink-0 px-2 sm:px-4">
-                  <div
-                    onClick={() => setActiveModalImage(src)}
-                    className="group premium-panel gloss-panel gradient-outline relative cursor-pointer overflow-hidden rounded-2xl transition hover:scale-[1.01] hover:shadow-xl"
-                  >
-                    {/* Contenedor con aspecto estándar 4:3 para encuadre uniforme */}
-                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-900/5">
-                      {/* Blur de fondo sutil */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={src}
-                        alt={`Modelo de uñas Vanessa Nails ${index + 1}`}
-                        className="absolute inset-0 h-full w-full object-cover blur-md opacity-30 scale-110"
-                      />
-                      {/* Imagen principal limpia */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={src}
-                        alt={`Modelo de uñas Vanessa Nails ${index + 1}`}
-                        className="relative z-10 h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
-                      />
-                      {/* Overlay con indicación de ampliar al pasar el mouse */}
-                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                        <span className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-semibold shadow-lg backdrop-blur-md" style={{ color: 'var(--brand-darker)' }}>
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                          </svg>
-                          Ver en tamaño grande
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+              <div className="relative h-full w-full overflow-hidden rounded-xl bg-neutral-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt={`Modelo de uñas Vanessa Nails ${index + 1}`}
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  loading="lazy"
+                />
+                
+                {/* Indicador sutil de ampliar */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  <span className="rounded-full bg-white/90 p-2 text-pink-600 shadow-md backdrop-blur-sm">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                    </svg>
+                  </span>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Botones de navegación (Flechas) */}
-          <button
-            onClick={handlePrev}
-            aria-label="Anterior modelo"
-            className="absolute left-3 top-1/2 z-30 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/85 p-3 shadow-md backdrop-blur-md transition hover:bg-white sm:left-6"
-            style={{ color: 'var(--brand-darker)' }}
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-
-          <button
-            onClick={handleNext}
-            aria-label="Siguiente modelo"
-            className="absolute right-3 top-1/2 z-30 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/85 p-3 shadow-md backdrop-blur-md transition hover:bg-white sm:right-6"
-            style={{ color: 'var(--brand-darker)' }}
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-
-          {/* Indicadores (Dots) */}
-          <div className="mt-6 flex justify-center gap-1.5 flex-wrap px-4">
-            {activeImages.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentIndex(i)}
-                aria-label={`Ir al slide ${i + 1}`}
-                className={`h-2.5 rounded-full transition-all duration-300 ${
-                  currentIndex === i ? 'w-7 bg-[#E11B74]' : 'w-2.5 bg-pink-200 hover:bg-pink-300'
-                }`}
-              />
-            ))}
-          </div>
+              </div>
+            </button>
+          ))}
         </div>
 
-        {/* Modal / Lightbox de Tamaño Grande */}
-        {activeModalImage && (
+        {/* Lightbox Modal para Ver Imagen en Grande con Navegación */}
+        {selectedIndex !== null && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm animate-fadeIn"
-            onClick={() => setActiveModalImage(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md animate-fadeIn"
+            onClick={() => setSelectedIndex(null)}
           >
             <div
-              className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-2xl bg-neutral-900 p-2 shadow-2xl"
+              className="relative flex max-h-[92vh] max-w-[92vw] flex-col items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Botón cerrar */}
               <button
-                onClick={() => setActiveModalImage(null)}
-                aria-label="Cerrar imagen grande"
-                className="absolute right-4 top-4 z-50 rounded-full bg-black/60 p-2.5 text-white transition hover:bg-black/90"
+                onClick={() => setSelectedIndex(null)}
+                aria-label="Cerrar vista grande"
+                className="absolute -top-12 right-0 z-50 flex items-center gap-1 rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md transition hover:bg-white/40"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <span>Cerrar</span>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
-              {/* Imagen a tamaño completo */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={activeModalImage}
-                alt="Trabajo de uñas Vanessa Nails ampliado"
-                className="max-h-[85vh] max-w-[88vw] rounded-xl object-contain"
-              />
+              {/* Imagen ampliada */}
+              <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-neutral-950 shadow-2xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={activeImages[selectedIndex]}
+                  alt={`Modelo ampliado ${selectedIndex + 1}`}
+                  className="max-h-[80vh] max-w-[88vw] object-contain"
+                />
+
+                {/* Flechas de navegación dentro del modal */}
+                {total > 1 && (
+                  <>
+                    <button
+                      onClick={handlePrev}
+                      aria-label="Anterior foto"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-3 text-white backdrop-blur-md transition hover:bg-black/90"
+                    >
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleNext}
+                      aria-label="Siguiente foto"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-3 text-white backdrop-blur-md transition hover:bg-black/90"
+                    >
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Contador de foto */}
+              <p className="mt-3 text-xs font-semibold text-white/80">
+                {selectedIndex + 1} de {total}
+              </p>
             </div>
           </div>
         )}
