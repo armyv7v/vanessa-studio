@@ -18,15 +18,34 @@ export default function LandingGallery({ images = [] }) {
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
+  const [panPos, setPanPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [scrollProgress, setScrollProgress] = useState(0);
+
   const scrollContainerRef = useRef(null);
   const animFrameRef = useRef(null);
 
   const baseImages = images.length > 0 ? images : realGalleryImages;
-  // Duplicamos el array para lograr un bucle infinito continuo e imperceptible
   const displayImages = [...baseImages, ...baseImages];
   const total = baseImages.length;
 
-  // Auto-scroll continuo e infinito
+  // Bloqueo estricto del scroll del fondo (body) cuando el modal está abierto
+  useEffect(() => {
+    if (selectedIndex !== null) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [selectedIndex]);
+
+  // Auto-scroll continuo ultra lento e infinito con actualización de barra de progreso
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -38,14 +57,17 @@ export default function LandingGallery({ images = [] }) {
       lastTime = time;
 
       if (!isPaused && selectedIndex === null) {
-        // Avance de 0.6px por frame (~36px/seg) para un desplazamiento suave y elegante
-        el.scrollLeft += (delta * 0.04);
+        // Velocidad pausada y ultra elegante (~16px/seg)
+        el.scrollLeft += (delta * 0.018);
 
-        // Si llega a la mitad del contenedor (fin del primer set), resetea silenciosamente al inicio
         const maxScroll = el.scrollWidth / 2;
         if (el.scrollLeft >= maxScroll) {
           el.scrollLeft -= maxScroll;
         }
+
+        // Cálculo de barra de progreso (0% a 100%)
+        const progress = (el.scrollLeft % maxScroll) / maxScroll;
+        setScrollProgress(Math.min(100, Math.max(0, progress * 100)));
       }
 
       animFrameRef.current = requestAnimationFrame(step);
@@ -58,19 +80,56 @@ export default function LandingGallery({ images = [] }) {
     };
   }, [isPaused, selectedIndex]);
 
-  // Manejo de zoom con scroll de mouse (Wheel)
+  // Manejo de scroll manual en el carrusel para actualizar la barra de progreso
+  const handleContainerScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth / 2;
+    const progress = (el.scrollLeft % maxScroll) / maxScroll;
+    setScrollProgress(Math.min(100, Math.max(0, progress * 100)));
+  };
+
+  // Zoom con rueda de mouse exclusivamente sobre el modal
   const handleWheelZoom = (e) => {
+    e.preventDefault();
     e.stopPropagation();
     setZoomScale((prev) => {
       const delta = e.deltaY < 0 ? 0.35 : -0.35;
-      return Math.min(4, Math.max(1, +(prev + delta).toFixed(2)));
+      const nextScale = Math.min(5, Math.max(1, +(prev + delta).toFixed(2)));
+      if (nextScale === 1) setPanPos({ x: 0, y: 0 });
+      return nextScale;
     });
+  };
+
+  // Drag & Pan para desplazarse dentro de la foto ampliada
+  const handleMouseDown = (e) => {
+    if (zoomScale <= 1) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panPos.x, y: e.clientY - panPos.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || zoomScale <= 1) return;
+    setPanPos({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const resetModalState = () => {
+    setZoomScale(1);
+    setPanPos({ x: 0, y: 0 });
+    setIsDragging(false);
   };
 
   const handleNextModal = (e) => {
     e?.stopPropagation();
     if (selectedIndex !== null) {
-      setZoomScale(1);
+      resetModalState();
       setSelectedIndex((prev) => (prev + 1) % total);
     }
   };
@@ -78,7 +137,7 @@ export default function LandingGallery({ images = [] }) {
   const handlePrevModal = (e) => {
     e?.stopPropagation();
     if (selectedIndex !== null) {
-      setZoomScale(1);
+      resetModalState();
       setSelectedIndex((prev) => (prev - 1 + total) % total);
     }
   };
@@ -100,11 +159,11 @@ export default function LandingGallery({ images = [] }) {
           </span>
           <h2 className="headline-section mt-4">Modelos de Uñas</h2>
           <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-            El carrusel se desplaza automáticamente. Coloca el cursor sobre cualquier foto para pausar, o haz clic para ampliarla con zoom interactivo.
+            Desplazamiento continuo de nuestras creaciones. Detén el cursor sobre cualquier foto para pausar o haz clic para abrir el visor interactivo.
           </p>
         </div>
 
-        {/* Carrusel Multi-Card Infinito con Pausa en Hover */}
+        {/* Carrusel Multi-Card Infinito y Lento */}
         <div
           className="relative mt-10 px-2 sm:px-6"
           onMouseEnter={() => setIsPaused(true)}
@@ -122,9 +181,10 @@ export default function LandingGallery({ images = [] }) {
             </svg>
           </button>
 
-          {/* Track Horizontal de Miniaturas con Desplazamiento Infinito */}
+          {/* Track Horizontal de Miniaturas */}
           <div
             ref={scrollContainerRef}
+            onScroll={handleContainerScroll}
             className="flex gap-4 overflow-x-auto py-4 no-scrollbar"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
@@ -135,7 +195,7 @@ export default function LandingGallery({ images = [] }) {
                   key={index}
                   type="button"
                   onClick={() => {
-                    setZoomScale(1);
+                    resetModalState();
                     setSelectedIndex(realIndex);
                   }}
                   className="group relative aspect-square h-44 w-44 shrink-0 overflow-hidden rounded-2xl border border-pink-200/60 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#E11B74]/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#E11B74] sm:h-52 sm:w-52"
@@ -175,40 +235,58 @@ export default function LandingGallery({ images = [] }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
+
+          {/* Barra de progreso inferior del carrusel */}
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <div className="h-1.5 w-48 overflow-hidden rounded-full bg-pink-100 shadow-inner sm:w-64">
+              <div
+                className="h-full rounded-full transition-all duration-150 ease-out"
+                style={{
+                  width: `${scrollProgress}%`,
+                  background: 'linear-gradient(90deg, #E11B74, #C5A059)',
+                }}
+              />
+            </div>
+            <span className="text-[11px] font-semibold tracking-wider text-pink-400">
+              {Math.round((scrollProgress / 100) * total) || 1} / {total}
+            </span>
+          </div>
         </div>
 
-        {/* Lightbox Modal con Zoom por Scroll de Mouse */}
+        {/* Lightbox Modal con Bloqueo de Scroll de Fondo, Zoom y Desplazamiento */}
         {selectedIndex !== null && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/92 p-4 backdrop-blur-md animate-fadeIn select-none"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/94 p-4 backdrop-blur-lg animate-fadeIn select-none overflow-hidden"
             onClick={() => {
               setSelectedIndex(null);
-              setZoomScale(1);
+              resetModalState();
             }}
           >
             <div
-              className="relative flex max-h-[95vh] max-w-[95vw] flex-col items-center justify-center"
+              className="relative flex max-h-[96vh] max-w-[96vw] flex-col items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Barra de Controles Superior */}
               <div className="absolute -top-14 left-0 right-0 z-50 flex items-center justify-between px-2">
                 <div className="flex items-center gap-2 rounded-full bg-white/20 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
-                  <span>🔍 Scroll de mouse para zoom:</span>
-                  <span className="rounded bg-pink-600/80 px-1.5 py-0.5 text-[11px]">{zoomScale}x</span>
-                  {zoomScale > 1 && (
+                  <span>🔍 Zoom:</span>
+                  <span className="rounded bg-pink-600/90 px-2 py-0.5 text-[11px] font-bold">{zoomScale}x</span>
+                  {zoomScale > 1 ? (
                     <button
-                      onClick={() => setZoomScale(1)}
+                      onClick={resetModalState}
                       className="ml-1 underline hover:text-pink-300"
                     >
                       (restablecer)
                     </button>
+                  ) : (
+                    <span className="text-[11px] opacity-80">(usa la rueda del mouse)</span>
                   )}
                 </div>
 
                 <button
                   onClick={() => {
                     setSelectedIndex(null);
-                    setZoomScale(1);
+                    resetModalState();
                   }}
                   aria-label="Cerrar vista grande"
                   className="flex items-center gap-1 rounded-full bg-white/20 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md transition hover:bg-white/40"
@@ -220,20 +298,27 @@ export default function LandingGallery({ images = [] }) {
                 </button>
               </div>
 
-              {/* Contenedor de la Imagen con Zoom por Wheel Scroll */}
+              {/* Contenedor de Imagen con Zoom e Interacción de Arrastre */}
               <div
                 onWheel={handleWheelZoom}
-                className="relative overflow-hidden rounded-2xl border border-white/20 bg-neutral-950 shadow-2xl cursor-zoom-in"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                className={`relative overflow-hidden rounded-2xl border border-white/20 bg-neutral-950 shadow-2xl ${
+                  zoomScale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'
+                }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={baseImages[selectedIndex]}
                   alt={`Modelo ampliado ${selectedIndex + 1}`}
+                  draggable={false}
                   style={{
-                    transform: `scale(${zoomScale})`,
-                    transition: 'transform 0.15s ease-out',
+                    transform: `scale(${zoomScale}) translate(${panPos.x / zoomScale}px, ${panPos.y / zoomScale}px)`,
+                    transition: isDragging ? 'none' : 'transform 0.15s ease-out',
                   }}
-                  className="max-h-[78vh] max-w-[85vw] object-contain origin-center"
+                  className="max-h-[80vh] max-w-[88vw] object-contain origin-center select-none pointer-events-none"
                 />
 
                 {/* Flechas de navegación en modal */}
