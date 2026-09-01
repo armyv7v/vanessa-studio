@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { SparkleIcon } from './BrandMotifs';
 import { BUSINESS } from '../lib/businessInfo';
 
@@ -16,18 +16,31 @@ function InstagramGlyph({ className = 'h-6 w-6' }) {
 
 export default function LandingGallery({ images = [] }) {
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const scrollContainerRef = useRef(null);
 
   const activeImages = images.length > 0 ? images : realGalleryImages;
   const total = activeImages.length;
 
-  const handleNext = (e) => {
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -320, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 320, behavior: 'smooth' });
+    }
+  };
+
+  const handleNextModal = (e) => {
     e?.stopPropagation();
     if (selectedIndex !== null) {
       setSelectedIndex((prev) => (prev + 1) % total);
     }
   };
 
-  const handlePrev = (e) => {
+  const handlePrevModal = (e) => {
     e?.stopPropagation();
     if (selectedIndex !== null) {
       setSelectedIndex((prev) => (prev - 1 + total) % total);
@@ -44,42 +57,74 @@ export default function LandingGallery({ images = [] }) {
           </span>
           <h2 className="headline-section mt-4">Modelos de Uñas</h2>
           <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-            Vistas previas de nuestros trabajos. Toca cualquier foto para ampliarla y ver los detalles en alta resolución.
+            Desliza el carrusel para ver las miniaturas de nuestros trabajos. Toca cualquier foto para ampliarla en alta resolución.
           </p>
         </div>
 
-        {/* Grilla de Miniaturas (Vista Previa Compacta) */}
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 sm:gap-4">
-          {activeImages.map((src, index) => (
-            <button
-              key={index}
-              type="button"
-              onClick={() => setSelectedIndex(index)}
-              className="group relative aspect-square w-full overflow-hidden rounded-2xl border border-pink-200/60 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#E11B74]/40 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#E11B74]"
-            >
-              <div className="relative h-full w-full overflow-hidden rounded-xl bg-neutral-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt={`Modelo de uñas Vanessa Nails ${index + 1}`}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                  loading="lazy"
-                />
-                
-                {/* Indicador sutil de ampliar */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  <span className="rounded-full bg-white/90 p-2 text-pink-600 shadow-md backdrop-blur-sm">
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                    </svg>
-                  </span>
+        {/* Carrusel Multi-Card Premium (Tarjetas compactas en carrusel horizontal) */}
+        <div className="relative mt-10 px-2 sm:px-6">
+          {/* Botón Flecha Izquierda */}
+          <button
+            onClick={scrollLeft}
+            aria-label="Deslizar galería a la izquierda"
+            className="absolute -left-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/90 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white sm:-left-4"
+            style={{ color: 'var(--brand-darker)' }}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* Track Horizontal de Miniaturas Compactas */}
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-4 overflow-x-auto py-4 scroll-smooth snap-x snap-mandatory no-scrollbar"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {activeImages.map((src, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => setSelectedIndex(index)}
+                className="group relative aspect-square h-44 w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-pink-200/60 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#E11B74]/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#E11B74] sm:h-52 sm:w-52"
+              >
+                <div className="relative h-full w-full overflow-hidden rounded-xl bg-neutral-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt={`Modelo de uñas Vanessa Nails ${index + 1}`}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    loading="lazy"
+                  />
+                  
+                  {/* Overlay indicando ampliar */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-pink-600 shadow-md backdrop-blur-sm">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                      </svg>
+                      Ampliar
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
+
+          {/* Botón Flecha Derecha */}
+          <button
+            onClick={scrollRight}
+            aria-label="Deslizar galería a la derecha"
+            className="absolute -right-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/90 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white sm:-right-4"
+            style={{ color: 'var(--brand-darker)' }}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
 
-        {/* Lightbox Modal para Ver Imagen en Grande con Navegación */}
+        {/* Lightbox Modal para Ver Imagen en Grande */}
         {selectedIndex !== null && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md animate-fadeIn"
@@ -114,7 +159,7 @@ export default function LandingGallery({ images = [] }) {
                 {total > 1 && (
                   <>
                     <button
-                      onClick={handlePrev}
+                      onClick={handlePrevModal}
                       aria-label="Anterior foto"
                       className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-3 text-white backdrop-blur-md transition hover:bg-black/90"
                     >
@@ -123,7 +168,7 @@ export default function LandingGallery({ images = [] }) {
                       </svg>
                     </button>
                     <button
-                      onClick={handleNext}
+                      onClick={handleNextModal}
                       aria-label="Siguiente foto"
                       className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-3 text-white backdrop-blur-md transition hover:bg-black/90"
                     >
