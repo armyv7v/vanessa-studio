@@ -1,12 +1,35 @@
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isSameDay, startOfMonth, startOfWeek, subMonths } from 'date-fns';
+import {
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameMonth,
+  isSameDay,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from 'date-fns';
 import { es } from 'date-fns/locale';
+import {
+  CalendarDays,
+  Clock,
+  Sparkles,
+  Lock,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  AlertCircle,
+  Save,
+  Trash2,
+  RotateCcw,
+} from 'lucide-react';
 import HorarioEditor from '../../components/HorarioEditor';
 import AdminShell from '../../components/AdminShell';
-import AdminMetricIcon from '../../components/AdminMetricIcon';
 import { hasAdminToken } from '../../lib/adminAuth';
-import { ArrowLeftIcon, ArrowRightIcon } from '../../components/BrandMotifs';
 
 const HORARIOS_ENDPOINT = '/api/horarios';
 
@@ -17,8 +40,15 @@ export default function AdminHorarios() {
   const [disabledDays, setDisabledDays] = useState([]);
   const [disabledDates, setDisabledDates] = useState([]);
   const [blackoutRanges, setBlackoutRanges] = useState([]);
-  const [extraCuposConfig, setExtraCuposConfig] = useState({ enabled: true, start: '18:00', end: '20:00', daysToShow: 35, extraChargeClp: 5000 });
+  const [extraCuposConfig, setExtraCuposConfig] = useState({
+    enabled: true,
+    start: '18:00',
+    end: '20:00',
+    daysToShow: 35,
+    extraChargeClp: 5000,
+  });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [calendarBlockMode, setCalendarBlockMode] = useState('day');
@@ -47,7 +77,15 @@ export default function AdminHorarios() {
         setDisabledDays(data?.disabledDays || []);
         setDisabledDates(Array.isArray(data?.disabledDates) ? data.disabledDates : []);
         setBlackoutRanges(Array.isArray(data?.blackoutRanges) ? data.blackoutRanges : []);
-        setExtraCuposConfig(data?.extraCuposConfig || { enabled: true, start: '18:00', end: '20:00', daysToShow: 35, extraChargeClp: 5000 });
+        setExtraCuposConfig(
+          data?.extraCuposConfig || {
+            enabled: true,
+            start: '18:00',
+            end: '20:00',
+            daysToShow: 35,
+            extraChargeClp: 5000,
+          }
+        );
       } catch (e) {
         setError(e.message || 'No se pudo cargar horarios.');
       } finally {
@@ -59,57 +97,46 @@ export default function AdminHorarios() {
 
   const handleSave = async () => {
     try {
+      setSaving(true);
       setError(null);
       setSuccessMsg('');
 
       const res = await fetch(HORARIOS_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ horarioAtencion: horarios, disabledDays, disabledDates, blackoutRanges, extraCuposConfig }),
+        body: JSON.stringify({
+          horarioAtencion: horarios,
+          disabledDays,
+          disabledDates,
+          blackoutRanges,
+          extraCuposConfig,
+        }),
       });
 
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || 'Error al guardar horarios');
 
-      setSuccessMsg('Horarios guardados correctamente');
+      setSuccessMsg('¡Horarios y reglas de agenda guardados con éxito!');
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (e) {
-      setError(e.message);
+      setError(e.message || 'Error al guardar.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  // ── Loading state ──────────────────────────────────────────
   if (loading) {
     return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        style={{
-          background: 'linear-gradient(180deg, #FFFBFD 0%, #FFF0F6 50%, #FDF6EF 100%)',
-        }}
-      >
-        <div
-          className="h-12 w-12 animate-spin rounded-full border-2 border-b-transparent"
-          style={{ borderColor: 'var(--brand) transparent var(--brand) var(--brand)' }}
-        />
+      <div className="flex min-h-screen items-center justify-center bg-pink-50/40">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[#E11B74] border-t-transparent" />
+          <p className="text-xs font-semibold text-neutral-500">Cargando configuración de horarios...</p>
+        </div>
       </div>
     );
   }
 
   if (!isAuthenticated) return null;
-  if (error) {
-    return (
-      <AdminShell
-        title="Administrar horarios"
-        description="Configura horarios de atención y bloquea sábados o domingos específicos del mes para controlar la disponibilidad visible en la reserva."
-      >
-        <div className="mx-auto max-w-4xl">
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900">
-            Error: {error}
-          </div>
-        </div>
-      </AdminShell>
-    );
-  }
 
   const ordinalOptions = [1, 2, 3, 4, 5];
   const todayKey = format(new Date(), 'yyyy-MM-dd');
@@ -130,7 +157,9 @@ export default function AdminHorarios() {
   };
 
   const toggleDisabledDate = (dateKey) => {
-    setDisabledDates((prev) => prev.includes(dateKey) ? prev.filter((item) => item !== dateKey) : [...prev, dateKey].sort());
+    setDisabledDates((prev) =>
+      prev.includes(dateKey) ? prev.filter((item) => item !== dateKey) : [...prev, dateKey].sort()
+    );
   };
 
   const toggleBlackoutRangeForDate = (mode, baseDate) => {
@@ -153,7 +182,9 @@ export default function AdminHorarios() {
   };
 
   const removeBlackoutRange = (rangeToDelete) => {
-    setBlackoutRanges((prev) => prev.filter((range) => !(range.start === rangeToDelete.start && range.end === rangeToDelete.end)));
+    setBlackoutRanges((prev) =>
+      prev.filter((range) => !(range.start === rangeToDelete.start && range.end === rangeToDelete.end))
+    );
   };
 
   const clearExpiredBlackouts = () => {
@@ -161,7 +192,8 @@ export default function AdminHorarios() {
     setBlackoutRanges((prev) => prev.filter((range) => range.end >= todayKey));
   };
 
-  const isDateInsideRange = (dateKey) => blackoutRanges.some((range) => dateKey >= range.start && dateKey <= range.end);
+  const isDateInsideRange = (dateKey) =>
+    blackoutRanges.some((range) => dateKey >= range.start && dateKey <= range.end);
 
   const handleCalendarBlockToggle = (day) => {
     const dateKey = format(day, 'yyyy-MM-dd');
@@ -174,319 +206,259 @@ export default function AdminHorarios() {
     toggleBlackoutRangeForDate(calendarBlockMode, day);
   };
 
-  const applyQuickBlockAction = (mode) => {
-    if (!selectedCalendarDate) return;
-
-    const selectedDate = new Date(`${selectedCalendarDate}T12:00:00`);
-    if (mode === 'day') {
-      toggleDisabledDate(selectedCalendarDate);
-      return;
-    }
-
-    toggleBlackoutRangeForDate(mode, selectedDate);
-  };
-
   return (
-    <AdminShell
-      title="Administrar horarios"
-      description="Configura horarios de atención y bloquea sábados o domingos específicos del mes para controlar la disponibilidad visible en la reserva."
-    >
-      <div className="admin-workspace space-y-8">
-        {successMsg ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-800 animate-pulse">
-            {successMsg}
-          </div>
-        ) : null}
-        <div className="admin-highlight-card rounded-[2rem] p-5 sm:p-7">
-          <p className="admin-section-kicker">Operación del calendario</p>
-          <h2 className="mt-3 text-xl font-bold" style={{ color: 'var(--ink-medium)' }}>Ajusta disponibilidad real del estudio</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
-            Aquí defines la ventana de atención por día y también ocultas sábados o domingos específicos para que el flujo público nunca muestre espacios que no quieres abrir.
-          </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            {[
-              { label: 'Bloqueos ordinales', value: disabledDays.length, detail: 'S?bados y domingos ordinales ocultos', icon: 'lock' },
-              { label: 'Fechas puntuales', value: disabledDates.length, detail: 'D?as espec?ficos fuera de agenda', icon: 'calendar' },
-              { label: 'Rangos activos', value: blackoutRanges.length, detail: 'Semanas o meses completos bloqueados', icon: 'pulse' },
-            ].map((metric) => (
-              <div key={metric.label} className="admin-metric-card rounded-2xl p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-600">{metric.label}</p>
-                    <p className="mt-2 text-3xl font-black text-slate-950">{metric.value}</p>
-                  </div>
-                  <AdminMetricIcon type={metric.icon} />
+    <>
+      <Head>
+        <title>Horarios & Bloqueos | Admin Vanessa Nails</title>
+      </Head>
+
+      <AdminShell
+        title="Configuración de Horarios & Bloqueos"
+        description="Ajusta las horas de apertura por día de la semana, bloquea fechas por vacaciones y configura los extra-cupos."
+      >
+        <div className="space-y-6 pb-20">
+          {/* Mensajes de feedback */}
+          {error && (
+            <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-800 animate-fadeIn">
+              <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          {successMsg && (
+            <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800 animate-fadeIn">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* Tarjetas KPI de Resumen */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-pink-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Bloqueos Ordinales</p>
+                  <p className="mt-1 text-2xl font-bold text-neutral-900">{disabledDays.length}</p>
                 </div>
-                <p className="mt-3 text-sm font-semibold text-slate-600">{metric.detail}</p>
+                <div className="rounded-xl bg-pink-50 p-2 text-pink-600">
+                  <Lock className="h-5 w-5" />
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="admin-section-band rounded-[2rem] p-6 shadow-sm" style={{ border: '1px solid rgba(242, 200, 212, 0.6)', background: 'rgba(255,255,255,0.97)' }}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-bold" style={{ color: 'var(--ink-medium)' }}>Calendario visual de bloqueos</h2>
-              <p className="mt-1 text-sm" style={{ color: 'var(--ink-muted)' }}>
-                Haz clic sobre un día para bloquearlo o desbloquearlo rápidamente. Los rangos semanales y mensuales aparecen resaltados.
-              </p>
+              <p className="mt-2 text-[11px] text-neutral-500">Sábados o domingos recurrentes</p>
             </div>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setCalendarMonth((prev) => subMonths(prev, 1))} className="rounded-full p-2" style={{ background: 'var(--bg-blush)', color: 'var(--brand)' }}>
-                <ArrowLeftIcon className="h-5 w-5" />
-              </button>
-              <div className="rounded-full border px-4 py-2 text-sm font-semibold capitalize" style={{ borderColor: 'var(--gold-lighter)', color: 'var(--ink-medium)', background: 'rgba(255,255,255,0.92)' }}>
-                {format(calendarMonth, 'MMMM yyyy')}
+
+            <div className="rounded-2xl border border-amber-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Fechas Puntuales</p>
+                  <p className="mt-1 text-2xl font-bold text-amber-900">{disabledDates.length}</p>
+                </div>
+                <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
+                  <CalendarDays className="h-5 w-5" />
+                </div>
               </div>
-              <button type="button" onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))} className="rounded-full p-2" style={{ background: 'var(--bg-blush)', color: 'var(--brand)' }}>
-                <ArrowRightIcon className="h-5 w-5" />
-              </button>
+              <p className="mt-2 text-[11px] text-amber-700">Días específicos cerrados</p>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Rangos de Vacaciones</p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-900">{blackoutRanges.length}</p>
+                </div>
+                <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-emerald-700">Semanas o meses bloqueados</p>
             </div>
           </div>
 
-          <div className="mt-5 mb-4 flex flex-wrap gap-2">
-            {[
-              { id: 'day', label: 'Bloqueo por día' },
-              { id: 'week', label: 'Bloqueo por semana' },
-              { id: 'month', label: 'Bloqueo por mes' },
-            ].map((mode) => (
+          {/* Sección 1: Franjas Horarias Semanales */}
+          <div className="rounded-3xl border border-pink-200/70 bg-white/90 p-5 sm:p-6 shadow-sm backdrop-blur-md space-y-4">
+            <div className="flex items-center gap-2 border-b border-pink-100 pb-3">
+              <div className="rounded-xl bg-pink-100/70 p-2 text-pink-600">
+                <Clock className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-base font-bold text-neutral-900">
+                  Horario de Atención Habitual
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  Establece la hora de apertura y cierre para cada día de la semana.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((dia) => (
+                <HorarioEditor
+                  key={dia}
+                  dia={dia}
+                  rango={horarios[dia] || []}
+                  horarios={horarios}
+                  setHorarios={setHorarios}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Sección 2: Calendario Visual de Bloqueos */}
+          <div className="rounded-3xl border border-pink-200/70 bg-white/90 p-5 sm:p-6 shadow-sm backdrop-blur-md space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-pink-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="rounded-xl bg-amber-100/70 p-2 text-amber-700">
+                  <CalendarDays className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-display text-base font-bold text-neutral-900">
+                    Calendario Visual de Bloqueos & Vacaciones
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Haz clic sobre cualquier fecha para bloquearla o liberarla al instante.
+                  </p>
+                </div>
+              </div>
+
+              {/* Selector de Modo de Bloqueo */}
+              <div className="flex items-center gap-1 rounded-2xl border border-pink-200 bg-pink-50/60 p-1">
+                {[
+                  { id: 'day', label: 'Por Día' },
+                  { id: 'week', label: 'Por Semana' },
+                  { id: 'month', label: 'Por Mes' },
+                ].map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setCalendarBlockMode(mode.id)}
+                    className={`rounded-xl px-3 py-1 text-xs font-bold transition ${
+                      calendarBlockMode === mode.id
+                        ? 'bg-gradient-to-r from-[#E11B74] to-[#C5A059] text-white shadow-sm'
+                        : 'text-neutral-600 hover:text-pink-600'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Navegación del Mes */}
+            <div className="flex items-center justify-between border-b border-pink-100/60 py-2">
               <button
-                key={mode.id}
                 type="button"
-                onClick={() => setCalendarBlockMode(mode.id)}
-                className="rounded-full px-4 py-2 text-sm font-semibold transition"
-                style={calendarBlockMode === mode.id
-                  ? { background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)', color: '#fff', boxShadow: '0 8px 18px rgba(225,27,116,0.20)' }
-                  : { background: 'var(--bg-blush)', color: 'var(--ink-muted)', border: '1px solid var(--gold-lighter)' }}
+                onClick={() => setCalendarMonth((prev) => subMonths(prev, 1))}
+                className="rounded-xl border border-pink-200 bg-white p-2 text-pink-600 hover:bg-pink-50 shadow-sm transition"
               >
-                {mode.label}
+                <ChevronLeft className="h-4 w-4" />
               </button>
-            ))}
-          </div>
 
-          <div className="overflow-hidden rounded-2xl border shadow-lg" style={{ borderColor: 'rgba(242,200,212,0.45)', background: 'rgba(255,255,255,0.98)' }}>
-            <div
-              className="grid grid-cols-7 border-b"
-              style={{
-                borderColor: 'rgba(242,200,212,0.4)',
-                background: 'rgba(254,240,248,0.40)',
-              }}
-            >
-              {calendarWeekDays.map((day) => (
-                <div
-                  key={day}
-                  className="py-3 text-center text-sm font-semibold"
-                  style={{ color: 'var(--ink-faint)' }}
-                >
-                  {day}
-                </div>
+              <h4 className="font-display text-sm sm:text-base font-bold capitalize text-neutral-800">
+                {format(calendarMonth, 'MMMM yyyy', { locale: es })}
+              </h4>
+
+              <button
+                type="button"
+                onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))}
+                className="rounded-xl border border-pink-200 bg-white p-2 text-pink-600 hover:bg-pink-50 shadow-sm transition"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Días de la semana */}
+            <div className="grid grid-cols-7 text-center text-xs font-bold text-neutral-500 py-1 bg-pink-50/30 rounded-xl">
+              {calendarWeekDays.map((d) => (
+                <div key={d}>{d}</div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 auto-rows-fr">
+            {/* Celdas del calendario */}
+            <div className="grid grid-cols-7 auto-rows-fr gap-1">
               {calendarDays.map((day) => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 const isCurrentMonthDay = isSameMonth(day, calendarMonth);
                 const isToday = isSameDay(day, new Date());
                 const isBlockedDay = disabledDates.includes(dateKey);
                 const isInRange = isDateInsideRange(dateKey);
-                const isSelectedDate = selectedCalendarDate === dateKey;
-                const dayTone = isBlockedDay
-                  ? { bg: 'rgba(225, 27, 116, 0.08)', border: 'rgba(225, 27, 116, 0.18)', text: 'var(--brand-dark)', label: 'Bloqueado' }
-                  : isInRange
-                    ? { bg: 'rgba(197, 160, 89, 0.08)', border: 'rgba(197, 160, 89, 0.18)', text: 'var(--gold-dark)', label: 'En rango' }
-                    : { bg: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.18)', text: '#065f46', label: 'Disponible' };
 
                 return (
                   <button
                     key={dateKey}
                     type="button"
                     onClick={() => handleCalendarBlockToggle(day)}
-                    title={isBlockedDay ? 'Día bloqueado manualmente' : isInRange ? 'Fecha incluida en un rango bloqueado' : 'Fecha disponible'}
-                    aria-label={`${format(day, "d 'de' MMMM", { locale: es })}: ${isBlockedDay ? 'bloqueado' : isInRange ? 'dentro de rango bloqueado' : 'disponible'}`}
-                    className="relative min-h-[110px] border-b border-r p-2 text-left transition hover:opacity-90 sm:min-h-[128px]"
+                    className={`relative min-h-[70px] sm:min-h-[85px] rounded-2xl border p-2 text-left transition select-none ${
+                      !isCurrentMonthDay
+                        ? 'opacity-30 bg-neutral-50 border-neutral-100'
+                        : isBlockedDay
+                        ? 'border-pink-300 bg-pink-100/70 text-pink-900 shadow-sm'
+                        : isInRange
+                        ? 'border-amber-300 bg-amber-100/70 text-amber-900 shadow-sm'
+                        : 'border-emerald-200/80 bg-emerald-50/40 text-emerald-900 hover:bg-emerald-100/50'
+                    }`}
                     style={{
-                      borderColor: 'rgba(242,200,212,0.30)',
-                      background: !isCurrentMonthDay ? 'rgba(249,249,249,0.60)' : dayTone.bg,
-                      opacity: !isCurrentMonthDay ? 0.45 : 1,
-                      outline: isSelectedDate ? `2px solid ${isBlockedDay || isInRange ? '#EA580C' : 'var(--brand)'}` : (isToday ? '2px solid var(--brand)' : 'none'),
-                      outlineOffset: isSelectedDate || isToday ? '-2px' : '0',
+                      outline: isToday ? '2px solid #E11B74' : 'none',
+                      outlineOffset: isToday ? '-2px' : '0',
                     }}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start justify-between">
                       <span
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium"
-                        style={
-                          isSelectedDate || isToday
-                            ? {
-                                background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 100%)',
-                                color: '#fff',
-                              }
-                            : { color: 'var(--ink-muted)' }
-                        }
+                        className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[11px] font-bold ${
+                          isToday
+                            ? 'bg-gradient-to-tr from-[#E11B74] to-[#C5A059] text-white shadow-sm'
+                            : 'text-neutral-700'
+                        }`}
                       >
                         {format(day, 'd')}
                       </span>
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[11px] font-bold"
-                        style={{
-                          background: 'rgba(255,255,255,0.72)',
-                          color: dayTone.text,
-                        }}
-                      >
-                        {dayTone.label}
-                      </span>
-                    </div>
 
-                    <div className="mt-3 space-y-1 text-xs" style={{ color: dayTone.text }}>
-                      <div className="truncate rounded px-1.5 py-1" style={{ background: 'rgba(255,255,255,0.45)' }}>
-                        {calendarBlockMode === 'day' ? 'Click para alternar este dia' : calendarBlockMode === 'week' ? 'Click para alternar la semana' : 'Click para alternar el mes'}
-                      </div>
-                      {isSelectedDate ? (
-                        <div className="truncate rounded px-1.5 py-1 font-semibold" style={{ background: 'rgba(255,255,255,0.68)' }}>
-                          Fecha seleccionada
-                        </div>
-                      ) : null}
+                      <span className="text-[9px] font-bold uppercase tracking-wider">
+                        {isBlockedDay ? 'Bloqueado' : isInRange ? 'En Rango' : 'Libre'}
+                      </span>
                     </div>
                   </button>
                 );
               })}
             </div>
-          </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-[1.2fr_1fr]">
-            <div className="rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] p-4 text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
-              El modo activo ahora es <strong style={{ color: 'var(--brand-dark)' }}>{calendarBlockMode === 'day' ? 'bloqueo por día' : calendarBlockMode === 'week' ? 'bloqueo por semana' : 'bloqueo por mes'}</strong>. Haz clic sobre cualquier fecha del calendario para aplicar o quitar ese tipo de bloqueo.
-            </div>
-            <div className="rounded-2xl border border-[#f3d9e4] bg-white/90 p-4 text-sm" style={{ color: 'var(--ink-muted)' }}>
-              <p className="font-semibold" style={{ color: 'var(--ink-medium)' }}>
-                Fecha seleccionada: {selectedCalendarDate || 'ninguna'}
-              </p>
-              <div className="mt-3 grid gap-2">
-                <button type="button" onClick={() => applyQuickBlockAction('day')} disabled={!selectedCalendarDate} className="premium-button-secondary disabled:opacity-50 disabled:cursor-not-allowed">
-                  Alternar día exacto
-                </button>
-                <button type="button" onClick={() => applyQuickBlockAction('week')} disabled={!selectedCalendarDate} className="premium-button-secondary disabled:opacity-50 disabled:cursor-not-allowed">
-                  Alternar semana completa
-                </button>
-                <button type="button" onClick={() => applyQuickBlockAction('month')} disabled={!selectedCalendarDate} className="premium-button-secondary disabled:opacity-50 disabled:cursor-not-allowed">
-                  Alternar mes completo
-                </button>
+            {/* Leyenda y Acciones de limpieza */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-pink-100/70 text-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                  <span className="text-neutral-600 font-medium">Disponible</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-pink-500" />
+                  <span className="text-neutral-600 font-medium">Bloqueado</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-amber-500" />
+                  <span className="text-neutral-600 font-medium">En Rango Vacacional</span>
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={clearExpiredBlackouts}
+                className="flex items-center gap-1 rounded-xl border border-pink-200 bg-white px-3 py-1.5 text-xs font-bold text-pink-700 shadow-sm hover:bg-pink-50 transition"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Limpiar Vencidos</span>
+              </button>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs">
-            <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(225, 27, 116, 0.08)', borderColor: 'rgba(225, 27, 116, 0.18)' }} /> Fuchsia: Bloqueado manualmente</div>
-            <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(197, 160, 89, 0.08)', borderColor: 'rgba(197, 160, 89, 0.18)' }} /> Dorado: Dentro de rango bloqueado</div>
-            <div className="flex items-center gap-2"><span className="h-4 w-4 rounded-lg border" style={{ background: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.18)' }} /> Esmeralda: Disponible para citas</div>
-          </div>
-        </div>
-
-        {/* Horario Editor Card */}
-        <div
-          className="admin-section-band rounded-[2rem] p-6 shadow-sm"
-          style={{
-            border: '1px solid rgba(242, 200, 212, 0.6)',
-            background: 'rgba(255,255,255,0.97)',
-          }}
-        >
-          {Object.entries(horarios).map(([dia, rango]) => (
-            <HorarioEditor
-              key={dia}
-              dia={dia}
-              rango={rango}
-              horarios={horarios}
-              setHorarios={setHorarios}
-            />
-          ))}
-        </div>
-
-        <div
-          className="admin-section-band rounded-[2rem] p-6 shadow-sm"
-          style={{
-            border: '1px solid rgba(242, 200, 212, 0.6)',
-            background: 'rgba(255,255,255,0.97)',
-          }}
-        >
-          <div className="mb-5">
-            <h2 className="text-lg font-bold" style={{ color: 'var(--ink-medium)' }}>Configuración explícita de extra-cupos</h2>
-            <p className="mt-1 text-sm" style={{ color: 'var(--ink-muted)' }}>
-              Define la franja extendida que usará la página <strong>/extra-cupos</strong> sin depender de fallback implícito.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label className="rounded-2xl border border-[#f3d9e4] bg-white/85 p-4">
-              <span className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Habilitado</span>
-              <input
-                type="checkbox"
-                checked={Boolean(extraCuposConfig?.enabled)}
-                onChange={(event) => setExtraCuposConfig((prev) => ({ ...prev, enabled: event.target.checked }))}
-                className="h-5 w-5 accent-[var(--brand)]"
-              />
-            </label>
-
-            <label className="rounded-2xl border border-[#f3d9e4] bg-white/85 p-4">
-              <span className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Inicio extra</span>
-              <input
-                type="time"
-                value={extraCuposConfig?.start || '18:00'}
-                onChange={(event) => setExtraCuposConfig((prev) => ({ ...prev, start: event.target.value }))}
-                className="w-full rounded-xl border border-[#f2c8d4] bg-white px-3 py-2"
-              />
-            </label>
-
-            <label className="rounded-2xl border border-[#f3d9e4] bg-white/85 p-4">
-              <span className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Fin extra</span>
-              <input
-                type="time"
-                value={extraCuposConfig?.end || '20:00'}
-                onChange={(event) => setExtraCuposConfig((prev) => ({ ...prev, end: event.target.value }))}
-                className="w-full rounded-xl border border-[#f2c8d4] bg-white px-3 py-2"
-              />
-            </label>
-
-            <label className="rounded-2xl border border-[#f3d9e4] bg-white/85 p-4">
-              <span className="mb-2 block text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Horizonte (días)</span>
-              <input
-                type="number"
-                min="1"
-                max="90"
-                value={extraCuposConfig?.daysToShow || 35}
-                onChange={(event) => setExtraCuposConfig((prev) => ({ ...prev, daysToShow: Number(event.target.value) || 35 }))}
-                className="w-full rounded-xl border border-[#f2c8d4] bg-white px-3 py-2"
-              />
-            </label>
-          </div>
-        </div>
-
-        <div className="grid items-start gap-8 xl:grid-cols-[0.95fr_1.05fr]">
-        {/* Disabled Days Card */}
-        <div
-          className="admin-section-band rounded-[2rem] p-6 shadow-sm"
-          style={{
-            border: '1px solid var(--gold-lighter)',
-            background: 'linear-gradient(135deg, var(--gold-lightest), rgba(255,255,255,0.90))',
-          }}
-        >
-          <h2
-            className="mb-2 text-lg font-bold"
-            style={{ color: 'var(--ink-medium)' }}
-          >
-            Días deshabilitados del calendario
-          </h2>
-          <p className="mb-4 text-sm" style={{ color: 'var(--ink-muted)' }}>
-            Marca qué sábados o domingos del mes no deben aparecer disponibles en el flujo de reserva.
-          </p>
-
-          <div className="space-y-4">
-            {/* Sábados */}
-            <div>
-              <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--ink-muted)' }}>
-                Sábados
+          {/* Sección 3: Bloqueo de Sábados y Domingos del Mes */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-3xl border border-pink-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-md space-y-3">
+              <h3 className="font-display text-sm font-bold text-neutral-900 flex items-center gap-2">
+                <Lock className="h-4 w-4 text-pink-600" />
+                Sábados Deshabilitados del Mes
+              </h3>
+              <p className="text-xs text-neutral-500">
+                Selecciona qué sábados del mes no estarán disponibles para agendar.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {ordinalOptions.map((ordinal) => {
                   const code = `SAT${ordinal}`;
                   const active = disabledDays.includes(code);
@@ -495,35 +467,28 @@ export default function AdminHorarios() {
                       key={code}
                       type="button"
                       onClick={() => toggleDisabledDay(code)}
-                      className="rounded-full border px-3 py-2 text-sm font-medium transition hover:-translate-y-px"
-                      style={
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition shadow-sm ${
                         active
-                          ? {
-                              background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
-                              borderColor: 'var(--brand)',
-                              color: '#fff',
-                              boxShadow: '0 8px 18px rgba(225,27,116,0.22)',
-                            }
-                          : {
-                              background: 'rgba(255,255,255,0.96)',
-                              borderColor: 'var(--gold-lighter)',
-                              color: 'var(--ink-muted)',
-                            }
-                      }
+                          ? 'bg-gradient-to-r from-[#E11B74] to-[#C5A059] text-white shadow-pink-500/20'
+                          : 'border border-pink-200 bg-pink-50/50 text-neutral-700 hover:bg-pink-100/60'
+                      }`}
                     >
-                      {ordinal}° sábado
+                      {ordinal}° Sábado
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Domingos */}
-            <div>
-              <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--ink-muted)' }}>
-                Domingos
+            <div className="rounded-3xl border border-pink-200/70 bg-white/90 p-5 shadow-sm backdrop-blur-md space-y-3">
+              <h3 className="font-display text-sm font-bold text-neutral-900 flex items-center gap-2">
+                <Lock className="h-4 w-4 text-pink-600" />
+                Domingos Deshabilitados del Mes
+              </h3>
+              <p className="text-xs text-neutral-500">
+                Selecciona qué domingos del mes no estarán disponibles para agendar.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {ordinalOptions.map((ordinal) => {
                   const code = `SUN${ordinal}`;
                   const active = disabledDays.includes(code);
@@ -532,100 +497,120 @@ export default function AdminHorarios() {
                       key={code}
                       type="button"
                       onClick={() => toggleDisabledDay(code)}
-                      className="rounded-full border px-3 py-2 text-sm font-medium transition hover:-translate-y-px"
-                      style={
+                      className={`rounded-xl px-3 py-1.5 text-xs font-bold transition shadow-sm ${
                         active
-                          ? {
-                              background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
-                              borderColor: 'var(--brand)',
-                              color: '#fff',
-                              boxShadow: '0 8px 18px rgba(225,27,116,0.22)',
-                            }
-                          : {
-                              background: 'rgba(255,255,255,0.96)',
-                              borderColor: 'var(--gold-lighter)',
-                              color: 'var(--ink-muted)',
-                            }
-                      }
+                          ? 'bg-gradient-to-r from-[#E11B74] to-[#C5A059] text-white shadow-pink-500/20'
+                          : 'border border-pink-200 bg-pink-50/50 text-neutral-700 hover:bg-pink-100/60'
+                      }`}
                     >
-                      {ordinal}° domingo
+                      {ordinal}° Domingo
                     </button>
                   );
                 })}
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="admin-section-band rounded-[2rem] p-6 shadow-sm" style={{ border: '1px solid rgba(242, 200, 212, 0.6)', background: 'rgba(255,255,255,0.97)' }}>
-          <h2 className="mb-2 text-lg font-bold" style={{ color: 'var(--ink-medium)' }}>Resumen de bloqueos activos</h2>
-          <p className="mb-5 text-sm" style={{ color: 'var(--ink-muted)' }}>
-            Este bloque resume lo que está activo ahora mismo para que puedas revisarlo o limpiar bloqueos viejos sin salir del flujo principal.
-          </p>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4">
-              <h3 className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--brand-light)' }}>Fechas exactas</h3>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {disabledDates.length === 0 ? (
-                  <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>No hay fechas puntuales bloqueadas.</p>
-                ) : disabledDates.map((date) => (
-                  <button
-                    key={date}
-                    type="button"
-                    onClick={() => removeDisabledDate(date)}
-                    className="rounded-full border px-3 py-2 text-sm font-medium transition hover:-translate-y-px"
-                    style={{ background: 'rgba(255,255,255,0.96)', borderColor: 'var(--gold-lighter)', color: 'var(--ink-muted)' }}
-                  >
-                    {date} · quitar
-                  </button>
-                ))}
+          {/* Sección 4: Configuración de Extra Cupos */}
+          <div className="rounded-3xl border border-pink-200/70 bg-white/90 p-5 sm:p-6 shadow-sm backdrop-blur-md space-y-4">
+            <div className="flex items-center gap-2 border-b border-pink-100 pb-3">
+              <div className="rounded-xl bg-pink-100/70 p-2 text-pink-600">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-base font-bold text-neutral-900">
+                  Configuración de Extra-Cupos
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  Reglas y recargo para la página especial de turnos de sobrecupo (<code>/extra-cupos</code>).
+                </p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#f3d9e4] bg-white/80 p-4">
-              <h3 className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--brand-light)' }}>Rangos activos</h3>
-              <div className="mt-4 space-y-2">
-                {blackoutRanges.length === 0 ? (
-                  <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>No hay rangos bloqueados.</p>
-                ) : blackoutRanges.map((range) => (
-                  <div key={`${range.start}-${range.end}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] px-4 py-3">
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>{range.label || `${range.start} → ${range.end}`}</p>
-                      <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>{range.start} hasta {range.end}</p>
-                    </div>
-                    <button type="button" onClick={() => removeBlackoutRange(range)} className="rounded-full border px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--gold-lighter)', color: 'var(--brand)' }}>
-                      Quitar
-                    </button>
-                  </div>
-                ))}
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="rounded-2xl border border-pink-200/80 bg-pink-50/40 p-4 block cursor-pointer">
+                <span className="block text-xs font-bold text-neutral-700 uppercase mb-2">Habilitado</span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(extraCuposConfig?.enabled)}
+                  onChange={(e) =>
+                    setExtraCuposConfig((prev) => ({ ...prev, enabled: e.target.checked }))
+                  }
+                  className="h-5 w-5 accent-[#E11B74]"
+                />
+              </label>
+
+              <label className="rounded-2xl border border-pink-200/80 bg-white p-4 block">
+                <span className="block text-xs font-bold text-neutral-700 uppercase mb-2">Hora Inicio Extra</span>
+                <input
+                  type="time"
+                  value={extraCuposConfig?.start || '18:00'}
+                  onChange={(e) =>
+                    setExtraCuposConfig((prev) => ({ ...prev, start: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-pink-200 px-3 py-2 text-xs font-bold text-neutral-800 outline-none"
+                />
+              </label>
+
+              <label className="rounded-2xl border border-pink-200/80 bg-white p-4 block">
+                <span className="block text-xs font-bold text-neutral-700 uppercase mb-2">Hora Fin Extra</span>
+                <input
+                  type="time"
+                  value={extraCuposConfig?.end || '20:00'}
+                  onChange={(e) =>
+                    setExtraCuposConfig((prev) => ({ ...prev, end: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-pink-200 px-3 py-2 text-xs font-bold text-neutral-800 outline-none"
+                />
+              </label>
+
+              <label className="rounded-2xl border border-pink-200/80 bg-white p-4 block">
+                <span className="block text-xs font-bold text-neutral-700 uppercase mb-2">Horizonte (Días)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={extraCuposConfig?.daysToShow || 35}
+                  onChange={(e) =>
+                    setExtraCuposConfig((prev) => ({
+                      ...prev,
+                      daysToShow: Number(e.target.value) || 35,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-pink-200 px-3 py-2 text-xs font-bold text-neutral-800 outline-none"
+                />
+              </label>
             </div>
           </div>
+        </div>
 
-          <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-[#f3d9e4] bg-[#fff8fc] p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--ink-medium)' }}>Mantenimiento rápido de bloqueos</p>
-              <p className="mt-1 text-sm" style={{ color: 'var(--ink-faint)' }}>Elimina fechas pasadas y rangos cuyo fin ya venció para mantener la agenda limpia.</p>
-            </div>
-            <button type="button" onClick={clearExpiredBlackouts} className="premium-button-secondary">
-              Limpiar vencidos
+        {/* Barra Flotante de Guardar Cambios */}
+        <div className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-5xl">
+          <div className="flex items-center justify-between rounded-3xl border border-pink-200/80 bg-white/95 p-3.5 shadow-xl backdrop-blur-lg">
+            <p className="hidden sm:block text-xs font-semibold text-neutral-600 pl-2">
+              Los cambios afectarán la disponibilidad pública de inmediato.
+            </p>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#E11B74] to-[#C5A059] px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-lg shadow-pink-500/20 active:scale-95 transition disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span>Guardando Cambios...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  <span>Guardar Horarios & Bloqueos</span>
+                </>
+              )}
             </button>
           </div>
         </div>
-
-        </div>
-
-        {/* Save Button */}
-        <div className="sticky bottom-4 z-10 flex justify-end rounded-[1.5rem] border border-slate-200 bg-white/88 p-3 shadow-[0_18px_46px_rgba(15,23,42,0.12)] backdrop-blur">
-        <button
-          onClick={handleSave}
-          className="premium-button"
-        >
-          Guardar Cambios
-        </button>
-        </div>
-      </div>
-    </AdminShell>
+      </AdminShell>
+    </>
   );
 }
