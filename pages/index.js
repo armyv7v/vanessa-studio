@@ -19,21 +19,26 @@ const normalConfig = {
   daysToShow: 21,
 };
 
-const mobileTabs = [
-  { id: 'reservar', label: 'Reserva', icon: '🗓️' },
-  { id: 'servicios', label: 'Servicios', icon: '💅' },
-  { id: 'galeria', label: 'Galería', icon: '📸' },
-  { id: 'testimonios', label: 'Opiniones', icon: '⭐' },
-  { id: 'contacto', label: 'Ubicación', icon: '📍' },
-];
-
 export default function Home() {
   const [reserveState, setReserveState] = useState(null);
-  const [activeMobileTab, setActiveMobileTab] = useState('reservar');
+
+  // Estado de acorteones para la Opción 2 en Móvil (desplegables)
+  const [openSections, setOpenSections] = useState({
+    servicios: false,
+    galeria: false,
+    testimonios: false,
+    contacto: false,
+  });
+
+  function toggleSection(sectionKey) {
+    setOpenSections((prev) => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey],
+    }));
+  }
 
   function handleReserve(serviceId) {
     setReserveState((prev) => ({ serviceId, signal: (prev?.signal || 0) + 1 }));
-    setActiveMobileTab('reservar');
     document.getElementById('booking-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -53,65 +58,124 @@ export default function Home() {
         <main>
           <LandingHero />
 
-          {/* --- OPCCIÓN 1 MÓVIL: Navegación Fija por Pestañas Interactivas (md:hidden) --- */}
-          <div className="sticky top-[61px] z-40 border-b border-pink-200/80 bg-white/95 px-2 py-2.5 backdrop-blur-md md:hidden">
-            <div className="flex items-center justify-around gap-1 overflow-x-auto no-scrollbar">
-              {mobileTabs.map((tab) => {
-                const isActive = activeMobileTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setActiveMobileTab(tab.id);
-                      window.scrollTo({ top: 480, behavior: 'smooth' });
-                    }}
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-[#E11B74] to-[#C5A059] text-white shadow-md scale-105'
-                        : 'bg-pink-50/80 text-neutral-600 hover:bg-pink-100'
-                    }`}
-                  >
-                    <span>{tab.icon}</span>
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* VISTA MÓVIL (Interactivas por Pestaña) */}
-          <div className="block md:hidden">
-            {activeMobileTab === 'reservar' && (
-              <section id="reservar" className="scroll-mt-24">
-                <div className="mx-auto max-w-6xl px-4 py-8">
-                  <div className="mx-auto max-w-2xl text-center">
-                    <span className="section-kicker">Reserva online</span>
-                    <h2 className="headline-section mt-3 text-2xl font-bold">Agenda tu cita en minutos</h2>
-                    <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--ink-muted)' }}>
-                      Selecciona tu servicio y horario. ¿Sin cupo regular? Revisa los{' '}
-                      <Link href="/extra-cupos" className="font-semibold underline decoration-dotted" style={{ color: 'var(--brand)' }}>
-                        extra cupos
-                      </Link>.
-                    </p>
-                  </div>
-
-                  <div id="booking-panel" className="premium-shell gloss-panel gradient-outline step-fade-in mt-6 !p-4">
-                    <BookingFlow config={normalConfig} initialService={reserveState?.serviceId} reserveSignal={reserveState?.signal} hideServiceSelect />
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {activeMobileTab === 'servicios' && (
-              <div>
-                <LandingServices onReserve={handleReserve} />
-                <LandingSteps />
+          {/* --- OPCIÓN 2 MÓVIL: Acordeón Premium & Módulos Desplegables (md:hidden) --- */}
+          <div className="block md:hidden px-4 py-6 space-y-4">
+            
+            {/* 1. Reservador de Citas (Siempre Visible en Móvil) */}
+            <section id="reservar" className="scroll-mt-20">
+              <div className="mx-auto max-w-2xl text-center">
+                <span className="section-kicker">Reserva online</span>
+                <h2 className="headline-section mt-2 text-xl font-bold">Agenda tu cita en minutos</h2>
+                <p className="mt-1.5 text-xs leading-relaxed" style={{ color: 'var(--ink-muted)' }}>
+                  Selecciona tu servicio y horario. ¿Sin disponibilidad regular? Revisa los{' '}
+                  <Link href="/extra-cupos" className="font-semibold underline decoration-dotted" style={{ color: 'var(--brand)' }}>
+                    extra cupos
+                  </Link>.
+                </p>
               </div>
-            )}
 
-            {activeMobileTab === 'galeria' && <LandingGallery />}
-            {activeMobileTab === 'testimonios' && <LandingTestimonials />}
-            {activeMobileTab === 'contacto' && <LandingContact />}
+              <div id="booking-panel" className="premium-shell gloss-panel gradient-outline step-fade-in mt-4 !p-4">
+                <BookingFlow config={normalConfig} initialService={reserveState?.serviceId} reserveSignal={reserveState?.signal} hideServiceSelect />
+              </div>
+            </section>
+
+            {/* 2. Módulo Desplegable: Servicios & Precios */}
+            <div className="premium-panel gloss-panel gradient-outline overflow-hidden rounded-2xl border border-pink-200/80 shadow-sm transition">
+              <button
+                type="button"
+                onClick={() => toggleSection('servicios')}
+                className="flex w-full items-center justify-between p-4 text-left font-display font-semibold text-sm"
+                style={{ color: 'var(--brand-darker)' }}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-base">💅</span> Servicios & Precios
+                </span>
+                <span className={`rounded-full bg-pink-100 p-1.5 text-pink-600 transition-transform duration-300 ${openSections.servicios ? 'rotate-180' : ''}`}>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              </button>
+              {openSections.servicios && (
+                <div className="border-t border-pink-100 pb-4 animate-fadeIn">
+                  <LandingServices onReserve={handleReserve} />
+                  <LandingSteps />
+                </div>
+              )}
+            </div>
+
+            {/* 3. Módulo Desplegable: Galería de Trabajos Reales */}
+            <div className="premium-panel gloss-panel gradient-outline overflow-hidden rounded-2xl border border-pink-200/80 shadow-sm transition">
+              <button
+                type="button"
+                onClick={() => toggleSection('galeria')}
+                className="flex w-full items-center justify-between p-4 text-left font-display font-semibold text-sm"
+                style={{ color: 'var(--brand-darker)' }}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-base">📸</span> Galería de Fotos (15 modelos)
+                </span>
+                <span className={`rounded-full bg-pink-100 p-1.5 text-pink-600 transition-transform duration-300 ${openSections.galeria ? 'rotate-180' : ''}`}>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7-7 7-7" />
+                  </svg>
+                </span>
+              </button>
+              {openSections.galeria && (
+                <div className="border-t border-pink-100 animate-fadeIn">
+                  <LandingGallery />
+                </div>
+              )}
+            </div>
+
+            {/* 4. Módulo Desplegable: Opiniones de Clientas */}
+            <div className="premium-panel gloss-panel gradient-outline overflow-hidden rounded-2xl border border-pink-200/80 shadow-sm transition">
+              <button
+                type="button"
+                onClick={() => toggleSection('testimonios')}
+                className="flex w-full items-center justify-between p-4 text-left font-display font-semibold text-sm"
+                style={{ color: 'var(--brand-darker)' }}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-base">⭐</span> Opiniones & Reseñas (4.9 / 5)
+                </span>
+                <span className={`rounded-full bg-pink-100 p-1.5 text-pink-600 transition-transform duration-300 ${openSections.testimonios ? 'rotate-180' : ''}`}>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7-7 7-7" />
+                  </svg>
+                </span>
+              </button>
+              {openSections.testimonios && (
+                <div className="border-t border-pink-100 animate-fadeIn">
+                  <LandingTestimonials />
+                </div>
+              )}
+            </div>
+
+            {/* 5. Módulo Desplegable: Ubicación & Contacto */}
+            <div className="premium-panel gloss-panel gradient-outline overflow-hidden rounded-2xl border border-pink-200/80 shadow-sm transition">
+              <button
+                type="button"
+                onClick={() => toggleSection('contacto')}
+                className="flex w-full items-center justify-between p-4 text-left font-display font-semibold text-sm"
+                style={{ color: 'var(--brand-darker)' }}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-base">📍</span> Ubicación & Contacto
+                </span>
+                <span className={`rounded-full bg-pink-100 p-1.5 text-pink-600 transition-transform duration-300 ${openSections.contacto ? 'rotate-180' : ''}`}>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7-7 7-7" />
+                  </svg>
+                </span>
+              </button>
+              {openSections.contacto && (
+                <div className="border-t border-pink-100 animate-fadeIn">
+                  <LandingContact />
+                </div>
+              )}
+            </div>
+
           </div>
 
           {/* VISTA DESKTOP (Secuencias Continuas Estándar md:block) */}
