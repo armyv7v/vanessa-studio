@@ -2,7 +2,25 @@ import { useState, useEffect, useRef } from 'react';
 import { SparkleIcon } from './BrandMotifs';
 import { BUSINESS } from '../lib/businessInfo';
 
-const realGalleryImages = Array.from({ length: 15 }, (_, i) => `/gallery/modelo-${i + 1}.webp`);
+const realGalleryImages = [
+  { src: '/gallery/modelo-1.webp', category: 'Acrílicas', title: 'Esculpidas Gold' },
+  { src: '/gallery/modelo-2.webp', category: 'Softgel', title: 'Nude Elegant' },
+  { src: '/gallery/modelo-3.webp', category: 'Polygel', title: 'Baby Boomer' },
+  { src: '/gallery/modelo-4.webp', category: 'Nail Art', title: 'Mariposa Chic' },
+  { src: '/gallery/modelo-5.webp', category: 'Acrílicas', title: 'Red Glam' },
+  { src: '/gallery/modelo-6.webp', category: 'Softgel', title: 'Esmaltado Espejo' },
+  { src: '/gallery/modelo-7.webp', category: 'Polygel', title: 'Francés Moderno' },
+  { src: '/gallery/modelo-8.webp', category: 'Nail Art', title: 'Cristales & Destellos' },
+  { src: '/gallery/modelo-9.webp', category: 'Acrílicas', title: 'Almond Nude' },
+  { src: '/gallery/modelo-10.webp', category: 'Softgel', title: 'Pink Velvet' },
+  { src: '/gallery/modelo-11.webp', category: 'Polygel', title: 'Encapsulado Gold' },
+  { src: '/gallery/modelo-12.webp', category: 'Nail Art', title: 'Marmoleado Rose' },
+  { src: '/gallery/modelo-13.webp', category: 'Acrílicas', title: 'Coffin Luxe' },
+  { src: '/gallery/modelo-14.webp', category: 'Softgel', title: 'Minimalist Line' },
+  { src: '/gallery/modelo-15.webp', category: 'Nail Art', title: 'Glitter Ombré' },
+];
+
+const categories = ['Todos', 'Acrílicas', 'Softgel', 'Polygel', 'Nail Art'];
 
 function InstagramGlyph({ className = 'h-6 w-6' }) {
   return (
@@ -15,37 +33,49 @@ function InstagramGlyph({ className = 'h-6 w-6' }) {
 }
 
 export default function LandingGallery({ images = [] }) {
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
   const [panPos, setPanPos] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [isDraggingModal, setIsDraggingModal] = useState(false);
+  const [dragStartModal, setDragStartModal] = useState({ x: 0, y: 0 });
+
+  // Arrastre con mouse en el carrusel
+  const [isTrackDragging, setIsTrackDragging] = useState(false);
+  const [trackStartX, setTrackStartX] = useState(0);
+  const [trackScrollLeft, setTrackScrollLeft] = useState(0);
 
   const scrollContainerRef = useRef(null);
+  const progressBarRef = useRef(null);
+  const progressTextRef = useRef(null);
   const animFrameRef = useRef(null);
 
-  const baseImages = images.length > 0 ? images : realGalleryImages;
-  const displayImages = [...baseImages, ...baseImages];
-  const total = baseImages.length;
+  const baseItems = images.length > 0
+    ? images.map((src, i) => ({ src, category: 'General', title: `Modelo ${i + 1}` }))
+    : realGalleryImages;
 
-  // Bloqueo estricto del scroll del fondo (body) cuando el modal está abierto
+  const filteredItems = selectedCategory === 'Todos'
+    ? baseItems
+    : baseItems.filter((item) => item.category === selectedCategory);
+
+  // Duplicamos items para scroll infinito continuo
+  const displayItems = [...filteredItems, ...filteredItems];
+  const total = filteredItems.length;
+
+  // Bloqueo estricto del scroll del cuerpo (body) cuando el modal está abierto
   useEffect(() => {
     if (selectedIndex !== null) {
       document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
     } else {
       document.body.style.overflow = '';
-      document.body.style.touchAction = '';
     }
     return () => {
       document.body.style.overflow = '';
-      document.body.style.touchAction = '';
     };
   }, [selectedIndex]);
 
-  // Auto-scroll continuo ultra lento e infinito con actualización de barra de progreso
+  // Auto-scroll fluido continuo sin re-renders mediante manipulacion directa de DOM
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -56,18 +86,24 @@ export default function LandingGallery({ images = [] }) {
       const delta = time - lastTime;
       lastTime = time;
 
-      if (!isPaused && selectedIndex === null) {
-        // Velocidad pausada y ultra elegante (~16px/seg)
-        el.scrollLeft += (delta * 0.018);
+      if (!isPaused && selectedIndex === null && !isTrackDragging) {
+        // Velocidad continua agradable (~22px/seg)
+        el.scrollLeft += delta * 0.024;
 
         const maxScroll = el.scrollWidth / 2;
-        if (el.scrollLeft >= maxScroll) {
+        if (maxScroll > 0 && el.scrollLeft >= maxScroll) {
           el.scrollLeft -= maxScroll;
         }
 
-        // Cálculo de barra de progreso (0% a 100%)
-        const progress = (el.scrollLeft % maxScroll) / maxScroll;
-        setScrollProgress(Math.min(100, Math.max(0, progress * 100)));
+        // Actualización directa del DOM de la barra de progreso sin provocar re-render de React
+        if (progressBarRef.current && maxScroll > 0) {
+          const ratio = Math.min(1, Math.max(0, (el.scrollLeft % maxScroll) / maxScroll));
+          progressBarRef.current.style.width = `${ratio * 100}%`;
+          if (progressTextRef.current) {
+            const currentItem = Math.min(total, Math.floor(ratio * total) + 1);
+            progressTextRef.current.textContent = `${currentItem} / ${total}`;
+          }
+        }
       }
 
       animFrameRef.current = requestAnimationFrame(step);
@@ -78,18 +114,30 @@ export default function LandingGallery({ images = [] }) {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isPaused, selectedIndex]);
+  }, [isPaused, selectedIndex, isTrackDragging, total, selectedCategory]);
 
-  // Manejo de scroll manual en el carrusel para actualizar la barra de progreso
-  const handleContainerScroll = () => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const maxScroll = el.scrollWidth / 2;
-    const progress = (el.scrollLeft % maxScroll) / maxScroll;
-    setScrollProgress(Math.min(100, Math.max(0, progress * 100)));
+  // Arrastre manual por mouse en el carrusel
+  const handleTrackMouseDown = (e) => {
+    setIsTrackDragging(true);
+    setIsPaused(true);
+    setTrackStartX(e.pageX - scrollContainerRef.current.offsetLeft);
+    setTrackScrollLeft(scrollContainerRef.current.scrollLeft);
   };
 
-  // Zoom con rueda de mouse exclusivamente sobre el modal
+  const handleTrackMouseMove = (e) => {
+    if (!isTrackDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - trackStartX) * 1.5;
+    scrollContainerRef.current.scrollLeft = trackScrollLeft - walk;
+  };
+
+  const handleTrackMouseUp = () => {
+    setIsTrackDragging(false);
+    setIsPaused(false);
+  };
+
+  // Zoom por rueda de mouse en el modal
   const handleWheelZoom = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -101,29 +149,29 @@ export default function LandingGallery({ images = [] }) {
     });
   };
 
-  // Drag & Pan para desplazarse dentro de la foto ampliada
-  const handleMouseDown = (e) => {
+  // Arrastre en modal ampliado
+  const handleModalMouseDown = (e) => {
     if (zoomScale <= 1) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - panPos.x, y: e.clientY - panPos.y });
+    setIsDraggingModal(true);
+    setDragStartModal({ x: e.clientX - panPos.x, y: e.clientY - panPos.y });
   };
 
-  const handleMouseMove = (e) => {
-    if (!isDragging || zoomScale <= 1) return;
+  const handleModalMouseMove = (e) => {
+    if (!isDraggingModal || zoomScale <= 1) return;
     setPanPos({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
+      x: e.clientX - dragStartModal.x,
+      y: e.clientY - dragStartModal.y,
     });
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  const handleModalMouseUp = () => {
+    setIsDraggingModal(false);
   };
 
   const resetModalState = () => {
     setZoomScale(1);
     setPanPos({ x: 0, y: 0 });
-    setIsDragging(false);
+    setIsDraggingModal(false);
   };
 
   const handleNextModal = (e) => {
@@ -155,25 +203,48 @@ export default function LandingGallery({ images = [] }) {
         <div className="mx-auto max-w-2xl text-center">
           <span className="section-kicker-gold">
             <SparkleIcon className="h-3.5 w-3.5" />
-            Galería & Trabajos Reales
+            Galería Interactiva
           </span>
-          <h2 className="headline-section mt-4">Modelos de Uñas</h2>
+          <h2 className="headline-section mt-4">Modelos de Uñas Reales</h2>
           <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-            Desplazamiento continuo de nuestras creaciones. Detén el cursor sobre cualquier foto para pausar o haz clic para abrir el visor interactivo.
+            Filtra por técnica, arrastra el carrusel o haz clic en cualquier miniatura para ampliarla con zoom interactivo.
           </p>
         </div>
 
-        {/* Carrusel Multi-Card Infinito y Lento */}
+        {/* Filtros de Categoría Interativos */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => {
+                setSelectedCategory(cat);
+                if (scrollContainerRef.current) scrollContainerRef.current.scrollLeft = 0;
+              }}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-300 ${
+                selectedCategory === cat
+                  ? 'bg-gradient-to-r from-[#E11B74] to-[#C5A059] text-white shadow-md scale-105'
+                  : 'border border-pink-200/80 bg-white/80 text-neutral-600 hover:border-pink-300 hover:bg-pink-50'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Carrusel Multi-Card Interactivo con Arrastre y Auto-scroll */}
         <div
-          className="relative mt-10 px-2 sm:px-6"
+          className="relative mt-8 px-2 sm:px-6"
           onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
+          onMouseLeave={() => {
+            setIsPaused(false);
+            setIsTrackDragging(false);
+          }}
         >
-          {/* Botón Flecha Izquierda */}
+          {/* Flecha Izquierda */}
           <button
             onClick={() => scrollManual('left')}
             aria-label="Deslizar galería a la izquierda"
-            className="absolute -left-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/90 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white sm:-left-4"
+            className="absolute -left-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/95 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white sm:-left-4"
             style={{ color: 'var(--brand-darker)' }}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
@@ -181,37 +252,50 @@ export default function LandingGallery({ images = [] }) {
             </svg>
           </button>
 
-          {/* Track Horizontal de Miniaturas */}
+          {/* Track Horizontal de Miniaturas (Soporta Click, Touch Swipe y Mouse Drag) */}
           <div
             ref={scrollContainerRef}
-            onScroll={handleContainerScroll}
-            className="flex gap-4 overflow-x-auto py-4 no-scrollbar"
+            onMouseDown={handleTrackMouseDown}
+            onMouseMove={handleTrackMouseMove}
+            onMouseUp={handleTrackMouseUp}
+            className={`flex gap-4 overflow-x-auto py-4 select-none no-scrollbar ${
+              isTrackDragging ? 'cursor-grabbing' : 'cursor-grab'
+            }`}
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {displayImages.map((src, index) => {
+            {displayItems.map((item, index) => {
               const realIndex = index % total;
               return (
-                <button
+                <div
                   key={index}
-                  type="button"
                   onClick={() => {
-                    resetModalState();
-                    setSelectedIndex(realIndex);
+                    if (!isTrackDragging) {
+                      resetModalState();
+                      setSelectedIndex(realIndex);
+                    }
                   }}
-                  className="group relative aspect-square h-44 w-44 shrink-0 overflow-hidden rounded-2xl border border-pink-200/60 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#E11B74]/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#E11B74] sm:h-52 sm:w-52"
+                  className="group relative aspect-square h-44 w-44 shrink-0 overflow-hidden rounded-2xl border border-pink-200/70 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-[#E11B74] hover:shadow-xl sm:h-52 sm:w-52"
                 >
                   <div className="relative h-full w-full overflow-hidden rounded-xl bg-neutral-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={src}
-                      alt={`Modelo de uñas Vanessa Nails ${realIndex + 1}`}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      src={item.src}
+                      alt={item.title}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                       loading="lazy"
+                      draggable={false}
                     />
-                    
+
+                    {/* Chip de categoría superior */}
+                    <div className="absolute top-2 left-2 z-10">
+                      <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
+                        {item.category}
+                      </span>
+                    </div>
+
                     {/* Overlay al pasar el mouse */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                      <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-pink-600 shadow-md backdrop-blur-sm">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                      <span className="flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-pink-600 shadow-md backdrop-blur-sm">
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
                         </svg>
@@ -219,16 +303,16 @@ export default function LandingGallery({ images = [] }) {
                       </span>
                     </div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
 
-          {/* Botón Flecha Derecha */}
+          {/* Flecha Derecha */}
           <button
             onClick={() => scrollManual('right')}
             aria-label="Deslizar galería a la derecha"
-            className="absolute -right-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/90 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white sm:-right-4"
+            className="absolute -right-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/95 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white sm:-right-4"
             style={{ color: 'var(--brand-darker)' }}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
@@ -236,24 +320,22 @@ export default function LandingGallery({ images = [] }) {
             </svg>
           </button>
 
-          {/* Barra de progreso inferior del carrusel */}
+          {/* Barra de Progreso Dinámica sin Re-renders de React */}
           <div className="mt-4 flex items-center justify-center gap-3">
             <div className="h-1.5 w-48 overflow-hidden rounded-full bg-pink-100 shadow-inner sm:w-64">
               <div
-                className="h-full rounded-full transition-all duration-150 ease-out"
-                style={{
-                  width: `${scrollProgress}%`,
-                  background: 'linear-gradient(90deg, #E11B74, #C5A059)',
-                }}
+                ref={progressBarRef}
+                className="h-full rounded-full bg-gradient-to-r from-[#E11B74] to-[#C5A059] transition-all duration-75"
+                style={{ width: '0%' }}
               />
             </div>
-            <span className="text-[11px] font-semibold tracking-wider text-pink-400">
-              {Math.round((scrollProgress / 100) * total) || 1} / {total}
+            <span ref={progressTextRef} className="text-[11px] font-semibold tracking-wider text-pink-500">
+              1 / {total}
             </span>
           </div>
         </div>
 
-        {/* Lightbox Modal con Bloqueo de Scroll de Fondo, Zoom y Desplazamiento */}
+        {/* Lightbox Modal con Bloqueo de Body Scroll, Zoom y Arrastre Pan */}
         {selectedIndex !== null && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/94 p-4 backdrop-blur-lg animate-fadeIn select-none overflow-hidden"
@@ -279,7 +361,7 @@ export default function LandingGallery({ images = [] }) {
                       (restablecer)
                     </button>
                   ) : (
-                    <span className="text-[11px] opacity-80">(usa la rueda del mouse)</span>
+                    <span className="text-[11px] opacity-80">(scroll de mouse o pellizco)</span>
                   )}
                 </div>
 
@@ -298,25 +380,25 @@ export default function LandingGallery({ images = [] }) {
                 </button>
               </div>
 
-              {/* Contenedor de Imagen con Zoom e Interacción de Arrastre */}
+              {/* Contenedor de la foto ampliada */}
               <div
                 onWheel={handleWheelZoom}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
+                onMouseDown={handleModalMouseDown}
+                onMouseMove={handleModalMouseMove}
+                onMouseUp={handleModalMouseUp}
+                onMouseLeave={handleModalMouseUp}
                 className={`relative overflow-hidden rounded-2xl border border-white/20 bg-neutral-950 shadow-2xl ${
-                  zoomScale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'
+                  zoomScale > 1 ? (isDraggingModal ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'
                 }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={baseImages[selectedIndex]}
-                  alt={`Modelo ampliado ${selectedIndex + 1}`}
+                  src={filteredItems[selectedIndex]?.src}
+                  alt={filteredItems[selectedIndex]?.title || `Modelo ${selectedIndex + 1}`}
                   draggable={false}
                   style={{
                     transform: `scale(${zoomScale}) translate(${panPos.x / zoomScale}px, ${panPos.y / zoomScale}px)`,
-                    transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+                    transition: isDraggingModal ? 'none' : 'transform 0.15s ease-out',
                   }}
                   className="max-h-[80vh] max-w-[88vw] object-contain origin-center select-none pointer-events-none"
                 />
@@ -346,10 +428,15 @@ export default function LandingGallery({ images = [] }) {
                 )}
               </div>
 
-              {/* Contador de foto */}
-              <p className="mt-3 text-xs font-semibold text-white/80">
-                {selectedIndex + 1} de {total}
-              </p>
+              {/* Título e indicador de foto */}
+              <div className="mt-3 text-center">
+                <p className="text-sm font-semibold text-white">
+                  {filteredItems[selectedIndex]?.title}
+                </p>
+                <p className="text-xs text-white/70">
+                  {selectedIndex + 1} de {total}
+                </p>
+              </div>
             </div>
           </div>
         )}
