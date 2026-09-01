@@ -13,23 +13,27 @@ import LandingContact from '../components/LandingContact';
 import { WhatsAppIcon } from '../components/BrandMotifs';
 import { BUSINESS, WHATSAPP_DEFAULT } from '../lib/businessInfo';
 
-// El horario normal de atención es hasta las 21:00.
-// Las citas ya agendadas (normales o extra) bloquearán los turnos correspondientes.
 const normalConfig = {
   isExtra: false,
   mode: 'normal',
   daysToShow: 21,
 };
 
+const mobileTabs = [
+  { id: 'reservar', label: 'Reserva', icon: '🗓️' },
+  { id: 'servicios', label: 'Servicios', icon: '💅' },
+  { id: 'galeria', label: 'Galería', icon: '📸' },
+  { id: 'testimonios', label: 'Opiniones', icon: '⭐' },
+  { id: 'contacto', label: 'Ubicación', icon: '📍' },
+];
+
 export default function Home() {
-  // Al elegir un servicio en la grilla del landing baja al reservador con
-  // ese servicio YA seleccionado (salta directo al calendario).
   const [reserveState, setReserveState] = useState(null);
+  const [activeMobileTab, setActiveMobileTab] = useState('reservar');
 
   function handleReserve(serviceId) {
     setReserveState((prev) => ({ serviceId, signal: (prev?.signal || 0) + 1 }));
-    // Lleva el scroll directo al panel del calendario: así el encabezado no
-    // roba espacio arriba y el calendario queda visible (como en la captura).
+    setActiveMobileTab('reservar');
     document.getElementById('booking-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -48,34 +52,98 @@ export default function Home() {
 
         <main>
           <LandingHero />
-          <LandingServices onReserve={handleReserve} />
-          <LandingSteps />
 
-          {/* Reserva online */}
-          <section id="reservar" className="scroll-mt-24">
-            <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-              <div className="mx-auto max-w-2xl text-center">
-                <span className="section-kicker">Reserva online</span>
-                <h2 className="headline-section mt-4">Agenda tu cita en minutos</h2>
-                <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-                  Selecciona tu servicio, elige el horario ideal y confirma. Si no encuentras
-                  disponibilidad en el horario regular, revisa los{' '}
-                  <Link href="/extra-cupos" className="font-semibold underline decoration-dotted" style={{ color: 'var(--brand)' }}>
-                    extra cupos
-                  </Link>{' '}
-                  disponibles.
-                </p>
-              </div>
-
-              <div id="booking-panel" className="premium-shell gloss-panel gradient-outline step-fade-in mt-10 scroll-mt-20 !p-5 sm:!p-6 lg:!p-8">
-                <BookingFlow config={normalConfig} initialService={reserveState?.serviceId} reserveSignal={reserveState?.signal} hideServiceSelect />
-              </div>
+          {/* --- OPCCIÓN 1 MÓVIL: Navegación Fija por Pestañas Interactivas (md:hidden) --- */}
+          <div className="sticky top-[61px] z-40 border-b border-pink-200/80 bg-white/95 px-2 py-2.5 backdrop-blur-md md:hidden">
+            <div className="flex items-center justify-around gap-1 overflow-x-auto no-scrollbar">
+              {mobileTabs.map((tab) => {
+                const isActive = activeMobileTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveMobileTab(tab.id);
+                      window.scrollTo({ top: 480, behavior: 'smooth' });
+                    }}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-[#E11B74] to-[#C5A059] text-white shadow-md scale-105'
+                        : 'bg-pink-50/80 text-neutral-600 hover:bg-pink-100'
+                    }`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
-          </section>
+          </div>
 
-          <LandingTestimonials />
-          <LandingGallery />
-          <LandingContact />
+          {/* VISTA MÓVIL (Interactivas por Pestaña) */}
+          <div className="block md:hidden">
+            {activeMobileTab === 'reservar' && (
+              <section id="reservar" className="scroll-mt-24">
+                <div className="mx-auto max-w-6xl px-4 py-8">
+                  <div className="mx-auto max-w-2xl text-center">
+                    <span className="section-kicker">Reserva online</span>
+                    <h2 className="headline-section mt-3 text-2xl font-bold">Agenda tu cita en minutos</h2>
+                    <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--ink-muted)' }}>
+                      Selecciona tu servicio y horario. ¿Sin cupo regular? Revisa los{' '}
+                      <Link href="/extra-cupos" className="font-semibold underline decoration-dotted" style={{ color: 'var(--brand)' }}>
+                        extra cupos
+                      </Link>.
+                    </p>
+                  </div>
+
+                  <div id="booking-panel" className="premium-shell gloss-panel gradient-outline step-fade-in mt-6 !p-4">
+                    <BookingFlow config={normalConfig} initialService={reserveState?.serviceId} reserveSignal={reserveState?.signal} hideServiceSelect />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {activeMobileTab === 'servicios' && (
+              <div>
+                <LandingServices onReserve={handleReserve} />
+                <LandingSteps />
+              </div>
+            )}
+
+            {activeMobileTab === 'galeria' && <LandingGallery />}
+            {activeMobileTab === 'testimonios' && <LandingTestimonials />}
+            {activeMobileTab === 'contacto' && <LandingContact />}
+          </div>
+
+          {/* VISTA DESKTOP (Secuencias Continuas Estándar md:block) */}
+          <div className="hidden md:block">
+            <LandingServices onReserve={handleReserve} />
+            <LandingSteps />
+
+            <section id="reservar" className="scroll-mt-24">
+              <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+                <div className="mx-auto max-w-2xl text-center">
+                  <span className="section-kicker">Reserva online</span>
+                  <h2 className="headline-section mt-4">Agenda tu cita en minutos</h2>
+                  <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
+                    Selecciona tu servicio, elige el horario ideal y confirma. Si no encuentras
+                    disponibilidad en el horario regular, revisa los{' '}
+                    <Link href="/extra-cupos" className="font-semibold underline decoration-dotted" style={{ color: 'var(--brand)' }}>
+                      extra cupos
+                    </Link>{' '}
+                    disponibles.
+                  </p>
+                </div>
+
+                <div id="booking-panel" className="premium-shell gloss-panel gradient-outline step-fade-in mt-10 scroll-mt-20 !p-5 sm:!p-6 lg:!p-8">
+                  <BookingFlow config={normalConfig} initialService={reserveState?.serviceId} reserveSignal={reserveState?.signal} hideServiceSelect />
+                </div>
+              </div>
+            </section>
+
+            <LandingTestimonials />
+            <LandingGallery />
+            <LandingContact />
+          </div>
         </main>
 
         <footer className="border-t border-white/70" style={{ background: 'linear-gradient(180deg, rgba(255,251,253,0.94), rgba(254,240,246,0.96))' }}>

@@ -75,7 +75,7 @@ export default function LandingGallery({ images = [] }) {
     };
   }, [selectedIndex]);
 
-  // Auto-scroll continuo: NUNCA se detiene por completo al pasar el mouse (solo baja ligeramente de velocidad)
+  // Auto-scroll continuo en desktop
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -87,7 +87,6 @@ export default function LandingGallery({ images = [] }) {
       lastTime = time;
 
       if (selectedIndex === null && !isTrackDragging) {
-        // Velocidad: normal (0.02) o suave al pasar el mouse (0.01) para que NUNCA se congele en web
         const speed = isHovered ? 0.01 : 0.02;
         el.scrollLeft += delta * speed;
 
@@ -96,7 +95,6 @@ export default function LandingGallery({ images = [] }) {
           el.scrollLeft -= maxScroll;
         }
 
-        // Actualización directa de la barra de progreso sin re-renders
         if (progressBarRef.current && maxScroll > 0) {
           const ratio = Math.min(1, Math.max(0, (el.scrollLeft % maxScroll) / maxScroll));
           progressBarRef.current.style.width = `${ratio * 100}%`;
@@ -117,9 +115,8 @@ export default function LandingGallery({ images = [] }) {
     };
   }, [selectedIndex, isTrackDragging, isHovered, total, selectedCategory]);
 
-  // Arrastre por mouse exclusivo de escritorio (sin bloquear el touch nativo de móviles)
+  // Arrastre por mouse de escritorio
   const handleTrackMouseDown = (e) => {
-    // Solo responde a clic principal de mouse
     if (e.button !== 0) return;
     setIsTrackDragging(true);
     dragDistanceRef.current = 0;
@@ -209,7 +206,7 @@ export default function LandingGallery({ images = [] }) {
           </span>
           <h2 className="headline-section mt-4">Modelos de Uñas Reales</h2>
           <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-            Filtra por técnica, desliza libremente en móvil o haz clic en cualquier foto para abrir el visor con zoom interactivo.
+            Filtra por técnica o toca cualquier foto para abrir el visor con zoom interactivo.
           </p>
         </div>
 
@@ -233,9 +230,39 @@ export default function LandingGallery({ images = [] }) {
           ))}
         </div>
 
-        {/* Carrusel Multi-Card Continuo (Móvil táctil 100% fluido + Web no congelable) */}
+        {/* --- VISTA MÓVIL: Grilla de miniaturas limpia 100% nativa (Sin JS touch conflicts) --- */}
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:hidden">
+          {filteredItems.map((item, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => {
+                resetModalState();
+                setSelectedIndex(index);
+              }}
+              className="group relative aspect-square w-full overflow-hidden rounded-2xl border border-pink-200/70 bg-pink-50/40 p-1 shadow-sm active:scale-95 transition"
+            >
+              <div className="relative h-full w-full overflow-hidden rounded-xl bg-neutral-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.src}
+                  alt={item.title}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute top-2 left-2 z-10">
+                  <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
+                    {item.category}
+                  </span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* --- VISTA DESKTOP/TABLET: Carrusel Multi-Card Continuo --- */}
         <div
-          className="relative mt-8 px-2 sm:px-6"
+          className="hidden sm:block relative mt-8 px-6"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => {
             setIsHovered(false);
@@ -246,7 +273,7 @@ export default function LandingGallery({ images = [] }) {
           <button
             onClick={() => scrollManual('left')}
             aria-label="Deslizar galería a la izquierda"
-            className="absolute -left-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/95 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white sm:-left-4"
+            className="absolute -left-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/95 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white"
             style={{ color: 'var(--brand-darker)' }}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
@@ -254,21 +281,19 @@ export default function LandingGallery({ images = [] }) {
             </svg>
           </button>
 
-          {/* Track Horizontal de Miniaturas con Swipe Táctil Nativo de Móvil */}
+          {/* Track Horizontal */}
           <div
             ref={scrollContainerRef}
             onMouseDown={handleTrackMouseDown}
             onMouseMove={handleTrackMouseMove}
             onMouseUp={handleTrackMouseUp}
             onMouseLeave={handleTrackMouseUp}
-            className={`flex gap-3 sm:gap-4 overflow-x-auto py-4 touch-pan-x no-scrollbar ${
+            className={`flex gap-4 overflow-x-auto py-4 select-none no-scrollbar ${
               isTrackDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
             style={{
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-x pan-y',
             }}
           >
             {displayItems.map((item, index) => {
@@ -282,7 +307,7 @@ export default function LandingGallery({ images = [] }) {
                       setSelectedIndex(realIndex);
                     }
                   }}
-                  className="group relative aspect-square h-40 w-40 shrink-0 overflow-hidden rounded-2xl border border-pink-200/70 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-[#E11B74] hover:shadow-xl sm:h-52 sm:w-52"
+                  className="group relative aspect-square h-52 w-52 shrink-0 overflow-hidden rounded-2xl border border-pink-200/70 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-[#E11B74] hover:shadow-xl"
                 >
                   <div className="relative h-full w-full overflow-hidden rounded-xl bg-neutral-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -293,15 +318,11 @@ export default function LandingGallery({ images = [] }) {
                       loading="lazy"
                       draggable={false}
                     />
-
-                    {/* Chip de categoría */}
                     <div className="absolute top-2 left-2 z-10">
                       <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
                         {item.category}
                       </span>
                     </div>
-
-                    {/* Overlay al pasar el mouse en web */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                       <span className="flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-pink-600 shadow-md backdrop-blur-sm">
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
@@ -320,7 +341,7 @@ export default function LandingGallery({ images = [] }) {
           <button
             onClick={() => scrollManual('right')}
             aria-label="Deslizar galería a la derecha"
-            className="absolute -right-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/95 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white sm:-right-4"
+            className="absolute -right-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-pink-200/80 bg-white/95 p-3 shadow-lg backdrop-blur-md transition duration-200 hover:scale-110 hover:bg-white"
             style={{ color: 'var(--brand-darker)' }}
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
@@ -330,7 +351,7 @@ export default function LandingGallery({ images = [] }) {
 
           {/* Barra de Progreso Dinámica */}
           <div className="mt-4 flex items-center justify-center gap-3">
-            <div className="h-1.5 w-48 overflow-hidden rounded-full bg-pink-100 shadow-inner sm:w-64">
+            <div className="h-1.5 w-64 overflow-hidden rounded-full bg-pink-100 shadow-inner">
               <div
                 ref={progressBarRef}
                 className="h-full rounded-full bg-gradient-to-r from-[#E11B74] to-[#C5A059] transition-all duration-75"
@@ -369,7 +390,7 @@ export default function LandingGallery({ images = [] }) {
                       (restablecer)
                     </button>
                   ) : (
-                    <span className="text-[11px] opacity-80">(scroll de mouse o pellizco)</span>
+                    <span className="text-[11px] opacity-80">(scroll de mouse)</span>
                   )}
                 </div>
 
