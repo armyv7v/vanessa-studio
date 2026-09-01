@@ -1,13 +1,12 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { addDays, subDays, endOfDay, endOfWeek, format, startOfDay, startOfWeek, parseISO } from 'date-fns';
+import Head from 'next/head';
+import { addDays, subDays, endOfDay, endOfWeek, format, startOfDay, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   Check,
   RotateCcw,
   MessageSquare,
-  Calendar,
-  DollarSign,
   Clock,
   ShieldCheck,
   RefreshCw,
@@ -19,6 +18,7 @@ import {
   ExternalLink,
   Save,
   X,
+  Sparkles,
 } from 'lucide-react';
 import AdminShell from '../../components/AdminShell';
 import AdminMetricIcon from '../../components/AdminMetricIcon';
@@ -148,7 +148,6 @@ export default function ValidarCitas() {
   const visibleReservations = useMemo(() => {
     let result = reservations;
 
-    // Filtro por Estado de Pago
     if (paymentFilter !== 'all') {
       result = result.filter((reservation) => {
         const status = reservation.isExpired ? 'EXPIRADA' : reservation.paymentStatus;
@@ -156,15 +155,13 @@ export default function ValidarCitas() {
       });
     }
 
-    // Filtro "Acción Requerida" (Pendientes de pago o Expiradas sin resolver)
     if (showActionRequired) {
       result = result.filter((reservation) => {
         const status = reservation.isExpired ? 'EXPIRADA' : reservation.paymentStatus;
-        return status === 'PENDIENTE_PAGO' || status === 'EXPIRADA';
+        return status === 'PENDIENTE_PAGO' || status === 'EXPIRADA' || (status === 'PAGO_CONFIRMADO' && !reservation.attended);
       });
     }
 
-    // Filtro de Búsqueda de Texto
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       result = result.filter((res) => {
@@ -181,7 +178,7 @@ export default function ValidarCitas() {
     return result;
   }, [paymentFilter, showActionRequired, searchQuery, reservations]);
 
-  // Agrupamiento por fecha para optimizar espacio
+  // Agrupamiento por fecha
   const groupedReservations = useMemo(() => {
     const groups = {};
     visibleReservations.forEach((reservation) => {
@@ -203,7 +200,7 @@ export default function ValidarCitas() {
 
     const data = await res.json().catch(() => null);
     if (!res.ok) {
-      throw new Error(data?.error || 'No se pudo completar la operacion admin.');
+      throw new Error(data?.error || 'No se pudo completar la operación admin.');
     }
 
     return data;
@@ -273,15 +270,13 @@ export default function ValidarCitas() {
       setSuccessMessage(data?.message || 'Cita actualizada correctamente.');
       closeActionPanel();
     } catch (actionError) {
-      setError(actionError.message || 'No se pudo completar la accion sobre la cita.');
+      setError(actionError.message || 'No se pudo completar la acción sobre la cita.');
     } finally {
       setActionSubmitting(false);
     }
   };
 
-  // Manejadores de API
   const handleConfirmPayment = async (reservationCode) => {
-
     try {
       setConfirmingPaymentCode(reservationCode);
       setError('');
@@ -301,7 +296,7 @@ export default function ValidarCitas() {
             }
           : reservation
       )));
-      setSuccessMessage(data?.message || 'Pago confirmado correctamente.');
+      setSuccessMessage(data?.message || 'Pago confirmado y cupo liberado en agenda.');
     } catch (paymentError) {
       setError(paymentError.message || 'No se pudo confirmar el pago.');
     } finally {
@@ -310,7 +305,6 @@ export default function ValidarCitas() {
   };
 
   const handleSweepExpiredPayments = async () => {
-
     try {
       setSweepingPayments(true);
       setError('');
@@ -320,14 +314,13 @@ export default function ValidarCitas() {
       await refreshReservations();
       setSuccessMessage(data?.message || 'Liberación de vencidas ejecutada correctamente.');
     } catch (sweepError) {
-      setError(sweepError.message || 'No se pudo ejecutar la liberación de vencidas.');
+      setError(sweepError.message || 'No se pudo ejecutar la liberación.');
     } finally {
       setSweepingPayments(false);
     }
   };
 
   const handleValidate = async (reservationCode) => {
-
     try {
       setSubmittingCode(reservationCode);
       setError('');
@@ -344,7 +337,7 @@ export default function ValidarCitas() {
             }
           : reservation
       )));
-      setSuccessMessage('Asistencia validada correctamente y tarjeta de fidelidad actualizada.');
+      setSuccessMessage('Asistencia validada y tarjeta de fidelidad actualizada.');
     } catch (validationError) {
       setError(validationError.message || 'No se pudo validar la cita.');
     } finally {
@@ -354,10 +347,10 @@ export default function ValidarCitas() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
+      <div className="flex min-h-screen items-center justify-center bg-pink-50/40">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-b-transparent" style={{ borderColor: 'var(--brand) transparent var(--brand) var(--brand)' }} />
-          <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>Verificando sesión admin...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[#E11B74] border-t-transparent" />
+          <p className="text-xs font-semibold text-neutral-500">Verificando sesión admin...</p>
         </div>
       </div>
     );
@@ -366,674 +359,416 @@ export default function ValidarCitas() {
   if (!isAuthenticated) return null;
 
   return (
-    <AdminShell
-      title="Validar citas y abonos"
-      description="Liberá turnos confirmando el abono recibido por transferencia, o validá asistencia cuando las clientas lleguen al estudio."
-    >
-      <div className="admin-workspace space-y-8">
-        
-        {/* Alerts */}
-        {error && (
-          <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 shadow-sm animate-fadeIn">
-            <AlertCircle className="h-5 w-5 shrink-0 text-rose-500" />
-            <p className="font-medium">{error}</p>
-          </div>
-        )}
-        {successMessage && (
-          <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 shadow-sm animate-fadeIn">
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
-            <p className="font-medium">{successMessage}</p>
-          </div>
-        )}
+    <>
+      <Head>
+        <title>Validar Citas & Pagos | Admin Vanessa Nails</title>
+      </Head>
 
-        <section className="admin-command-card rounded-[2rem] p-5 sm:p-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="inline-flex rounded-full border border-pink-200 bg-pink-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.24em] text-pink-800">
-                Centro operativo
-              </p>
-              <h2 className="mt-5 max-w-2xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                Agenda, abonos y asistencia en una sola vista
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-700">
-                Inspirado en un SaaS de gestion de citas: primero lo urgente, despues el detalle.
-              </p>
+      <AdminShell
+        title="Validar Citas & Abonos"
+        description="Confirma transferencias bancarias de abonos, reagenda turnos y valida asistencia de clientas."
+      >
+        <div className="space-y-6">
+          {/* Alertas */}
+          {error && (
+            <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-900 shadow-sm animate-fadeIn">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+              <p>{error}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={refreshReservations}
-                disabled={listLoading}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-900 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
-              >
-                <RefreshCw className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`} />
-                Actualizar agenda
-              </button>
-              <button
-                type="button"
-                onClick={handleSweepExpiredPayments}
-                disabled={sweepingPayments}
-                className="inline-flex items-center gap-2 rounded-2xl bg-pink-700 px-5 py-3 text-sm font-black text-white shadow-lg shadow-pink-900/10 transition hover:-translate-y-px hover:bg-pink-800 disabled:opacity-60"
-              >
-                <Trash2 className="h-4 w-4" />
-                Liberar vencidas
-              </button>
+          )}
+          {successMessage && (
+            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-950 shadow-sm animate-fadeIn">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+              <p>{successMessage}</p>
             </div>
-          </div>
+          )}
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              { label: 'Citas visibles', value: visibleReservations.length, detail: `${paymentSummary.total} en el rango cargado`, icon: 'calendar' },
-              { label: 'Acciones criticas', value: operationsSummary.actionRequired, detail: 'Abonos, vencidas o asistencia', icon: 'bolt' },
-              { label: 'Abonos confirmados', value: paymentSummary.confirmed, detail: `${paymentSummary.pending} pendientes de pago`, icon: 'wallet' },
-              { label: 'Flujo resuelto', value: `${operationsSummary.completionRate}%`, detail: `${operationsSummary.attendancePending} esperan asistencia`, icon: 'pulse' },
-            ].map((metric) => (
-              <div key={metric.label} className="admin-metric-card rounded-3xl p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-600">
-                      {metric.label}
-                    </p>
-                    <p className="mt-2 text-4xl font-black text-slate-950">{metric.value}</p>
-                  </div>
-                  <AdminMetricIcon type={metric.icon} />
+          {/* Tarjetas KPI de Resumen Operativo */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-pink-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Citas en Rango</p>
+                  <p className="mt-1 text-2xl font-bold text-neutral-900">{visibleReservations.length}</p>
                 </div>
-                <p className="mt-3 text-xs font-semibold text-slate-600">{metric.detail}</p>
+                <div className="rounded-xl bg-pink-50 p-2 text-pink-600">
+                  <CalendarDays className="h-5 w-5" />
+                </div>
               </div>
-            ))}
-          </div>
-        </section>
+              <p className="mt-2 text-[11px] text-neutral-500">{paymentSummary.total} cargadas en total</p>
+            </div>
 
-        {/* Dashboard Grid */}
-        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
-          
-          {/* Main Controls Section (Left/Top 2 Cols) */}
-          <div className="space-y-7">
-            
-            {/* Search and Filters Card */}
-            <div className="admin-section-band rounded-[2rem] p-5 shadow-sm space-y-5 sm:p-6">
-              
-              {/* Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+            <div className="rounded-2xl border border-amber-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Por Validar / Abono</p>
+                  <p className="mt-1 text-2xl font-bold text-amber-900">{paymentSummary.pending}</p>
+                </div>
+                <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
+                  <Clock className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-amber-700">Esperando comprobante</p>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Abonos Confirmados</p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-900">{paymentSummary.confirmed}</p>
+                </div>
+                <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-emerald-700">{operationsSummary.attendancePending} esperan asistencia</p>
+            </div>
+
+            <div className="rounded-2xl border border-pink-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#E11B74]">Acciones Críticas</p>
+                  <p className="mt-1 text-2xl font-bold text-[#E11B74]">{operationsSummary.actionRequired}</p>
+                </div>
+                <div className="rounded-xl bg-pink-50 p-2 text-[#E11B74]">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-neutral-500">Abonos o asistencia pendientes</p>
+            </div>
+          </div>
+
+          {/* Barra de Filtros y Búsqueda */}
+          <div className="rounded-3xl border border-pink-200/70 bg-white/90 p-4 sm:p-5 shadow-sm space-y-4 backdrop-blur-md">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {/* Buscador */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-neutral-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por nombre, email, teléfono, código..."
+                  placeholder="Buscar por clienta, teléfono, email, código..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white/50 pl-11 pr-4 py-3 text-sm text-slate-800 outline-none transition focus:border-pink-400 focus:bg-white focus:ring-2 focus:ring-pink-100"
+                  className="w-full rounded-2xl border border-pink-200/80 bg-white/80 pl-10 pr-4 py-2 text-xs sm:text-sm text-neutral-800 outline-none transition focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
                 />
               </div>
 
-              {/* Range & Filters Row */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                {/* Date range filters */}
-                <div className="flex items-center gap-2">
-                  {[
-                    { id: 'today', label: 'Hoy' },
-                    { id: 'week', label: 'Esta Semana' },
-                    { id: 'all', label: 'Ver Todo (Histórico)' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setFilter(tab.id)}
-                      className="rounded-full px-4 py-2 text-xs font-bold transition-all"
-                      style={
-                        filter === tab.id
-                          ? {
-                              background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
-                              color: '#fff',
-                              boxShadow: '0 4px 10px rgba(225,27,116,0.18)',
-                            }
-                          : {
-                              background: 'var(--bg-blush)',
-                              color: 'var(--ink-muted)',
-                              border: '1px solid var(--gold-lighter)',
-                            }
-                      }
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Show Required Actions Toggle */}
+              {/* Botones de acción rápida */}
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setShowActionRequired(!showActionRequired)}
-                  className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition border"
-                  style={
-                    showActionRequired
-                      ? {
-                          borderColor: 'var(--brand)',
-                          background: 'var(--brand-lightest)',
-                          color: 'var(--brand)',
-                        }
-                      : {
-                          borderColor: '#cbd5e1',
-                          background: '#f8fafc',
-                          color: '#64748b',
-                        }
-                  }
+                  onClick={refreshReservations}
+                  disabled={listLoading}
+                  className="flex items-center gap-1.5 rounded-xl border border-pink-200 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-700 shadow-sm hover:bg-pink-50 active:scale-95 transition disabled:opacity-50"
                 >
-                  <Clock className="h-4 w-4" />
-                  {showActionRequired ? 'Filtro: Acción Requerida' : 'Mostrar Completadas'}
+                  <RefreshCw className={`h-3.5 w-3.5 ${listLoading ? 'animate-spin text-pink-600' : ''}`} />
+                  <span>Refrescar</span>
                 </button>
-              </div>
-
-              {/* Detailed Payment Filters (only if action required is off) */}
-              {!showActionRequired && (
-                <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
-                  {[
-                    { id: 'all', label: 'Todos los pagos' },
-                    { id: 'PENDIENTE_PAGO', label: 'Pendientes' },
-                    { id: 'PAGO_CONFIRMADO', label: 'Confirmados' },
-                    { id: 'EXPIRADA', label: 'Expiradas/Liberadas' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setPaymentFilter(tab.id)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                        paymentFilter === tab.id
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Citations List Panel */}
-            <div className="admin-section-band rounded-[2rem] p-5 shadow-sm sm:p-6">
-              <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800">Turnos Registrados</h2>
-                  <p className="text-xs text-slate-500">
-                    Mostrando citas desde {format(dateRange.start, "d 'de' MMMM", { locale: es })} hasta {format(dateRange.end, "d 'de' MMMM", { locale: es })}
-                  </p>
-                </div>
-                {listLoading ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-pink-600">
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                    Actualizando...
-                  </span>
-                ) : (
-                  <span className="text-xs font-bold text-slate-500 rounded-full bg-slate-100 px-2.5 py-1">
-                    {visibleReservations.length} {visibleReservations.length === 1 ? 'cita' : 'citas'}
-                  </span>
-                )}
-              </div>
-
-              {listLoading && reservations.length === 0 ? (
-                <div className="space-y-4 py-2">
-                  {[0, 1, 2].map((item) => (
-                    <div key={item} className="rounded-2xl border border-slate-100 bg-white p-4">
-                      <div className="flex items-start gap-4">
-                        <div className="admin-skeleton-row h-16 w-20 rounded-2xl" />
-                        <div className="min-w-0 flex-1 space-y-3">
-                          <div className="admin-skeleton-row h-4 w-32 rounded-full" />
-                          <div className="admin-skeleton-row h-5 w-2/3 rounded-full" />
-                          <div className="admin-skeleton-row h-3 w-1/2 rounded-full" />
-                        </div>
-                        <div className="hidden space-y-2 sm:block">
-                          <div className="admin-skeleton-row h-9 w-36 rounded-xl" />
-                          <div className="admin-skeleton-row h-9 w-36 rounded-xl" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <p className="text-center text-xs font-semibold" style={{ color: 'var(--ink-faint)' }}>
-                    Cargando agenda operativa...
-                  </p>
-                </div>
-              ) : visibleReservations.length === 0 ? (
-                <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
-                  <CalendarDays className="mx-auto h-10 w-10 text-slate-300 mb-3" />
-                  <h3 className="text-sm font-bold text-slate-700">Sin citas para mostrar</h3>
-                  <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                    {showActionRequired 
-                      ? 'No hay citas con acciones pendientes de abono o asistencia en este rango de tiempo.'
-                      : 'No se encontraron citas que coincidan con los filtros o la búsqueda actual.'}
-                  </p>
-                  {showActionRequired && (
-                    <button
-                      onClick={() => setShowActionRequired(false)}
-                      className="mt-4 text-xs font-bold text-pink-600 hover:text-pink-700 hover:underline"
-                    >
-                      Ver historial de citas confirmadas y completadas
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {Object.entries(groupedReservations).map(([dateLabel, dateReservations]) => (
-                    <div key={dateLabel} className="space-y-3">
-                      
-                      {/* Section Date Header */}
-                      <div className="flex items-center gap-3 py-1">
-                        <h3 className="font-display text-base font-semibold text-slate-800 capitalize">
-                          {dateLabel}
-                        </h3>
-                        <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
-                      </div>
-
-                      {/* Items */}
-                      <div className="space-y-3">
-                        {dateReservations.map((reservation) => {
-                          const status = reservation.isExpired ? 'EXPIRADA' : reservation.paymentStatus;
-                          
-                          // WhatsApp Message Helper
-                          const waPhone = reservation.phone ? reservation.phone.replace(/\D/g, '') : '';
-                          const waMessage = `Hola ${reservation.name}, te escribo de Vanessa Nails Studio con respecto a tu cita del día ${reservation.dateLabel} a las ${reservation.timeLabel}...`;
-                          const waUrl = waPhone ? `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}` : null;
-
-                          return (
-                            <div
-                              key={reservation.code}
-                              className="admin-list-card rounded-2xl border border-slate-100 bg-slate-50/60 p-4 transition-all hover:bg-slate-50 hover:shadow-sm"
-                            >
-                              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                
-                                {/* Info Layout */}
-                                <div className="flex items-start gap-4 min-w-0">
-                                  {/* Big Time Block */}
-                                  <div className="shrink-0 flex flex-col items-center justify-center rounded-2xl bg-white border border-slate-100 px-3.5 py-2.5 shadow-sm text-center min-w-[70px]">
-                                    <Clock className="h-4 w-4 text-pink-600 mb-1" />
-                                    <span className="text-base font-bold text-slate-900 leading-none">
-                                      {reservation.timeLabel}
-                                    </span>
-                                  </div>
-
-                                  {/* Details */}
-                                  <div className="min-w-0 space-y-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      {/* Status Badge */}
-                                      {status === 'PENDIENTE_PAGO' && (
-                                        <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                                          Pendiente Abono
-                                        </span>
-                                      )}
-                                      {status === 'PAGO_CONFIRMADO' && (
-                                        <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                                          Abono Confirmado
-                                        </span>
-                                      )}
-                                      {status === 'EXPIRADA' && (
-                                        <span className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-700">
-                                          Cita Expirada (Sin Pago)
-                                        </span>
-                                      )}
-                                      {status === 'CANCELADA' && (
-                                        <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
-                                          Cancelada
-                                        </span>
-                                      )}
-
-                                      {/* Attendance Badge */}
-                                      {reservation.attended ? (
-                                        <span className="rounded-full bg-emerald-100/70 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
-                                          Asistió
-                                        </span>
-                                      ) : reservation.paymentStatus === 'PAGO_CONFIRMADO' ? (
-                                        <span className="rounded-full bg-pink-50 border border-pink-100 text-pink-700 px-2 py-0.5 text-[10px] font-bold">
-                                          Espera Asistencia
-                                        </span>
-                                      ) : null}
-                                    </div>
-
-                                    <h4 className="text-base font-bold text-slate-800 truncate">
-                                      {reservation.name}
-                                    </h4>
-                                    <p className="text-xs font-semibold text-slate-600">
-                                      {reservation.service}
-                                    </p>
-                                    
-                                    <div className="text-[11px] text-slate-500 space-y-0.5 leading-tight">
-                                      <p>{reservation.email}</p>
-                                      <p>{reservation.phone || 'Sin teléfono registrado'}</p>
-                                      <p className="font-mono text-[10px] text-slate-400">Código: {reservation.code}</p>
-                                      {status === 'PENDIENTE_PAGO' && reservation.paymentExpiresAt && (
-                                        <p className="text-amber-600 font-medium">
-                                          Vence pago: {format(new Date(reservation.paymentExpiresAt), 'dd/MM HH:mm')}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Actions Layout */}
-                                <div className="flex flex-wrap items-center gap-2 shrink-0 sm:flex-col sm:items-stretch sm:min-w-[170px]">
-                                  
-                                  {/* Confirm Button */}
-                                  {status === 'PENDIENTE_PAGO' && (
-                                    <button
-                                      type="button"
-                                      disabled={confirmingPaymentCode === reservation.code}
-                                      onClick={() => handleConfirmPayment(reservation.code)}
-                                      className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2.5 shadow-sm transition disabled:opacity-50"
-                                    >
-                                      {confirmingPaymentCode === reservation.code ? (
-                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                      ) : (
-                                        <Check className="h-3.5 w-3.5" />
-                                      )}
-                                      Confirmar Pago
-                                    </button>
-                                  )}
-
-                                  {/* Reactivate Expired Button */}
-                                  {status === 'EXPIRADA' && (
-                                    <button
-                                      type="button"
-                                      disabled={confirmingPaymentCode === reservation.code}
-                                      onClick={() => handleConfirmPayment(reservation.code)}
-                                      className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-4 py-2.5 shadow-sm transition disabled:opacity-50"
-                                    >
-                                      {confirmingPaymentCode === reservation.code ? (
-                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                      ) : (
-                                        <RotateCcw className="h-3.5 w-3.5" />
-                                      )}
-                                      Reactivar y Confirmar
-                                    </button>
-                                  )}
-
-                                  {/* Validate Attendance Button */}
-                                  {status === 'PAGO_CONFIRMADO' && !reservation.attended && (
-                                    <button
-                                      type="button"
-                                      disabled={submittingCode === reservation.code}
-                                      onClick={() => handleValidate(reservation.code)}
-                                      className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-semibold text-xs px-4 py-2.5 shadow-sm transition disabled:opacity-50"
-                                    >
-                                      {submittingCode === reservation.code ? (
-                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                      ) : (
-                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                      )}
-                                      Validar Asistencia
-                                    </button>
-                                  )}
-
-                                  {/* Direct Contact & Calendar Icons */}
-                                  <div className="flex gap-2 w-full justify-end sm:justify-start">
-                                    {reservation.htmlLink && (
-                                      <a
-                                        href={reservation.htmlLink}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        title="Ver en Google Calendar"
-                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition shadow-sm shrink-0"
-                                      >
-                                        <ExternalLink className="h-4 w-4" />
-                                      </a>
-                                    )}
-                                    {waUrl && (
-                                      <a
-                                        href={waUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        title="Chatear por WhatsApp"
-                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100 transition shadow-sm shrink-0"
-                                      >
-                                        <MessageSquare className="h-4 w-4" />
-                                      </a>
-                                    )}
-                                  </div>
-
-                                  {!reservation.attended && status !== 'CANCELADA' && (
-                                    <div className="grid w-full grid-cols-3 gap-1.5 border-t border-slate-100 pt-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => openActionPanel('reschedule', reservation)}
-                                        className="rounded-lg border border-sky-100 bg-sky-50 px-2 py-2 text-[10px] font-black text-sky-700 transition hover:bg-sky-100"
-                                      >
-                                        Reagendar
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => openActionPanel('edit', reservation)}
-                                        className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-[10px] font-black text-slate-700 transition hover:bg-slate-100"
-                                      >
-                                        Editar
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => openActionPanel('cancel', reservation)}
-                                        disabled={actionSubmitting}
-                                        className="rounded-lg border border-rose-100 bg-rose-50 px-2 py-2 text-[10px] font-black text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
-                                      >
-                                        Eliminar
-                                      </button>
-                                    </div>
-                                  )}
-
-                                </div>
-                              </div>
-
-                              {actionPanel?.code === reservation.code && (
-                                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                                  <div className="mb-3 flex items-center justify-between gap-3">
-                                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-600">
-                                      {actionPanel.mode === 'reschedule' ? 'Reagendar cita' : actionPanel.mode === 'cancel' ? 'Eliminar hora' : 'Editar datos'}
-                                    </p>
-                                    <button
-                                      type="button"
-                                      onClick={closeActionPanel}
-                                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </button>
-                                  </div>
-
-                                  {actionPanel.mode === 'cancel' ? (
-                                    <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-950">
-                                      <div className="flex items-start gap-3">
-                                        <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
-                                        <div>
-                                          <p className="font-black">Eliminar y liberar esta hora</p>
-                                          <p className="mt-1 text-xs font-semibold leading-5 text-rose-800">
-                                            Esto cancela el evento de Google Calendar y marca la reserva como CANCELADA en Sheets. No borra el historial, porque la auditoria importa.
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : actionPanel.mode === 'reschedule' ? (
-                                    <div className="grid gap-3 sm:grid-cols-3">
-                                      <label className="text-[11px] font-bold text-slate-600">
-                                        Fecha
-                                        <input
-                                          type="date"
-                                          value={actionDraft.date || ''}
-                                          onChange={(event) => updateActionDraft('date', event.target.value)}
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
-                                        />
-                                      </label>
-                                      <label className="text-[11px] font-bold text-slate-600">
-                                        Hora
-                                        <input
-                                          type="time"
-                                          value={actionDraft.start || ''}
-                                          onChange={(event) => updateActionDraft('start', event.target.value)}
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
-                                        />
-                                      </label>
-                                      <label className="text-[11px] font-bold text-slate-600">
-                                        Duracion min.
-                                        <input
-                                          type="number"
-                                          min="15"
-                                          step="15"
-                                          value={actionDraft.durationMin || ''}
-                                          onChange={(event) => updateActionDraft('durationMin', event.target.value)}
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
-                                        />
-                                      </label>
-                                    </div>
-                                  ) : (
-                                    <div className="grid gap-3 sm:grid-cols-2">
-                                      <label className="text-[11px] font-bold text-slate-600">
-                                        Nombre
-                                        <input
-                                          type="text"
-                                          value={actionDraft.name || ''}
-                                          onChange={(event) => updateActionDraft('name', event.target.value)}
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
-                                        />
-                                      </label>
-                                      <label className="text-[11px] font-bold text-slate-600">
-                                        Telefono
-                                        <input
-                                          type="tel"
-                                          value={actionDraft.phone || ''}
-                                          onChange={(event) => updateActionDraft('phone', event.target.value)}
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
-                                        />
-                                      </label>
-                                      <label className="text-[11px] font-bold text-slate-600">
-                                        Email
-                                        <input
-                                          type="email"
-                                          value={actionDraft.email || ''}
-                                          onChange={(event) => updateActionDraft('email', event.target.value)}
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
-                                        />
-                                      </label>
-                                      <label className="text-[11px] font-bold text-slate-600">
-                                        Servicio
-                                        <input
-                                          type="text"
-                                          value={actionDraft.service || ''}
-                                          onChange={(event) => updateActionDraft('service', event.target.value)}
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-pink-400"
-                                        />
-                                      </label>
-                                    </div>
-                                  )}
-
-                                  <div className="mt-4 flex flex-wrap justify-end gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={closeActionPanel}
-                                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
-                                    >
-                                      <X className="h-3.5 w-3.5" />
-                                      Cancelar
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => runReservationAction(actionPanel.mode, reservation.code)}
-                                      disabled={actionSubmitting}
-                                      className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white disabled:opacity-50 ${
-                                        actionPanel.mode === 'cancel'
-                                          ? 'bg-rose-600 hover:bg-rose-700'
-                                          : 'bg-slate-950 hover:bg-slate-800'
-                                      }`}
-                                    >
-                                      {actionSubmitting ? (
-                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                      ) : actionPanel.mode === 'cancel' ? (
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      ) : (
-                                        <Save className="h-3.5 w-3.5" />
-                                      )}
-                                      {actionPanel.mode === 'cancel' ? 'Eliminar hora' : 'Guardar cambios'}
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Sidebar Area (Right 1 Col) */}
-          <div className="space-y-6 xl:sticky xl:top-28">
-            
-            {/* Session authorization */}
-            <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm">
-              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <ShieldCheck className="h-4.5 w-4.5 text-emerald-600" />
-                Seguridad de operaciones
-              </h3>
-
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs space-y-3">
-                <div className="flex items-center gap-2 text-emerald-900 font-bold">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  Sesion admin verificada
-                </div>
-                <p className="text-emerald-800 leading-normal">
-                  Ya no necesitas ingresar un PIN adicional. Las operaciones criticas se autorizan en el servidor con tu sesion admin activa.
-                </p>
-                <p className="text-[10px] text-emerald-700/80">
-                  El secreto operativo queda server-side: la interfaz nunca lo expone en el navegador.
-                </p>
-              </div>
-
-              {/* Sweep Expired bookings */}
-              <div className="mt-4 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={handleSweepExpiredPayments}
                   disabled={sweepingPayments}
-                  className="w-full rounded-xl border border-pink-200 bg-pink-50/30 px-4 py-2.5 text-xs font-bold text-pink-700 transition hover:bg-pink-50 hover:text-pink-800 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#E11B74] to-[#C5A059] px-3.5 py-2 text-xs font-semibold text-white shadow-md hover:opacity-90 active:scale-95 transition disabled:opacity-50"
                 >
-                  {sweepingPayments ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
-                  )}
-                  {sweepingPayments ? 'Liberando vencidas...' : 'Liberar Vencidas Manual'}
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Liberar Vencidas</span>
                 </button>
-                <p className="text-[10px] text-slate-400 mt-2 text-center leading-normal">
-                  El sistema limpia las citas automaticamente cada 15 minutos. Usa este botón si quieres forzar la limpieza ahora.
-                </p>
               </div>
             </div>
 
-            {/* Summary statistics */}
-            <div className="admin-surface-card rounded-3xl border border-white/70 bg-white p-5 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">
-                Resumen de Citas (Rango)
-              </h3>
-              
-              <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
-                  <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Total</p>
-                  <p className="mt-1 text-xl font-extrabold text-slate-800">{paymentSummary.total}</p>
-                </div>
-                
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3">
-                  <p className="text-amber-700 font-bold uppercase tracking-wider text-[9px]">Pendientes</p>
-                  <p className="mt-1 text-xl font-extrabold text-amber-800">{paymentSummary.pending}</p>
-                </div>
+            {/* Chips de Fecha y Estados */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-pink-100/70">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { id: 'today', label: 'Hoy' },
+                  { id: 'week', label: 'Esta Semana' },
+                  { id: 'all', label: 'Histórico (90d)' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setFilter(tab.id)}
+                    className={`rounded-full px-3.5 py-1 text-xs font-semibold transition ${
+                      filter === tab.id
+                        ? 'bg-neutral-900 text-white shadow-sm'
+                        : 'bg-pink-50 text-neutral-600 hover:bg-pink-100'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3">
-                  <p className="text-emerald-700 font-bold uppercase tracking-wider text-[9px]">Confirmadas</p>
-                  <p className="mt-1 text-xl font-extrabold text-emerald-800">{paymentSummary.confirmed}</p>
-                </div>
-
-                <div className="rounded-2xl border border-rose-100 bg-rose-50 px-3 py-3">
-                  <p className="text-rose-700 font-bold uppercase tracking-wider text-[9px]">Expiradas</p>
-                  <p className="mt-1 text-xl font-extrabold text-rose-800">{paymentSummary.expired}</p>
-                </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowActionRequired(!showActionRequired)}
+                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold transition border ${
+                    showActionRequired
+                      ? 'border-pink-400 bg-pink-100/80 text-pink-700 shadow-sm'
+                      : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'
+                  }`}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  <span>{showActionRequired ? 'Filtro: Acción Requerida' : 'Mostrar Todas'}</span>
+                </button>
               </div>
             </div>
-
           </div>
 
-        </div>
+          {/* Listado de Citas */}
+          <div className="space-y-4">
+            {listLoading && reservations.length === 0 ? (
+              <div className="rounded-3xl border border-pink-200/60 bg-white/80 p-8 text-center backdrop-blur-md">
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-pink-600 border-t-transparent" />
+                <p className="mt-3 text-xs font-semibold text-neutral-500">Cargando citas operativas...</p>
+              </div>
+            ) : visibleReservations.length === 0 ? (
+              <div className="rounded-3xl border-2 border-dashed border-pink-200 bg-white/70 p-10 text-center backdrop-blur-md">
+                <CalendarDays className="mx-auto h-10 w-10 text-pink-300 mb-2" />
+                <h3 className="font-display text-sm font-bold text-neutral-800">No hay citas en este filtro</h3>
+                <p className="mt-1 text-xs text-neutral-500 max-w-sm mx-auto">
+                  {showActionRequired
+                    ? 'No hay citas con abonos pendientes ni acciones pendientes de atención en este rango.'
+                    : 'Prueba cambiando el rango de fechas o el término de búsqueda.'}
+                </p>
+                {showActionRequired && (
+                  <button
+                    onClick={() => setShowActionRequired(false)}
+                    className="mt-3 text-xs font-bold text-pink-600 hover:underline"
+                  >
+                    Ver todas las citas confirmadas →
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(groupedReservations).map(([dateLabel, dateReservations]) => (
+                  <div key={dateLabel} className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <span className="rounded-full bg-gradient-to-r from-[#E11B74] to-[#C5A059] px-3 py-1 text-xs font-bold text-white shadow-sm capitalize">
+                        {dateLabel}
+                      </span>
+                      <div className="h-px flex-1 bg-pink-200/60" />
+                      <span className="text-xs font-semibold text-neutral-500">
+                        {dateReservations.length} {dateReservations.length === 1 ? 'cita' : 'citas'}
+                      </span>
+                    </div>
 
-      </div>
-    </AdminShell>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {dateReservations.map((reservation) => {
+                        const status = reservation.isExpired ? 'EXPIRADA' : reservation.paymentStatus;
+                        const waPhone = reservation.phone ? reservation.phone.replace(/\D/g, '') : '';
+                        const waMessage = `Hola ${reservation.name}, te escribo de Vanessa Nails Studio con respecto a tu cita del día ${reservation.dateLabel} a las ${reservation.timeLabel}...`;
+                        const waUrl = waPhone ? `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}` : null;
+
+                        return (
+                          <div
+                            key={reservation.code}
+                            className="flex flex-col justify-between rounded-3xl border border-pink-200/70 bg-white/95 p-4 shadow-sm transition hover:shadow-md backdrop-blur-md"
+                          >
+                            <div>
+                              {/* Header Card: Hora + Badges */}
+                              <div className="flex items-center justify-between border-b border-pink-100/70 pb-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="flex items-center gap-1 rounded-xl bg-pink-50 px-2.5 py-1 text-xs font-bold text-pink-700 border border-pink-200/70">
+                                    <Clock className="h-3.5 w-3.5 text-pink-600" />
+                                    {reservation.timeLabel}
+                                  </span>
+                                  <span className="text-[10px] font-mono text-neutral-400">
+                                    #{reservation.code}
+                                  </span>
+                                </div>
+
+                                <div>
+                                  {status === 'PENDIENTE_PAGO' && (
+                                    <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                      Pendiente Abono
+                                    </span>
+                                  )}
+                                  {status === 'PAGO_CONFIRMADO' && (
+                                    <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                      Abono Confirmado
+                                    </span>
+                                  )}
+                                  {status === 'EXPIRADA' && (
+                                    <span className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                                      Expirada
+                                    </span>
+                                  )}
+                                  {reservation.attended && (
+                                    <span className="ml-1 rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
+                                      Asistió ✓
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Info Clienta */}
+                              <div className="mt-3 flex items-start gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#E11B74] to-[#C5A059] text-xs font-bold text-white shadow-sm">
+                                  {reservation.name ? reservation.name.charAt(0).toUpperCase() : 'C'}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="truncate font-display text-sm font-bold text-neutral-900">
+                                    {reservation.name}
+                                  </h4>
+                                  <p className="text-xs font-semibold text-pink-600">
+                                    {reservation.service}
+                                  </p>
+                                  <p className="mt-1 text-[11px] text-neutral-500">
+                                    📞 {reservation.phone || 'Sin teléfono'} · ✉️ {reservation.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Acciones Rápidas */}
+                            <div className="mt-4 pt-3 border-t border-pink-100/70 flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5">
+                                {waUrl && (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition shadow-sm"
+                                    title="Contactar por WhatsApp"
+                                  >
+                                    <MessageSquare className="h-4 w-4" />
+                                  </a>
+                                )}
+                                {reservation.htmlLink && (
+                                  <a
+                                    href={reservation.htmlLink}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-neutral-50 text-neutral-600 border border-neutral-200 hover:bg-neutral-100 transition shadow-sm"
+                                    title="Ver en Google Calendar"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </a>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
+                                {status === 'PENDIENTE_PAGO' && (
+                                  <button
+                                    type="button"
+                                    disabled={confirmingPaymentCode === reservation.code}
+                                    onClick={() => handleConfirmPayment(reservation.code)}
+                                    className="flex items-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold shadow-sm transition disabled:opacity-50"
+                                  >
+                                    {confirmingPaymentCode === reservation.code ? (
+                                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Check className="h-3.5 w-3.5" />
+                                    )}
+                                    <span>Confirmar Pago</span>
+                                  </button>
+                                )}
+
+                                {status === 'PAGO_CONFIRMADO' && !reservation.attended && (
+                                  <button
+                                    type="button"
+                                    disabled={submittingCode === reservation.code}
+                                    onClick={() => handleValidate(reservation.code)}
+                                    className="flex items-center gap-1 rounded-xl bg-pink-600 hover:bg-pink-700 text-white px-3 py-1.5 text-xs font-bold shadow-sm transition disabled:opacity-50"
+                                  >
+                                    {submittingCode === reservation.code ? (
+                                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <CheckCircle2 className="h-3.5 w-3.5" />
+                                    )}
+                                    <span>Validar Asistencia</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => openActionPanel('reschedule', reservation)}
+                                  className="rounded-xl border border-pink-200 bg-pink-50/80 hover:bg-pink-100 px-2.5 py-1.5 text-[11px] font-bold text-pink-700 transition"
+                                >
+                                  Reagendar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openActionPanel('cancel', reservation)}
+                                  className="rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-2 py-1.5 text-[11px] font-bold text-rose-700 transition"
+                                  title="Eliminar hora"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Modal de Acción (Reagendar / Cancelar / Editar) */}
+                            {actionPanel?.code === reservation.code && (
+                              <div className="mt-3 rounded-2xl border border-pink-200 bg-pink-50/90 p-3.5 text-xs space-y-3 animate-fadeIn">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold uppercase tracking-wider text-neutral-700 text-[10px]">
+                                    {actionPanel.mode === 'reschedule' ? 'Reagendar Turno' : 'Eliminar Cita'}
+                                  </span>
+                                  <button onClick={closeActionPanel} className="text-neutral-400 hover:text-neutral-600">
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+
+                                {actionPanel.mode === 'reschedule' ? (
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="block text-[10px] font-bold text-neutral-600">Nueva Fecha</label>
+                                      <input
+                                        type="date"
+                                        value={actionDraft.date || ''}
+                                        onChange={(e) => updateActionDraft('date', e.target.value)}
+                                        className="w-full rounded-xl border border-pink-200 bg-white px-2 py-1 text-xs outline-none"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] font-bold text-neutral-600">Nueva Hora</label>
+                                      <input
+                                        type="time"
+                                        value={actionDraft.start || ''}
+                                        onChange={(e) => updateActionDraft('start', e.target.value)}
+                                        className="w-full rounded-xl border border-pink-200 bg-white px-2 py-1 text-xs outline-none"
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-rose-700 text-[11px]">
+                                    ¿Seguro que deseas eliminar esta reserva y liberar el cupo en Google Calendar y Sheets?
+                                  </p>
+                                )}
+
+                                <div className="flex justify-end gap-2 pt-1">
+                                  <button
+                                    onClick={closeActionPanel}
+                                    className="rounded-lg bg-white px-2.5 py-1 font-semibold text-neutral-600 border border-neutral-200"
+                                  >
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    onClick={() => runReservationAction(actionPanel.mode, reservation.code)}
+                                    disabled={actionSubmitting}
+                                    className={`rounded-lg px-3 py-1 font-bold text-white ${
+                                      actionPanel.mode === 'cancel' ? 'bg-rose-600' : 'bg-pink-600'
+                                    }`}
+                                  >
+                                    {actionSubmitting ? 'Guardando...' : 'Confirmar'}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </AdminShell>
+    </>
   );
 }
