@@ -32,7 +32,7 @@ function InstagramGlyph({ className = 'h-6 w-6' }) {
   );
 }
 
-export default function LandingGallery({ images = [] }) {
+export default function LandingGallery({ images = [], externalIndex = null, onClearExternalIndex }) {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -62,6 +62,16 @@ export default function LandingGallery({ images = [] }) {
 
   const displayItems = [...filteredItems, ...filteredItems];
   const total = filteredItems.length;
+
+  // Si se pasa un index externo desde las historias
+  useEffect(() => {
+    if (typeof externalIndex === 'number') {
+      setSelectedCategory('Todos');
+      setSelectedIndex(externalIndex % baseItems.length);
+      setZoomScale(1);
+      setPanPos({ x: 0, y: 0 });
+    }
+  }, [externalIndex, baseItems.length]);
 
   // Bloqueo estricto del scroll del cuerpo (body) cuando el modal está abierto
   useEffect(() => {
@@ -171,6 +181,7 @@ export default function LandingGallery({ images = [] }) {
     setZoomScale(1);
     setPanPos({ x: 0, y: 0 });
     setIsDraggingModal(false);
+    if (onClearExternalIndex) onClearExternalIndex();
   };
 
   const handleNextModal = (e) => {
@@ -198,20 +209,20 @@ export default function LandingGallery({ images = [] }) {
 
   return (
     <section id="galeria" className="scroll-mt-24">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <span className="section-kicker-gold">
             <SparkleIcon className="h-3.5 w-3.5" />
             Galería Interactiva
           </span>
-          <h2 className="headline-section mt-4">Modelos de Uñas Reales</h2>
-          <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
+          <h2 className="headline-section mt-3 text-2xl sm:text-3xl font-bold">Modelos de Uñas Reales</h2>
+          <p className="mt-2 text-xs sm:text-sm leading-relaxed" style={{ color: 'var(--ink-muted)' }}>
             Filtra por técnica o toca cualquier foto para abrir el visor con zoom interactivo.
           </p>
         </div>
 
-        {/* Filtros de Categoría Intermedias */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+        {/* Filtros de Categoría */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
           {categories.map((cat) => (
             <button
               key={cat}
@@ -219,7 +230,7 @@ export default function LandingGallery({ images = [] }) {
                 setSelectedCategory(cat);
                 if (scrollContainerRef.current) scrollContainerRef.current.scrollLeft = 0;
               }}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-300 ${
+              className={`rounded-full px-3.5 py-1 text-xs font-semibold transition-all duration-300 ${
                 selectedCategory === cat
                   ? 'bg-gradient-to-r from-[#E11B74] to-[#C5A059] text-white shadow-md scale-105'
                   : 'border border-pink-200/80 bg-white/80 text-neutral-600 hover:border-pink-300 hover:bg-pink-50'
@@ -230,8 +241,8 @@ export default function LandingGallery({ images = [] }) {
           ))}
         </div>
 
-        {/* --- VISTA MÓVIL: Grilla de miniaturas limpia 100% nativa (Sin JS touch conflicts) --- */}
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:hidden">
+        {/* --- VISTA MÓVIL: Grilla compacta nativa de 3 columnas para navegación ágil --- */}
+        <div className="mt-6 grid grid-cols-3 gap-2.5 sm:hidden">
           {filteredItems.map((item, index) => (
             <button
               key={index}
@@ -240,9 +251,9 @@ export default function LandingGallery({ images = [] }) {
                 resetModalState();
                 setSelectedIndex(index);
               }}
-              className="group relative aspect-square w-full overflow-hidden rounded-2xl border border-pink-200/70 bg-pink-50/40 p-1 shadow-sm active:scale-95 transition"
+              className="group relative aspect-square w-full overflow-hidden rounded-xl border border-pink-200/70 bg-pink-50/40 p-0.5 shadow-sm active:scale-95 transition"
             >
-              <div className="relative h-full w-full overflow-hidden rounded-xl bg-neutral-100">
+              <div className="relative h-full w-full overflow-hidden rounded-lg bg-neutral-100">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.src}
@@ -250,8 +261,8 @@ export default function LandingGallery({ images = [] }) {
                   className="h-full w-full object-cover"
                   loading="lazy"
                 />
-                <div className="absolute top-2 left-2 z-10">
-                  <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
+                <div className="absolute top-1 left-1 z-10">
+                  <span className="rounded-full bg-black/60 px-1.5 py-0.2 text-[8px] font-medium text-white backdrop-blur-md">
                     {item.category}
                   </span>
                 </div>
@@ -390,7 +401,7 @@ export default function LandingGallery({ images = [] }) {
                       (restablecer)
                     </button>
                   ) : (
-                    <span className="text-[11px] opacity-80">(scroll de mouse)</span>
+                    <span className="text-[11px] opacity-80">(scroll o pellizco)</span>
                   )}
                 </div>
 

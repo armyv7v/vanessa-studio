@@ -46,54 +46,57 @@ function StarRating({ count = 5 }) {
 export default function LandingTestimonials() {
   return (
     <section id="testimonios" className="scroll-mt-24">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
           <span className="section-kicker">
             <SparkleIcon className="h-3.5 w-3.5" />
             Opiniones reales
           </span>
-          <h2 className="headline-section mt-4">Lo que dicen nuestras clientas</h2>
-          <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
+          <h2 className="headline-section mt-3 text-2xl sm:text-3xl font-bold">Lo que dicen nuestras clientas</h2>
+          <p className="mt-2 text-xs sm:text-sm leading-relaxed" style={{ color: 'var(--ink-muted)' }}>
             La satisfacción de cada clienta es nuestro mayor orgullo. Descubre por qué eligen Vanessa Nails Studio.
           </p>
         </div>
 
-        {/* Métrica destacada */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-center sm:gap-12">
+        {/* Métricas destacadas */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-center sm:gap-12">
           <div className="flex items-center gap-2">
-            <span className="font-display text-3xl font-bold" style={{ color: 'var(--brand-darker)' }}>4.9</span>
+            <span className="font-display text-2xl sm:text-3xl font-bold" style={{ color: 'var(--brand-darker)' }}>4.9</span>
             <div className="text-left">
               <StarRating count={5} />
-              <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>Calificación promedio</p>
+              <p className="text-[11px]" style={{ color: 'var(--ink-faint)' }}>Calificación promedio</p>
             </div>
           </div>
           <div className="hidden h-8 w-px bg-pink-200/60 sm:block" />
           <div>
-            <p className="font-display text-2xl font-bold" style={{ color: 'var(--brand-darker)' }}>+500</p>
-            <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>Clientas satisfechas</p>
+            <p className="font-display text-xl sm:text-2xl font-bold" style={{ color: 'var(--brand-darker)' }}>+500</p>
+            <p className="text-[11px]" style={{ color: 'var(--ink-faint)' }}>Clientas satisfechas</p>
           </div>
           <div className="hidden h-8 w-px bg-pink-200/60 sm:block" />
           <div>
-            <p className="font-display text-2xl font-bold" style={{ color: 'var(--brand-darker)' }}>100%</p>
-            <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>Higiene & Calidad</p>
+            <p className="font-display text-xl sm:text-2xl font-bold" style={{ color: 'var(--brand-darker)' }}>100%</p>
+            <p className="text-[11px]" style={{ color: 'var(--ink-faint)' }}>Higiene & Calidad</p>
           </div>
         </div>
 
-        {/* Grilla de Testimonios */}
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Tarjetas con Swipe Horizontal en Móvil y Grilla en Desktop */}
+        <div className="mt-8 flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory no-scrollbar sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible">
           {testimonials.map((t, idx) => (
-            <div key={idx} className="premium-panel gloss-panel gradient-outline flex flex-col justify-between p-6">
+            <div
+              key={idx}
+              className="premium-panel gloss-panel gradient-outline flex w-[80vw] max-w-[290px] shrink-0 snap-center flex-col justify-between p-5 sm:w-auto sm:max-w-none sm:p-6"
+            >
               <div>
                 <div className="flex items-center justify-between">
                   <StarRating count={t.rating} />
                   <span className="text-[10px]" style={{ color: 'var(--ink-faint)' }}>{t.date}</span>
                 </div>
-                <p className="mt-4 text-xs italic leading-relaxed sm:text-sm" style={{ color: 'var(--ink-medium)' }}>
+                <p className="mt-3 text-xs italic leading-relaxed sm:text-sm" style={{ color: 'var(--ink-medium)' }}>
                   &ldquo;{t.comment}&rdquo;
                 </p>
               </div>
 
-              <div className="mt-6 flex items-center gap-3 border-t pt-4" style={{ borderColor: 'rgba(230,0,126,0.1)' }}>
+              <div className="mt-5 flex items-center gap-2.5 border-t pt-3.5" style={{ borderColor: 'rgba(230,0,126,0.1)' }}>
                 <div
                   className="flex h-8 w-8 items-center justify-center rounded-full font-semibold text-xs text-white shadow-sm"
                   style={{ background: 'linear-gradient(135deg, var(--brand), var(--brand-dark))' }}
