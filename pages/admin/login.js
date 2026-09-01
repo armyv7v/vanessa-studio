@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 import { hasAdminToken, loginAdmin } from '../../lib/adminAuth';
 import { SparkleIcon } from '../../components/BrandMotifs';
 
@@ -134,12 +135,12 @@ export default function AdminLogin() {
           </div>
 
           <div className="text-center">
-            <a
+            <Link
               href="/"
               className="text-xs font-semibold text-pink-600 hover:text-pink-700 underline decoration-dotted transition"
             >
               ← Volver al sitio web de reservas
-            </a>
+            </Link>
           </div>
         </div>
       </div>
