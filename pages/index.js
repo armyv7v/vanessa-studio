@@ -24,9 +24,17 @@ export default function Home() {
   const [reserveState, setReserveState] = useState(null);
   const [externalGalleryIndex, setExternalGalleryIndex] = useState(null);
 
+  // Función unificada y consistente de desplazamiento al panel de reserva
+  function scrollToBookingPanel() {
+    const el = document.getElementById('booking-panel');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
   function handleReserve(serviceId) {
     setReserveState((prev) => ({ serviceId, signal: (prev?.signal || 0) + 1 }));
-    document.getElementById('booking-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollToBookingPanel();
   }
 
   function handleOpenGalleryPhoto(photoIndex) {
@@ -43,24 +51,24 @@ export default function Home() {
         />
       </Head>
 
-      <div className="min-h-screen pb-16 md:pb-0" style={{ color: 'var(--ink-medium)' }}>
+      <div className="min-h-screen pb-20 md:pb-0" style={{ color: 'var(--ink-medium)' }}>
         <LandingNav />
 
         <main>
-          <LandingHero />
+          <LandingHero onStartBooking={scrollToBookingPanel} />
 
-          {/* Burbujas de Historias / Highlights Estilo Instagram (Interactivas y Conectadas) */}
+          {/* Burbujas de Historias / Highlights Estilo Instagram con SVGs de Lujo */}
           <LandingStories onOpenGalleryPhoto={handleOpenGalleryPhoto} />
 
-          {/* Servicios con Swipe Táctil en Móvil */}
+          {/* Servicios con Swipe Táctil en Móvil e Indicador */}
           <LandingServices onReserve={handleReserve} />
 
           {/* Pasos de reserva */}
           <LandingSteps />
 
           {/* Módulo de Reserva Online */}
-          <section id="reservar" className="scroll-mt-24">
-            <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
+          <section id="reservar" className="scroll-mt-20">
+            <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
               <div className="mx-auto max-w-2xl text-center">
                 <span className="section-kicker">Reserva online</span>
                 <h2 className="headline-section mt-3 text-2xl sm:text-3xl font-bold">Agenda tu cita en minutos</h2>
@@ -74,8 +82,13 @@ export default function Home() {
                 </p>
               </div>
 
-              <div id="booking-panel" className="premium-shell gloss-panel gradient-outline step-fade-in mt-6 sm:mt-10 scroll-mt-20 !p-4 sm:!p-6 lg:!p-8">
-                <BookingFlow config={normalConfig} initialService={reserveState?.serviceId} reserveSignal={reserveState?.signal} hideServiceSelect />
+              {/* El BookingFlow ahora permite seleccionar servicio directamente si el usuario no eligió uno arriba, sin obligarlo a subir */}
+              <div id="booking-panel" className="premium-shell gloss-panel gradient-outline step-fade-in mt-6 sm:mt-8 scroll-mt-20 !p-4 sm:!p-6 lg:!p-8">
+                <BookingFlow
+                  config={normalConfig}
+                  initialService={reserveState?.serviceId}
+                  reserveSignal={reserveState?.signal}
+                />
               </div>
             </div>
           </section>
@@ -120,9 +133,7 @@ export default function Home() {
 
               <button
                 type="button"
-                onClick={() => {
-                  document.getElementById('booking-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }}
+                onClick={scrollToBookingPanel}
                 className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-md active:scale-95 transition"
                 style={{ background: 'linear-gradient(135deg, #E11B74, #C5A059)' }}
               >
