@@ -35,16 +35,17 @@ function InstagramGlyph({ className = 'h-6 w-6' }) {
 export default function LandingGallery({ images = [] }) {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [selectedIndex, setSelectedIndex] = useState(null);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
   const [panPos, setPanPos] = useState({ x: 0, y: 0 });
   const [isDraggingModal, setIsDraggingModal] = useState(false);
   const [dragStartModal, setDragStartModal] = useState({ x: 0, y: 0 });
 
-  // Arrastre con mouse en el carrusel
+  // Arrastre con mouse en el carrusel (solo desktop)
   const [isTrackDragging, setIsTrackDragging] = useState(false);
   const [trackStartX, setTrackStartX] = useState(0);
   const [trackScrollLeft, setTrackScrollLeft] = useState(0);
+  const dragDistanceRef = useRef(0);
 
   const scrollContainerRef = useRef(null);
   const progressBarRef = useRef(null);
@@ -59,7 +60,6 @@ export default function LandingGallery({ images = [] }) {
     ? baseItems
     : baseItems.filter((item) => item.category === selectedCategory);
 
-  // Duplicamos items para scroll infinito continuo
   const displayItems = [...filteredItems, ...filteredItems];
   const total = filteredItems.length;
 
@@ -75,7 +75,7 @@ export default function LandingGallery({ images = [] }) {
     };
   }, [selectedIndex]);
 
-  // Auto-scroll fluido continuo sin re-renders mediante manipulacion directa de DOM
+  // Auto-scroll continuo: NUNCA se detiene por completo al pasar el mouse (solo baja ligeramente de velocidad)
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -86,16 +86,17 @@ export default function LandingGallery({ images = [] }) {
       const delta = time - lastTime;
       lastTime = time;
 
-      if (!isPaused && selectedIndex === null && !isTrackDragging) {
-        // Velocidad continua agradable (~22px/seg)
-        el.scrollLeft += delta * 0.024;
+      if (selectedIndex === null && !isTrackDragging) {
+        // Velocidad: normal (0.02) o suave al pasar el mouse (0.01) para que NUNCA se congele en web
+        const speed = isHovered ? 0.01 : 0.02;
+        el.scrollLeft += delta * speed;
 
         const maxScroll = el.scrollWidth / 2;
         if (maxScroll > 0 && el.scrollLeft >= maxScroll) {
           el.scrollLeft -= maxScroll;
         }
 
-        // Actualización directa del DOM de la barra de progreso sin provocar re-render de React
+        // Actualización directa de la barra de progreso sin re-renders
         if (progressBarRef.current && maxScroll > 0) {
           const ratio = Math.min(1, Math.max(0, (el.scrollLeft % maxScroll) / maxScroll));
           progressBarRef.current.style.width = `${ratio * 100}%`;
@@ -114,27 +115,28 @@ export default function LandingGallery({ images = [] }) {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isPaused, selectedIndex, isTrackDragging, total, selectedCategory]);
+  }, [selectedIndex, isTrackDragging, isHovered, total, selectedCategory]);
 
-  // Arrastre manual por mouse en el carrusel
+  // Arrastre por mouse exclusivo de escritorio (sin bloquear el touch nativo de móviles)
   const handleTrackMouseDown = (e) => {
+    // Solo responde a clic principal de mouse
+    if (e.button !== 0) return;
     setIsTrackDragging(true);
-    setIsPaused(true);
+    dragDistanceRef.current = 0;
     setTrackStartX(e.pageX - scrollContainerRef.current.offsetLeft);
     setTrackScrollLeft(scrollContainerRef.current.scrollLeft);
   };
 
   const handleTrackMouseMove = (e) => {
     if (!isTrackDragging) return;
-    e.preventDefault();
     const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - trackStartX) * 1.5;
+    const walk = (x - trackStartX) * 1.4;
+    dragDistanceRef.current += Math.abs(walk);
     scrollContainerRef.current.scrollLeft = trackScrollLeft - walk;
   };
 
   const handleTrackMouseUp = () => {
     setIsTrackDragging(false);
-    setIsPaused(false);
   };
 
   // Zoom por rueda de mouse en el modal
@@ -192,7 +194,7 @@ export default function LandingGallery({ images = [] }) {
 
   const scrollManual = (direction) => {
     if (scrollContainerRef.current) {
-      const offset = direction === 'left' ? -320 : 320;
+      const offset = direction === 'left' ? -300 : 300;
       scrollContainerRef.current.scrollBy({ left: offset, behavior: 'smooth' });
     }
   };
@@ -207,11 +209,11 @@ export default function LandingGallery({ images = [] }) {
           </span>
           <h2 className="headline-section mt-4">Modelos de Uñas Reales</h2>
           <p className="mt-4 text-sm leading-relaxed sm:text-base" style={{ color: 'var(--ink-muted)' }}>
-            Filtra por técnica, arrastra el carrusel o haz clic en cualquier miniatura para ampliarla con zoom interactivo.
+            Filtra por técnica, desliza libremente en móvil o haz clic en cualquier foto para abrir el visor con zoom interactivo.
           </p>
         </div>
 
-        {/* Filtros de Categoría Interativos */}
+        {/* Filtros de Categoría Intermedias */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
           {categories.map((cat) => (
             <button
@@ -231,12 +233,12 @@ export default function LandingGallery({ images = [] }) {
           ))}
         </div>
 
-        {/* Carrusel Multi-Card Interactivo con Arrastre y Auto-scroll */}
+        {/* Carrusel Multi-Card Continuo (Móvil táctil 100% fluido + Web no congelable) */}
         <div
           className="relative mt-8 px-2 sm:px-6"
-          onMouseEnter={() => setIsPaused(true)}
+          onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => {
-            setIsPaused(false);
+            setIsHovered(false);
             setIsTrackDragging(false);
           }}
         >
@@ -252,16 +254,22 @@ export default function LandingGallery({ images = [] }) {
             </svg>
           </button>
 
-          {/* Track Horizontal de Miniaturas (Soporta Click, Touch Swipe y Mouse Drag) */}
+          {/* Track Horizontal de Miniaturas con Swipe Táctil Nativo de Móvil */}
           <div
             ref={scrollContainerRef}
             onMouseDown={handleTrackMouseDown}
             onMouseMove={handleTrackMouseMove}
             onMouseUp={handleTrackMouseUp}
-            className={`flex gap-4 overflow-x-auto py-4 select-none no-scrollbar ${
+            onMouseLeave={handleTrackMouseUp}
+            className={`flex gap-3 sm:gap-4 overflow-x-auto py-4 touch-pan-x no-scrollbar ${
               isTrackDragging ? 'cursor-grabbing' : 'cursor-grab'
             }`}
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-x pan-y',
+            }}
           >
             {displayItems.map((item, index) => {
               const realIndex = index % total;
@@ -269,12 +277,12 @@ export default function LandingGallery({ images = [] }) {
                 <div
                   key={index}
                   onClick={() => {
-                    if (!isTrackDragging) {
+                    if (dragDistanceRef.current < 10) {
                       resetModalState();
                       setSelectedIndex(realIndex);
                     }
                   }}
-                  className="group relative aspect-square h-44 w-44 shrink-0 overflow-hidden rounded-2xl border border-pink-200/70 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-[#E11B74] hover:shadow-xl sm:h-52 sm:w-52"
+                  className="group relative aspect-square h-40 w-40 shrink-0 overflow-hidden rounded-2xl border border-pink-200/70 bg-pink-50/40 p-1 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-[#E11B74] hover:shadow-xl sm:h-52 sm:w-52"
                 >
                   <div className="relative h-full w-full overflow-hidden rounded-xl bg-neutral-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -286,14 +294,14 @@ export default function LandingGallery({ images = [] }) {
                       draggable={false}
                     />
 
-                    {/* Chip de categoría superior */}
+                    {/* Chip de categoría */}
                     <div className="absolute top-2 left-2 z-10">
                       <span className="rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-md">
                         {item.category}
                       </span>
                     </div>
 
-                    {/* Overlay al pasar el mouse */}
+                    {/* Overlay al pasar el mouse en web */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                       <span className="flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-pink-600 shadow-md backdrop-blur-sm">
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
@@ -320,7 +328,7 @@ export default function LandingGallery({ images = [] }) {
             </svg>
           </button>
 
-          {/* Barra de Progreso Dinámica sin Re-renders de React */}
+          {/* Barra de Progreso Dinámica */}
           <div className="mt-4 flex items-center justify-center gap-3">
             <div className="h-1.5 w-48 overflow-hidden rounded-full bg-pink-100 shadow-inner sm:w-64">
               <div
@@ -335,7 +343,7 @@ export default function LandingGallery({ images = [] }) {
           </div>
         </div>
 
-        {/* Lightbox Modal con Bloqueo de Body Scroll, Zoom y Arrastre Pan */}
+        {/* Lightbox Modal con Bloqueo de Body Scroll y Zoom */}
         {selectedIndex !== null && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/94 p-4 backdrop-blur-lg animate-fadeIn select-none overflow-hidden"
