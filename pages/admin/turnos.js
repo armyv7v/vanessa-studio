@@ -8,32 +8,39 @@ import {
   isSameMonth, isSameDay, parseISO,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
+import {
+  CalendarDays,
+  Clock,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+} from 'lucide-react';
 import { bookAppointment, getAvailableSlots, getAvailableSlotsRange } from '../../lib/api';
 import AdminShell from '../../components/AdminShell';
-import AdminMetricIcon from '../../components/AdminMetricIcon';
 import { hasAdminToken } from '../../lib/adminAuth';
-import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon, CloseIcon, GemIcon, LaunchIcon, SparkleIcon } from '../../components/BrandMotifs';
 import { isAllowedBusinessDay } from '../../lib/calendarConfig';
 import { services } from '../../lib/services';
 import horariosConfig from '../../config/horarios.json';
 
-// ── Scheduling constants ────────────────────────────────────
 const OPEN_HOUR = 9;
 const CLOSE_HOUR = 22;
-const TOTAL_MINUTES = (CLOSE_HOUR - OPEN_HOUR) * 60; // 780
+const TOTAL_MINUTES = (CLOSE_HOUR - OPEN_HOUR) * 60;
 
-// Todas las duraciones únicas ordenadas de menor a mayor
-const UNIQUE_DURATIONS = [...new Set(services.map(s => s.duration))].sort((a, b) => a - b);
-const MIN_DURATION = UNIQUE_DURATIONS[0]; // 90 min (esmaltado)
+const UNIQUE_DURATIONS = [...new Set(services.map((s) => s.duration))].sort((a, b) => a - b);
+const MIN_DURATION = UNIQUE_DURATIONS[0];
 
 const AVAILABILITY_COLORS = {
-  blocked: { bg: 'rgba(225, 27, 116, 0.08)', border: 'rgba(225, 27, 116, 0.18)', text: 'var(--brand-dark)' },
-  available: { bg: 'rgba(16, 185, 129, 0.08)', border: 'rgba(16, 185, 129, 0.18)', text: '#065f46' },
-  occupied: { bg: 'rgba(239, 68, 68, 0.08)', border: 'rgba(239, 68, 68, 0.18)', text: '#991b1b' },
+  blocked: { bg: 'rgba(244, 114, 182, 0.12)', border: '#F472B6', text: '#9D174D' },
+  available: { bg: 'rgba(16, 185, 129, 0.09)', border: '#10B981', text: '#065F46' },
+  occupied: { bg: 'rgba(239, 68, 68, 0.08)', border: '#F87171', text: '#991B1B' },
 };
 
 const HORARIOS_ENDPOINT = '/api/horarios';
-const TURNOS_BUILD_VERSION = 'turnos-selected-duration-fix-v1';
 
 export default function AdminTurnos() {
   const router = useRouter();
@@ -44,13 +51,13 @@ export default function AdminTurnos() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [selectedServiceId, setSelectedServiceId] = useState('all'); // 'all' = uses MIN_DURATION
+  const [selectedServiceId, setSelectedServiceId] = useState('all');
 
-  // Dynamic duration based on selected service
   const selectedDuration = selectedServiceId === 'all'
     ? MIN_DURATION
-    : services.find(s => String(s.id) === selectedServiceId)?.duration || MIN_DURATION;
+    : services.find((s) => String(s.id) === selectedServiceId)?.duration || MIN_DURATION;
   const REAL_MAX_CAPACITY = Math.floor(TOTAL_MINUTES / selectedDuration);
+  
   const [selectedDayEvents, setSelectedDayEvents] = useState(null);
   const [horarioAtencion, setHorarioAtencion] = useState(horariosConfig.horarioAtencion || {});
   const [blackoutConfig, setBlackoutConfig] = useState({ disabledDays: [], disabledDates: [], blackoutRanges: [] });
@@ -65,7 +72,6 @@ export default function AdminTurnos() {
   const [bookingSuccess, setBookingSuccess] = useState('');
   const [submittingBooking, setSubmittingBooking] = useState(false);
 
-  // Auth
   useEffect(() => {
     const checkAuth = async () => {
       if (!(await hasAdminToken())) {
@@ -95,7 +101,7 @@ export default function AdminTurnos() {
           });
         }
       } catch {
-        // fallback local config only
+        // fallback
       }
     };
 
@@ -119,9 +125,6 @@ export default function AdminTurnos() {
       .sort((a, b) => new Date(a.start) - new Date(b.start));
   };
 
-  // Calcula cuántas citas REALES (sin solapamiento) caben entre los
-  // candidatos disponibles de un día. Recorre los slots ordenados y
-  // escoge el siguiente cuyo start >= el end del último seleccionado.
   const getRealCapacity = (daySlots) => {
     if (!daySlots.length) return 0;
     let count = 0;
@@ -139,7 +142,6 @@ export default function AdminTurnos() {
     return count;
   };
 
-  // Availability style based on REAL capacity (non-overlapping fits)
   const getAvailabilityStyle = (day) => {
     if (!isAllowedBusinessDay(day, blackoutConfig)) {
       return AVAILABILITY_COLORS.blocked;
@@ -212,7 +214,7 @@ export default function AdminTurnos() {
     });
 
     if (hasConflict) {
-      throw new Error('Ese horario ya no está disponible para la duración del servicio seleccionado.');
+      throw new Error('Ese horario ya no está disponible para la duración del servicio.');
     }
 
     return selectedService;
@@ -249,7 +251,7 @@ export default function AdminTurnos() {
         },
       });
 
-      setBookingSuccess('Cita creada correctamente desde el panel admin.');
+      setBookingSuccess('¡Cita creada correctamente desde el panel admin!');
       setSelectedDayEvents(null);
       await refreshSlots();
       setBookingForm((previous) => ({ ...previous, name: '', email: '', phone: '' }));
@@ -260,7 +262,6 @@ export default function AdminTurnos() {
     }
   };
 
-  // Data fetch
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -278,19 +279,13 @@ export default function AdminTurnos() {
     fetchSlots();
   }, [isAuthenticated, refreshSlots]);
 
-  // ── Loading state ──────────────────────────────────────────
   if (loading) {
     return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        style={{
-          background: 'linear-gradient(180deg, #FFFBFD 0%, #FFF0F6 50%, #FDF6EF 100%)',
-        }}
-      >
-        <div
-          className="h-12 w-12 animate-spin rounded-full border-2 border-b-transparent"
-          style={{ borderColor: 'var(--brand) transparent var(--brand) var(--brand)' }}
-        />
+      <div className="flex min-h-screen items-center justify-center bg-pink-50/40">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[#E11B74] border-t-transparent" />
+          <p className="text-xs font-semibold text-neutral-500">Cargando agenda de turnos...</p>
+        </div>
       </div>
     );
   }
@@ -300,11 +295,11 @@ export default function AdminTurnos() {
   const days = viewMode === 'month'
     ? eachDayOfInterval({
         start: startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }),
-        end:   endOfWeek(endOfMonth(currentDate),     { weekStartsOn: 1 }),
+        end: endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 }),
       })
     : eachDayOfInterval({
         start: startOfWeek(currentDate, { weekStartsOn: 1 }),
-        end:   endOfWeek(currentDate,   { weekStartsOn: 1 }),
+        end: endOfWeek(currentDate, { weekStartsOn: 1 }),
       });
 
   const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -313,70 +308,76 @@ export default function AdminTurnos() {
   const peakDay = days
     .map((day) => ({ day, count: getEventsForDay(day).length }))
     .sort((a, b) => b.count - a.count)[0];
-  const occupancySummary = [
-    { label: 'Slots visibles', value: String(availableSlotsCount), detail: 'turnos libres en este rango', icon: 'calendar' },
-    { label: 'D?as con disponibilidad', value: String(daysWithAvailability), detail: 'jornadas con al menos un bloque libre', icon: 'sparkle' },
-    {
-      label: 'Pico actual',
-      value: peakDay?.count ? `${peakDay.count}` : '0',
-      detail: peakDay?.count ? `${format(peakDay.day, "d MMM", { locale: es })} concentra más huecos` : 'sin huecos destacados',
-      icon: 'pulse',
-    },
-  ];
 
   return (
-    <AdminShell
-      title="Calendario de turnos"
-      description="Visualiza disponibilidad por semana o mes, detecta demanda y revisa qué días tienen más o menos espacios libres."
-    >
+    <>
       <Head>
-        <title>Admin Turnos | Vanessa Studio</title>
+        <title>Agenda de Turnos | Admin Vanessa Nails</title>
       </Head>
 
-      <div className="admin-workspace space-y-7" data-turnos-build={TURNOS_BUILD_VERSION}>
-        <div className="admin-highlight-card rounded-[2rem] p-5 sm:p-7">
-          <div className="mb-5 flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div>
-              <p className="admin-section-kicker">Disponibilidad editorial</p>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border shadow-sm" style={{ borderColor: 'var(--gold-lighter)', background: 'rgba(255,255,255,0.92)', color: 'var(--brand)' }}>
-                  <CalendarIcon className="h-5 w-5" />
-                </span>
-                <h1
-                  className="text-3xl font-bold"
-                  style={{ color: 'var(--ink-medium)' }}
-                >
-                  Calendario de Turnos
-                </h1>
+      <AdminShell
+        title="Agenda de Turnos & Disponibilidad"
+        description="Explora los cupos libres por día, visualiza la capacidad real del estudio y agenda citas de forma manual."
+      >
+        <div className="space-y-6">
+          {/* Tarjetas KPI de Disponibilidad */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-pink-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Slots Libres</p>
+                  <p className="mt-1 text-2xl font-bold text-neutral-900">{availableSlotsCount}</p>
+                </div>
+                <div className="rounded-xl bg-pink-50 p-2 text-pink-600">
+                  <Clock className="h-5 w-5" />
+                </div>
               </div>
-              <p className="mt-3 max-w-2xl text-sm leading-6" style={{ color: 'var(--ink-muted)' }}>
-                Lee de un vistazo dónde está la mayor disponibilidad y entra al detalle del día para crear citas manuales cuando sea necesario.
-              </p>
+              <p className="mt-2 text-[11px] text-neutral-500">En el período seleccionado</p>
             </div>
 
-            {/* Controls row: service filter + view mode */}
-            <div className="flex flex-col items-end gap-3">
-              {/* Service Filter */}
+            <div className="rounded-2xl border border-emerald-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Días con Cupo</p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-900">{daysWithAvailability}</p>
+                </div>
+                <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
+                  <CalendarDays className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-emerald-700">Jornadas con disponibilidad</p>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200/70 bg-white/90 p-4 shadow-sm backdrop-blur-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Pico de Disponibilidad</p>
+                  <p className="mt-1 text-2xl font-bold text-amber-900">
+                    {peakDay?.count ? `${peakDay.count} slots` : '0'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-amber-700">
+                {peakDay?.count ? `${format(peakDay.day, "d 'de' MMMM", { locale: es })}` : 'Sin cupos destacados'}
+              </p>
+            </div>
+          </div>
+
+          {/* Barra de Filtros y Control de Vista */}
+          <div className="rounded-3xl border border-pink-200/70 bg-white/90 p-4 sm:p-5 shadow-sm space-y-4 backdrop-blur-md">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {/* Filtro por Servicio */}
               <div className="flex items-center gap-2">
-                <label
-                  htmlFor="service-filter"
-                  className="text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--brand-light)' }}
-                >
-                  Servicio
-                </label>
+                <span className="text-xs font-bold uppercase tracking-wider text-neutral-600 shrink-0">
+                  Servicio:
+                </span>
                 <select
-                  id="service-filter"
                   value={selectedServiceId}
                   onChange={(e) => setSelectedServiceId(e.target.value)}
-                  className="rounded-xl border px-3 py-2 text-sm font-medium shadow-sm transition focus:outline-none focus:ring-2"
-                  style={{
-                    borderColor: 'var(--gold-lighter)',
-                    background: 'rgba(255,255,255,0.95)',
-                    color: 'var(--ink-medium)',
-                    minWidth: '200px',
-                    focusRingColor: 'var(--brand)',
-                  }}
+                  className="rounded-2xl border border-pink-200 bg-white px-3 py-2 text-xs sm:text-sm font-semibold text-neutral-800 outline-none shadow-sm focus:border-pink-500"
                 >
                   <option value="all">Todos ({MIN_DURATION} min mín.)</option>
                   {services.map((svc) => (
@@ -387,486 +388,342 @@ export default function AdminTurnos() {
                 </select>
               </div>
 
-              {/* View Mode Toggle */}
-              <div
-                className="flex items-center rounded-xl p-1 shadow-sm"
-                style={{
-                  background: 'rgba(255,255,255,0.95)',
-                  border: '1px solid var(--gold-lighter)',
-                }}
-              >
-                {['month', 'week'].map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setViewMode(mode)}
-                    className="rounded-lg px-4 py-2 text-sm font-medium transition"
-                    style={
-                      viewMode === mode
-                        ? {
-                            background: 'linear-gradient(135deg, #F04A94 0%, #E11B74 100%)',
-                            color: '#fff',
-                            boxShadow: '0 6px 14px rgba(225,27,116,0.20)',
-                          }
-                        : { color: 'var(--ink-muted)' }
-                    }
-                  >
-                    {mode === 'month' ? 'Mes' : 'Semana'}
-                  </button>
-                ))}
+              {/* Conmutador Mes / Semana & Botón Actualizar */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center rounded-2xl border border-pink-200 bg-pink-50/60 p-1">
+                  {['month', 'week'].map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setViewMode(mode)}
+                      className={`rounded-xl px-3.5 py-1 text-xs font-bold transition ${
+                        viewMode === mode
+                          ? 'bg-gradient-to-r from-[#E11B74] to-[#C5A059] text-white shadow-sm'
+                          : 'text-neutral-600 hover:text-pink-600'
+                      }`}
+                    >
+                      {mode === 'month' ? 'Mes' : 'Semana'}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={refreshSlots}
+                  disabled={loadingSlots}
+                  className="flex items-center gap-1.5 rounded-2xl border border-pink-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 shadow-sm hover:bg-pink-50 transition"
+                  title="Refrescar disponibilidad"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${loadingSlots ? 'animate-spin text-pink-600' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Leyenda cromática */}
+            <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-pink-100/70 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                <span className="text-neutral-600 font-medium">Disponible</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-full bg-rose-500" />
+                <span className="text-neutral-600 font-medium">Ocupado / Sin cupos</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-full bg-pink-400" />
+                <span className="text-neutral-600 font-medium">Bloqueado / No laboral</span>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
-            {occupancySummary.map((item) => (
-              <div key={item.label} className="admin-metric-card rounded-2xl p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-600">{item.label}</p>
-                    <p className="mt-2 text-3xl font-black text-slate-950">{item.value}</p>
-                  </div>
-                  <AdminMetricIcon type={item.icon} />
-                </div>
-                <p className="mt-3 text-sm font-semibold text-slate-600">{item.detail}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Availability Legend ──────────────────────────── */}
-        <div
-          className="admin-section-band rounded-[1.75rem] p-5 shadow-sm"
-          style={{
-            background: 'rgba(255,255,255,0.95)',
-            border: '1px solid var(--gold-lighter)',
-          }}
-        >
-          <div className="mb-3 flex items-center gap-2">
-            <SparkleIcon className="h-4 w-4" />
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--ink-muted)' }}>
-              Lectura cromática del calendario
-            </h3>
-          </div>
-          <div className="flex flex-wrap gap-4 text-xs">
-            {[
-              { label: 'Bloqueado', style: AVAILABILITY_COLORS.blocked },
-              { label: 'Disponible', style: AVAILABILITY_COLORS.available },
-              { label: 'Ocupado / sin huecos', style: AVAILABILITY_COLORS.occupied },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-2">
-                <div
-                  className="h-6 w-6 rounded-xl shadow-sm"
-                  style={{
-                    background: item.style.bg,
-                    border: `1px solid ${item.style.border}`,
-                  }}
-                />
-                <span style={{ color: 'var(--ink-muted)' }}>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Calendar ─────────────────────────────────────── */}
-        <div
-          className="admin-section-band overflow-hidden rounded-[2rem] shadow-lg"
-          style={{ background: 'rgba(255,255,255,0.98)' }}
-        >
-          {/* Calendar Header */}
-          <div
-            className="flex items-center justify-between border-b p-4"
-            style={{
-              borderColor: 'rgba(242,200,212,0.5)',
-              background: 'rgba(254,240,248,0.60)',
-            }}
-          >
-            <button
-              onClick={prevPeriod}
-              className="rounded-full p-2 transition hover:scale-110"
-              style={{ color: 'var(--brand)', background: 'var(--bg-blush)' }}
-            >
-              <ArrowLeftIcon className="h-5 w-5" />
-            </button>
-            <h2
-              className="text-xl font-semibold capitalize"
-              style={{ color: 'var(--ink-medium)' }}
-            >
-              {format(
-                currentDate,
-                viewMode === 'month' ? 'MMMM yyyy' : "'Semana del' d 'de' MMMM",
-                { locale: es }
-              )}
-            </h2>
-            <button
-              onClick={nextPeriod}
-              className="rounded-full p-2 transition hover:scale-110"
-              style={{ color: 'var(--brand)', background: 'var(--bg-blush)' }}
-            >
-              <ArrowRightIcon className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Week day labels */}
-          <div
-            className="grid grid-cols-7 border-b"
-            style={{
-              borderColor: 'rgba(242,200,212,0.4)',
-              background: 'rgba(254,240,248,0.40)',
-            }}
-          >
-            {weekDays.map((day) => (
-              <div
-                key={day}
-                className="py-3 text-center text-sm font-semibold"
-                style={{ color: 'var(--ink-faint)' }}
+          {/* Calendario Interactivo */}
+          <div className="overflow-hidden rounded-3xl border border-pink-200/70 bg-white/95 shadow-sm backdrop-blur-md">
+            {/* Header del Calendario */}
+            <div className="flex items-center justify-between border-b border-pink-100 bg-pink-50/40 p-4">
+              <button
+                onClick={prevPeriod}
+                className="rounded-2xl border border-pink-200 bg-white p-2 text-pink-600 shadow-sm hover:bg-pink-50 transition active:scale-95"
+                aria-label="Período anterior"
               >
-                {day}
-              </div>
-            ))}
-          </div>
+                <ChevronLeft className="h-5 w-5" />
+              </button>
 
-          {/* Day cells */}
-          <div
-            className={`grid grid-cols-7 ${viewMode === 'month' ? 'auto-rows-fr' : 'h-[600px]'}`}
-          >
-            {days.map((day) => {
-              const isToday       = isSameDay(day, new Date());
-              const isCurrentMonth = isSameMonth(day, currentDate);
-              const dayEvents     = getEventsForDay(day);
-              const availStyle    = getAvailabilityStyle(day);
+              <h3 className="font-display text-base sm:text-lg font-bold capitalize text-neutral-900">
+                {format(
+                  currentDate,
+                  viewMode === 'month' ? 'MMMM yyyy' : "'Semana del' d 'de' MMMM",
+                  { locale: es }
+                )}
+              </h3>
 
-              return (
-                <div
-                  key={day.toString()}
-                  onClick={() => setSelectedDayEvents({ date: day, events: dayEvents })}
-                  className="relative min-h-[100px] cursor-pointer border-b border-r p-2 transition hover:opacity-90"
-                  style={{
-                    borderColor: 'rgba(242,200,212,0.30)',
-                    background: !isCurrentMonth && viewMode === 'month'
-                      ? 'rgba(249,249,249,0.60)'
-                      : availStyle.bg,
-                    opacity: !isCurrentMonth && viewMode === 'month' ? 0.45 : 1,
-                    outline: isToday ? '2px solid var(--brand)' : 'none',
-                    outlineOffset: isToday ? '-2px' : '0',
-                  }}
-                >
-                  <div className="flex items-start justify-between">
-                    <span
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium"
-                      style={
-                        isToday
-                          ? {
-                              background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 100%)',
-                              color: '#fff',
-                            }
-                          : { color: 'var(--ink-muted)' }
-                      }
-                    >
-                      {format(day, 'd')}
-                    </span>
-                    {dayEvents.length > 0 && (() => {
-                      const realFits = getRealCapacity(dayEvents);
-                      return (
-                        <span
-                          className="rounded-full px-2 py-0.5 text-xs font-bold"
-                          style={{
-                            background: 'var(--brand-lightest)',
-                            color: 'var(--brand)',
-                          }}
-                          title={`${realFits} citas posibles (de ${REAL_MAX_CAPACITY} máx)`}
-                        >
-                          {realFits}/{REAL_MAX_CAPACITY}
+              <button
+                onClick={nextPeriod}
+                className="rounded-2xl border border-pink-200 bg-white p-2 text-pink-600 shadow-sm hover:bg-pink-50 transition active:scale-95"
+                aria-label="Período siguiente"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Días de la semana */}
+            <div className="grid grid-cols-7 border-b border-pink-100 bg-pink-50/20 text-center text-xs font-bold text-neutral-500 py-2.5">
+              {weekDays.map((d) => (
+                <div key={d}>{d}</div>
+              ))}
+            </div>
+
+            {/* Celdas de días */}
+            <div className={`grid grid-cols-7 ${viewMode === 'month' ? 'auto-rows-fr' : 'min-h-[500px]'}`}>
+              {days.map((day) => {
+                const isToday = isSameDay(day, new Date());
+                const isCurrentMonth = isSameMonth(day, currentDate);
+                const dayEvents = getEventsForDay(day);
+                const availStyle = getAvailabilityStyle(day);
+
+                return (
+                  <div
+                    key={day.toString()}
+                    onClick={() => setSelectedDayEvents({ date: day, events: dayEvents })}
+                    className="relative min-h-[90px] sm:min-h-[110px] cursor-pointer border-b border-r border-pink-100/60 p-2 transition hover:opacity-90 select-none"
+                    style={{
+                      background: !isCurrentMonth && viewMode === 'month'
+                        ? 'rgba(250, 245, 248, 0.4)'
+                        : availStyle.bg,
+                      opacity: !isCurrentMonth && viewMode === 'month' ? 0.45 : 1,
+                      outline: isToday ? '2px solid #E11B74' : 'none',
+                      outlineOffset: isToday ? '-2px' : '0',
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span
+                        className={`flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full text-xs font-bold ${
+                          isToday
+                            ? 'bg-gradient-to-tr from-[#E11B74] to-[#C5A059] text-white shadow-sm'
+                            : 'text-neutral-700'
+                        }`}
+                      >
+                        {format(day, 'd')}
+                      </span>
+
+                      {dayEvents.length > 0 && (
+                        <span className="rounded-full bg-emerald-100 text-emerald-800 px-1.5 py-0.2 text-[10px] font-bold">
+                          {getRealCapacity(dayEvents)}/{REAL_MAX_CAPACITY}
                         </span>
-                      );
-                    })()}
-                  </div>
+                      )}
+                    </div>
 
-                  <div className="mt-2 space-y-1">
-                    {dayEvents.slice(0, 3).map((event, i) => (
-                      <div
-                        key={i}
-                        className="truncate rounded px-1 py-0.5 text-xs"
-                        style={{
-                          background: 'rgba(200,240,215,0.80)',
-                          color: '#166534',
-                          borderLeft: '2px solid #86EFAC',
-                        }}
-                      >
-                        {format(parseISO(event.start), 'HH:mm')}→{event.end}
-                      </div>
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <div
-                        className="pl-1 text-xs"
-                        style={{ color: 'var(--ink-faint)' }}
-                      >
-                        + {dayEvents.length - 3} más
-                      </div>
-                    )}
+                    {/* Vista previa de slots */}
+                    <div className="mt-1.5 space-y-1">
+                      {dayEvents.slice(0, 2).map((event, i) => (
+                        <div
+                          key={i}
+                          className="truncate rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-1 py-0.5 text-[10px] font-semibold"
+                        >
+                          {format(parseISO(event.start), 'HH:mm')}
+                        </div>
+                      ))}
+                      {dayEvents.length > 2 && (
+                        <p className="text-[9px] font-bold text-neutral-400 pl-0.5">
+                          +{dayEvents.length - 2} más
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Day Detail Modal ──────────────────────────────────── */}
-      {selectedDayEvents ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(28, 10, 20, 0.50)' }}
-          onClick={() => setSelectedDayEvents(null)}
-        >
+        {/* Modal de Detalle Diario */}
+        {selectedDayEvents && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn"
+            onClick={() => setSelectedDayEvents(null)}
+          >
             <div
-              className="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl"
-              style={{ background: '#fff' }}
+              className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-            {/* Modal Header */}
-            <div
-              className="flex items-center justify-between p-4 text-white"
-              style={{
-                background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)',
-              }}
-            >
+              <div className="flex items-center justify-between p-4 text-white bg-gradient-to-r from-[#E11B74] to-[#C5A059]">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pink-100">Detalle diario</p>
-                  <h3 className="mt-1 text-lg font-bold capitalize">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-pink-100">Detalle de Turnos</p>
+                  <h4 className="font-display text-base font-bold capitalize">
                     {format(selectedDayEvents.date, "EEEE d 'de' MMMM", { locale: es })}
-                  </h3>
+                  </h4>
                 </div>
                 <button
                   onClick={() => setSelectedDayEvents(null)}
-                  className="rounded-full p-1 text-white transition"
-                  style={{ background: 'rgba(255,255,255,0.18)' }}
+                  className="rounded-full bg-white/20 p-1.5 text-white hover:bg-white/30 transition"
                 >
-                  <CloseIcon className="h-4 w-4" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
-            {/* Modal Body */}
-            <div className="max-h-[60vh] overflow-y-auto p-6">
-              {selectedDayEvents.events.length === 0 ? (
-                <p
-                  className="py-8 text-center text-sm"
-                  style={{ color: 'var(--ink-faint)' }}
-                >
-                  No hay turnos disponibles para este día.
-                </p>
-              ) : (
-                <>
-                  {/* Capacidad real del día */}
-                  <div
-                    className="mb-4 flex items-center gap-2 rounded-lg p-3"
-                    style={{
-                      background: 'rgba(254,240,248,0.60)',
-                      border: '1px solid rgba(242,200,212,0.50)',
-                    }}
-                  >
-                    <span className="text-sm" style={{ color: 'var(--ink-muted)' }}>
-                      Capacidad real:
-                    </span>
-                    <span
-                      className="rounded-full px-2 py-0.5 text-xs font-bold"
-                      style={{ background: 'var(--brand-lightest)', color: 'var(--brand)' }}
+              <div className="max-h-[60vh] overflow-y-auto p-4 space-y-3">
+                {selectedDayEvents.events.length === 0 ? (
+                  <p className="py-8 text-center text-xs text-neutral-500 font-medium">
+                    No hay turnos disponibles configurados para este día.
+                  </p>
+                ) : (
+                  selectedDayEvents.events.map((event, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3"
                     >
-                      {getRealCapacity(selectedDayEvents.events)}/{REAL_MAX_CAPACITY} citas
-                    </span>
-                    <span className="text-xs" style={{ color: 'var(--ink-faint)' }}>
-                      ({selectedDuration} min c/u)
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    {selectedDayEvents.events.map((event, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between gap-3 rounded-xl border p-3"
-                        style={{
-                          background: 'rgba(200,240,215,0.50)',
-                          borderColor: '#86EFAC',
-                        }}
-                      >
-                        <div className="flex items-center">
-                          <div
-                            className="mr-3 rounded px-2 py-1 text-sm font-bold"
-                            style={{
-                              background: 'rgba(200,240,215,0.80)',
-                              color: '#166534',
-                            }}
-                          >
-                            {format(parseISO(event.start), 'HH:mm')}
-                          </div>
-                          <div>
-                            <p className="font-medium" style={{ color: 'var(--ink-medium)' }}>
-                              Turno Disponible
-                            </p>
-                            <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>
-                              {format(parseISO(event.start), 'HH:mm')} → {event.end}
-                            </p>
-                          </div>
-                          <span
-                            className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-                            style={{
-                              background: 'rgba(200,240,215,0.60)',
-                              color: '#166534',
-                            }}
-                          >
-                            {selectedDuration} min
-                          </span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="rounded-xl bg-emerald-600 text-white px-2.5 py-1 text-xs font-bold shadow-sm">
+                          {format(parseISO(event.start), 'HH:mm')}
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold text-neutral-800">Turno Libre</p>
+                          <p className="text-[11px] text-neutral-500">Hasta las {event.end}</p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => openBookingModal(event)}
-                          className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-                          style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
-                        >
-                          <GemIcon className="h-4 w-4" />
-                          Crear cita
-                        </button>
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
 
-            {/* Modal Footer */}
-            <div
-              className="p-4 text-right"
-              style={{
-                background: 'var(--bg-blush)',
-                borderTop: '1px solid rgba(242,200,212,0.50)',
-              }}
-            >
-              <button
-                onClick={() => setSelectedDayEvents(null)}
-                className="premium-button-secondary"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {bookingSlot ? (
-        <div className="fixed inset-0 z-[60] overflow-y-auto bg-black/55 p-3 sm:p-4" onClick={closeBookingModal}>
-          <div className="flex min-h-full items-start justify-center py-3 sm:items-center sm:py-6">
-            <div
-              className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="shrink-0 p-4 sm:p-5 text-white" style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pink-100">Reserva manual</p>
-                    <h3 className="mt-1 text-lg font-bold sm:text-xl">Crear cita desde turno libre</h3>
-                    <p className="mt-2 text-sm text-pink-50">
-                      {format(parseISO(bookingSlot.start), "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })}
-                    </p>
-                  </div>
-                  <button type="button" onClick={closeBookingModal} className="rounded-full p-2 transition hover:bg-white/10" aria-label="Cerrar modal">
-                    <CloseIcon className="h-5 w-5" />
-                  </button>
-                </div>
+                      <button
+                        type="button"
+                        onClick={() => openBookingModal(event)}
+                        className="flex items-center gap-1 rounded-xl bg-gradient-to-r from-[#E11B74] to-[#C5A059] px-3 py-1.5 text-xs font-bold text-white shadow-md active:scale-95 transition"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Agendar</span>
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
 
-              <form onSubmit={handleBookingSubmit} className="flex min-h-0 flex-1 flex-col">
-                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
-                  {bookingError ? (
-                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-                      {bookingError}
-                    </div>
-                  ) : null}
+              <div className="border-t border-pink-100 bg-pink-50/40 p-3 text-right">
+                <button
+                  onClick={() => setSelectedDayEvents(null)}
+                  className="rounded-xl bg-white px-4 py-1.5 text-xs font-bold text-neutral-700 border border-neutral-200 shadow-sm"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-                  {bookingSuccess ? (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                      {bookingSuccess}
-                    </div>
-                  ) : null}
+        {/* Modal de Agendamiento Manual */}
+        {bookingSlot && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm animate-fadeIn"
+            onClick={closeBookingModal}
+          >
+            <div
+              className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 text-white bg-gradient-to-r from-[#E11B74] to-[#C5A059]">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-pink-100">Nueva Cita Manual</p>
+                  <h4 className="font-display text-base font-bold">
+                    {format(parseISO(bookingSlot.start), "EEEE d 'de' MMMM 'a las' HH:mm", { locale: es })}
+                  </h4>
+                </div>
+                <button onClick={closeBookingModal} className="rounded-full bg-white/20 p-1.5 text-white">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">Servicio</label>
-                    <select
-                      value={bookingForm.serviceId}
-                      onChange={(e) => setBookingForm((previous) => ({ ...previous, serviceId: e.target.value }))}
-                      className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
-                    >
-                      {services.map((service) => (
-                        <option key={service.id} value={service.id}>
-                          {service.name} ({service.duration} min)
-                        </option>
-                      ))}
-                    </select>
+              <form onSubmit={handleBookingSubmit} className="p-5 space-y-4">
+                {bookingError && (
+                  <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+                    <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                    <span>{bookingError}</span>
                   </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">Nombre</label>
-                    <input
-                      type="text"
-                      value={bookingForm.name}
-                      onChange={(e) => setBookingForm((previous) => ({ ...previous, name: e.target.value }))}
-                      className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
-                      placeholder="Nombre de la clienta"
-                      required
-                    />
+                )}
+                {bookingSuccess && (
+                  <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>{bookingSuccess}</span>
                   </div>
+                )}
 
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Tratamiento / Servicio</label>
+                  <select
+                    value={bookingForm.serviceId}
+                    onChange={(e) => setBookingForm((prev) => ({ ...prev, serviceId: e.target.value }))}
+                    className="w-full rounded-2xl border border-pink-200 bg-white p-2.5 text-xs sm:text-sm font-semibold outline-none focus:border-pink-500 shadow-sm"
+                  >
+                    {services.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.duration} min)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Nombre de la Clienta</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej. Camila Morales"
+                    value={bookingForm.name}
+                    onChange={(e) => setBookingForm((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full rounded-2xl border border-pink-200 bg-white p-2.5 text-xs sm:text-sm outline-none focus:border-pink-500 shadow-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">Email</label>
+                    <label className="block text-xs font-bold text-neutral-700 mb-1">Correo Electrónico</label>
                     <input
                       type="email"
-                      value={bookingForm.email}
-                      onChange={(e) => setBookingForm((previous) => ({ ...previous, email: e.target.value }))}
-                      className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
-                      placeholder="correo@cliente.com"
                       required
+                      placeholder="clienta@correo.com"
+                      value={bookingForm.email}
+                      onChange={(e) => setBookingForm((prev) => ({ ...prev, email: e.target.value }))}
+                      className="w-full rounded-2xl border border-pink-200 bg-white p-2.5 text-xs sm:text-sm outline-none focus:border-pink-500 shadow-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">Teléfono</label>
+                    <label className="block text-xs font-bold text-neutral-700 mb-1">Teléfono / WhatsApp</label>
                     <input
                       type="tel"
+                      placeholder="+56 9 1234 5678"
                       value={bookingForm.phone}
-                      onChange={(e) => setBookingForm((previous) => ({ ...previous, phone: e.target.value }))}
-                      className="premium-input transition-all duration-300 focus:shadow-[0_0_20px_rgba(225,27,116,0.12)] focus:scale-[1.01] bg-white/90"
-                      placeholder="Opcional"
+                      onChange={(e) => setBookingForm((prev) => ({ ...prev, phone: e.target.value }))}
+                      className="w-full rounded-2xl border border-pink-200 bg-white p-2.5 text-xs sm:text-sm outline-none focus:border-pink-500 shadow-sm"
                     />
-                  </div>
-
-                  <div className="rounded-xl border border-pink-100 bg-pink-50 px-4 py-3 text-sm text-pink-900">
-                    La cita se validará nuevamente contra disponibilidad real antes de enviarse al backend.
                   </div>
                 </div>
 
-                <div className="shrink-0 border-t border-slate-100 bg-white/95 p-4 backdrop-blur sm:p-5">
-                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={closeBookingModal}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submittingBooking}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                      style={{ background: 'linear-gradient(160deg, #F04A94 0%, #E11B74 55%, #B8105D 100%)' }}
-                    >
-                      <LaunchIcon className="h-4 w-4" />
-                      {submittingBooking ? 'Creando cita...' : 'Crear cita'}
-                    </button>
-                  </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-pink-100">
+                  <button
+                    type="button"
+                    onClick={closeBookingModal}
+                    className="rounded-xl bg-white px-4 py-2 text-xs font-bold text-neutral-600 border border-neutral-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingBooking}
+                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#E11B74] to-[#C5A059] px-4 py-2 text-xs font-bold text-white shadow-md active:scale-95 transition disabled:opacity-50"
+                  >
+                    {submittingBooking ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        <span>Creando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Confirmar Cita</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
-      ) : null}
-    </AdminShell>
+        )}
+      </AdminShell>
+    </>
   );
 }
